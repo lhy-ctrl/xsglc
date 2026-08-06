@@ -1422,9 +1422,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 </script>
 <script>/* cloud.js —— cloud_read.js */
 /*
- * cloud_read.js —— 云端只读模块（仅公网只读版使用）
+ * cloud_read.js —— 云端网页模块（公网网页版使用）
  * 只含 publishable key（公开读权限），不含任何写权限密钥。
- * 供同事访问的网页只能从此模块拉取展示，数据库中 RLS 亦强制只读。
+ * 供同事访问的网页默认只读拉取；管理员登录后可通过数据库函数
+ * （verify_admin / admin_write）校验密码后安全写入，密码校验在
+ * Supabase 服务端完成，网页不暴露任何 secret key。
  */
 (function (global, factory) {
   if (typeof module !== 'undefined' && module.exports) module.exports = factory();
@@ -1437,14 +1439,18 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     PUBLISHABLE: 'sb_publishable_DQFzwdIa8yenzZ7OJfZB2Q_Qfh0Z3Mk',
     TABLE: 'app_data',
     ROW_ID: 1,
-    READONLY: true
+    READONLY: false   // 网页版支持管理员登录写入（走 RPC，不含密钥）
   };
 
-  function rowUrl() { return CONFIG.URL + '/rest/v1/' + CONFIG.TABLE + '?id=eq.' + CONFIG.ROW_ID; }
+  function rpcUrl(fn) { return CONFIG.URL + '/rest/v1/rpc/' + fn; }
 
-  // 从云端拉取（只读）
+  function authHeaders() {
+    return { 'apikey': CONFIG.PUBLISHABLE, 'Authorization': 'Bearer ' + CONFIG.PUBLISHABLE, 'Content-Type': 'application/json' };
+  }
+
+  // 从云端拉取（publishable key 可读，RLS 允许匿名读）
   function pull() {
-    return fetch(rowUrl(), {
+    return fetch(CONFIG.URL + '/rest/v1/' + CONFIG.TABLE + '?id=eq.' + CONFIG.ROW_ID, {
       method: 'GET',
       headers: { 'apikey': CONFIG.PUBLISHABLE, 'Authorization': 'Bearer ' + CONFIG.PUBLISHABLE }
     }).then(function (r) {
@@ -1453,10 +1459,43 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     }).then(function (rows) { return rows && rows[0] ? rows[0].payload : null; });
   }
 
-  // 只读版不允许推送
-  function push() { return Promise.reject(new Error('只读版本不支持写入')); }
+  // 管理员密码校验：调用数据库函数 verify_admin（返回 boolean）
+  // 不暴露任何密钥，密码只传给服务端函数做 bcrypt 比对
+  function verifyAdmin(pwd) {
+    return fetch(rpcUrl('verify_admin'), {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ pwd: pwd })
+    }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error('验证失败 HTTP ' + r.status + ': ' + t); });
+      return r.json(); // true / false
+    });
+  }
 
-  return { push: push, pull: pull, CONFIG: CONFIG };
+  // 管理员安全写入：调用数据库函数 admin_write(payload, pwd)
+  // 函数内部校验密码，正确才写入 app_data（security definer 绕过 RLS 写限制）
+  function adminWrite(payload, pwd) {
+    return fetch(rpcUrl('admin_write'), {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ payload: payload, pwd: pwd })
+    }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) {
+        var msg = t;
+        try { msg = JSON.parse(t).message || t; } catch (e) {}
+        throw new Error('保存失败：' + msg);
+      });
+      return true;
+    });
+  }
+
+  // 兼容旧接口：push 必须带密码（网页版）；直接调用无密码则拒绝
+  function push(payload, pwd) {
+    if (!pwd) return Promise.reject(new Error('需要管理员密码才能保存到云端'));
+    return adminWrite(payload, pwd);
+  }
+
+  return { push: push, pull: pull, verifyAdmin: verifyAdmin, adminWrite: adminWrite, CONFIG: CONFIG };
 });
 
 </script>
@@ -1481,6 +1520,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   // 同步状态缓存：{ lastPushAt: string|null, lastError: string|null, busy: bool, lastPullAt: Date|null }
   var cloudStatus = { lastPushAt: null, lastError: null, busy: false, lastPullAt: null };
   var CLOUD_STORAGE_KEY = 'STUDENT_ADMIN_CLOUD_LAST_PUSH';
+  // 云端管理员登录态（仅网页版使用）：保存登录后的密码内存态，用于后续保存到云端
+  var cloudAdminPassword = null;
+  var cloudAdminVerified = false;
 
   var doc = null;
   var store = null;
@@ -1500,7 +1542,46 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     return false;
   }
   // 打开管理员登录 / 首次设置密码 弹窗
+  // 云端网页版（READONLY_MODE）走云端密码校验（verify_admin RPC），
+  // 校验通过后 isAdmin=true 并记住密码供“保存到云端”使用；
+  // 本地版保持原有本地密码逻辑。
   function openAdminGate() {
+    // 云端网页版：管理员登录（校验云端密码）
+    if (READONLY_MODE) {
+      var cp = el('input', { type: 'password', id: 'admin-pass-input', placeholder: '请输入管理员密码' });
+      var cerr = el('p', { class: 'muted', style: 'color:#e5484d;min-height:1.2em', id: 'admin-pass-err' });
+      var btnLogin = el('button', { class: 'btn primary', type: 'button' }, ['登录']);
+      var loginHint = el('p', { class: 'muted', style: 'margin-top:8px', text: '登录后即可修改并保存到云端。' });
+      openModal('管理员登录（云端）', [
+        el('div', { class: 'form-row' }, [el('label', { text: '密码' }), cp]),
+        cerr,
+        el('div', { class: 'toolbar', style: 'margin-top:4px' }, [btnLogin]),
+        loginHint
+      ], null, null);
+      btnLogin.onclick = function () {
+        var v = cp.value.trim();
+        if (!v) { cerr.textContent = '请输入密码'; return; }
+        if (!AppCloudLib || !AppCloudLib.verifyAdmin) { cerr.textContent = '云端模块未加载'; return; }
+        btnLogin.disabled = true;
+        cerr.textContent = '验证中…';
+        AppCloudLib.verifyAdmin(v).then(function (ok) {
+          if (ok) {
+            cloudAdminPassword = v;
+            cloudAdminVerified = true;
+            isAdmin = true;
+            closeModal();
+            refresh();
+          } else {
+            btnLogin.disabled = false;
+            cerr.textContent = '密码错误，请重试';
+          }
+        }).catch(function (err) {
+          btnLogin.disabled = false;
+          cerr.textContent = '验证失败：' + (err && err.message ? err.message : '网络错误');
+        });
+      };
+      return;
+    }
     var pass = el('input', { type: 'password', id: 'admin-pass-input', placeholder: hasAdminPass() ? '请输入管理员密码' : '请设置管理员密码（至少4位）' });
     var err = el('p', { class: 'muted', style: 'color:#e5484d;min-height:1.2em', id: 'admin-pass-err' });
     openModal(hasAdminPass() ? '管理员登录' : '设置管理员密码', [
@@ -1542,7 +1623,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       return true;
     }, '保存');
   }
-  function logoutAdmin() { isAdmin = false; refresh(); }
+  function logoutAdmin() { isAdmin = false; cloudAdminPassword = null; cloudAdminVerified = false; refresh(); }
 
   // ---------- DOM helpers ----------
   function el(tag, props, children) {
@@ -1705,8 +1786,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     if (btnImport) btnImport.classList.toggle('hidden', !isAdmin || READONLY_MODE);
     if (adminBtn) {
       if (READONLY_MODE) {
-        // 只读版：无管理员入口
-        adminBtn.classList.add('hidden');
+        // 云端网页版：始终显示管理员登录入口（供任何地方登录修改）
+        adminBtn.classList.remove('hidden');
+        adminBtn.textContent = isAdmin ? '退出管理员' : '管理员登录';
+        adminBtn.onclick = isAdmin ? logoutAdmin : openAdminGate;
       } else {
         adminBtn.classList.remove('hidden');
         adminBtn.textContent = isAdmin ? '退出管理员' : '管理员登录';
@@ -1716,7 +1799,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     if (status) {
       if (READONLY_MODE) {
         var last = cloudStatus.lastPullAt;
-        status.textContent = '只读网页版' + (last ? ' · 更新于 ' + last.toTimeString().slice(0, 8) : ' · 加载中…');
+        if (isAdmin) {
+          status.textContent = '管理员已登录（云端）';
+        } else {
+          status.textContent = '只读网页版' + (last ? ' · 更新于 ' + last.toTimeString().slice(0, 8) : ' · 加载中…');
+        }
       } else {
         status.textContent = isAdmin ? '管理员' : '只读模式';
       }
@@ -1780,25 +1867,38 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     try { if (typeof localStorage !== 'undefined') localStorage.setItem(CLOUD_STORAGE_KEY, t || ''); } catch (e) {}
   }
   // 把当前本地数据推送到云端（管理员）
+  // 本地版：secret key 直写；云端网页版：需要管理员密码，走 admin_write RPC
   function pushToCloud() {
     if (!guardAdmin('同步到云端')) return Promise.reject(new Error('无权限'));
     if (cloudStatus.busy) return Promise.reject(new Error('正在同步中，请稍候'));
     if (!AppCloudLib) { alert('云端模块未加载，请确认此版本为本地管理员版'); return Promise.reject(new Error('cloud 模块缺失')); }
+    if (READONLY_MODE && !cloudAdminPassword) {
+      alert('请先点击右上角「管理员登录」，输入云端管理员密码后再保存。');
+      return Promise.reject(new Error('未登录云端管理员'));
+    }
     cloudStatus.busy = true;
     updateCloudUI();
     var payload = store.getState();
-    return AppCloudLib.push(payload).then(function () {
+    var doPush;
+    if (READONLY_MODE) {
+      // 网页版：通过数据库函数校验密码后写入
+      doPush = AppCloudLib.adminWrite ? AppCloudLib.adminWrite(payload, cloudAdminPassword) : AppCloudLib.push(payload, cloudAdminPassword);
+    } else {
+      // 本地版：secret key 直写
+      doPush = AppCloudLib.push(payload);
+    }
+    return doPush.then(function () {
       setCloudLastPush(C.todayStr() + ' ' + new Date().toTimeString().slice(0, 8));
       cloudStatus.lastError = null;
       cloudStatus.busy = false;
       updateCloudUI();
-      if (typeof alert === 'function') alert('已同步到云端 ✓\n同事打开网页即可看到最新数据。');
+      if (typeof alert === 'function') alert('已保存到云端 ✓\n刷新网页即可看到最新数据。');
       return true;
     }).catch(function (err) {
       cloudStatus.lastError = err.message;
       cloudStatus.busy = false;
       updateCloudUI();
-      if (typeof alert === 'function') alert('同步失败：' + err.message);
+      if (typeof alert === 'function') alert('保存失败：' + err.message);
       throw err;
     });
   }
@@ -1843,15 +1943,29 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   // 云端同步面板（管理员可见）
   function cloudPanelNode() {
     if (!isAdmin) return null;
-    var panel = el('div', { class: 'panel', id: 'cloud-panel' }, [
-      el('h3', {}, ['云端网页 ', el('span', { class: 'muted', text: '（供同事访问的只读网页版）' })]),
-      el('p', { class: 'muted', text: '点击「同步到云端」把当前数据推送到云端，同事打开网页即可看到最新内容；数据在云端仅可读，无法被他人修改。' }),
-      el('div', { class: 'toolbar' }, [
-        el('button', { class: 'btn primary', id: 'btn-cloud-push', onclick: pushToCloud }, ['同步到云端']),
-        el('button', { class: 'btn', id: 'btn-cloud-pull', onclick: pullFromCloud }, ['从云端拉取'])
-      ]),
-      el('p', { class: 'muted', id: 'cloud-status' })
-    ]);
+    var panel;
+    if (READONLY_MODE) {
+      // 云端网页版管理员：登录后可修改并保存到云端
+      panel = el('div', { class: 'panel', id: 'cloud-panel' }, [
+        el('h3', {}, ['云端数据 ', el('span', { class: 'muted', text: '（你已登录管理员，可修改并保存）' })]),
+        el('p', { class: 'muted', text: '此处展示当前云端数据。修改任意内容后点「保存到云端」，即可让所有访问网页的人看到最新数据；其他访客无密码无法修改。' }),
+        el('div', { class: 'toolbar' }, [
+          el('button', { class: 'btn primary', id: 'btn-cloud-push', onclick: pushToCloud }, ['保存到云端']),
+          el('button', { class: 'btn', id: 'btn-cloud-pull', onclick: pullFromCloud }, ['从云端拉取'])
+        ]),
+        el('p', { class: 'muted', id: 'cloud-status' })
+      ]);
+    } else {
+      panel = el('div', { class: 'panel', id: 'cloud-panel' }, [
+        el('h3', {}, ['云端网页 ', el('span', { class: 'muted', text: '（供同事访问的只读网页版）' })]),
+        el('p', { class: 'muted', text: '点击「同步到云端」把当前数据推送到云端，同事打开网页即可看到最新内容；数据在云端仅可读，无法被他人修改。' }),
+        el('div', { class: 'toolbar' }, [
+          el('button', { class: 'btn primary', id: 'btn-cloud-push', onclick: pushToCloud }, ['同步到云端']),
+          el('button', { class: 'btn', id: 'btn-cloud-pull', onclick: pullFromCloud }, ['从云端拉取'])
+        ]),
+        el('p', { class: 'muted', id: 'cloud-status' })
+      ]);
+    }
     return panel;
   }
 
@@ -2629,11 +2743,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
   // ---------- 请假名单整理器 ----------
   function renderLeave(root) {
-    if (READONLY_MODE) {
-      // 云端只读版：只展示历史记录，不提供整理工具
+    if (READONLY_MODE && !isAdmin) {
+      // 云端网页版未登录：只展示历史记录，不提供整理工具
       root.appendChild(el('div', { class: 'panel' }, [
         el('h3', { text: '请假名单（只读）' }),
-        el('p', { class: 'muted', text: '本页面为只读网页版，数据由管理员在本地维护。以下为历史请假名单。' })
+        el('p', { class: 'muted', text: '点击右上角「管理员登录」后可在此整理请假名单并保存到云端。' })
       ]));
       root.appendChild(renderLeaveHistory());
       return;
@@ -2724,11 +2838,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   function renderReport(root) { return placeholder('每日通报')(root); }
   // ---------- 每日通报整理器 ----------
   function renderReport(root) {
-    if (READONLY_MODE) {
-      // 云端只读版：只展示历史通报
+    if (READONLY_MODE && !isAdmin) {
+      // 云端网页版未登录：只展示历史通报
       root.appendChild(el('div', { class: 'panel' }, [
         el('h3', { text: '每日通报（只读）' }),
-        el('p', { class: 'muted', text: '本页面为只读网页版，数据由管理员在本地维护。以下为历史查寝通报。' })
+        el('p', { class: 'muted', text: '点击右上角「管理员登录」后可在此整理查寝通报并保存到云端。' })
       ]));
       root.appendChild(renderReportHistory());
       return;
