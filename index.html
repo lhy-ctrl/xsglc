@@ -424,7 +424,7 @@ select { cursor: pointer; }
 </head>
 <body>
 <div id="app-root"></div>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>/* store.js */
 /*
@@ -1425,9 +1425,26 @@ select { cursor: pointer; }
     return { 'apikey': CONFIG.PUBLISHABLE, 'Authorization': 'Bearer ' + CONFIG.PUBLISHABLE, 'Content-Type': 'application/json' };
   }
 
+  // fetch 带超时（AbortController），避免网络慢时一直"验证中/加载中"无反馈
+  function fetchWithTimeout(url, opts, ms) {
+    ms = ms || 20000;
+    if (typeof AbortController === 'undefined') return fetch(url, opts);
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, ms);
+    opts = opts || {};
+    opts.signal = ctrl.signal;
+    return fetch(url, opts).then(function (r) {
+      clearTimeout(timer);
+      return r;
+    }, function (e) {
+      clearTimeout(timer);
+      throw e;
+    });
+  }
+
   // 从云端拉取（publishable key 可读，RLS 允许匿名读）
   function pull() {
-    return fetch(CONFIG.URL + '/rest/v1/' + CONFIG.TABLE + '?id=eq.' + CONFIG.ROW_ID, {
+    return fetchWithTimeout(CONFIG.URL + '/rest/v1/' + CONFIG.TABLE + '?id=eq.' + CONFIG.ROW_ID, {
       method: 'GET',
       headers: { 'apikey': CONFIG.PUBLISHABLE, 'Authorization': 'Bearer ' + CONFIG.PUBLISHABLE }
     }).then(function (r) {
@@ -1439,7 +1456,7 @@ select { cursor: pointer; }
   // 管理员密码校验：调用数据库函数 verify_admin（返回 boolean）
   // 不暴露任何密钥，密码只传给服务端函数做 bcrypt 比对
   function verifyAdmin(pwd) {
-    return fetch(rpcUrl('verify_admin'), {
+    return fetchWithTimeout(rpcUrl('verify_admin'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ pwd: pwd })
@@ -1452,7 +1469,7 @@ select { cursor: pointer; }
   // 管理员安全写入：调用数据库函数 admin_write(payload, pwd)
   // 函数内部校验密码，正确才写入 app_data（security definer 绕过 RLS 写限制）
   function adminWrite(payload, pwd) {
-    return fetch(rpcUrl('admin_write'), {
+    return fetchWithTimeout(rpcUrl('admin_write'), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ payload: payload, pwd: pwd })
