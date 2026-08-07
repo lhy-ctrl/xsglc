@@ -309,7 +309,11 @@ td[data-cat]:hover { background: rgba(90,140,255,.07); box-shadow: inset 0 0 0 1
 td[data-cat] input { width: 100%; min-width: 48px; box-sizing: border-box; padding: 4px 6px; font-size: 13px; }
 
 /* 量化管理分：月份 tab */
-.month-bar { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 12px; }
+.month-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 2px 0 12px; }
+.month-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+.month-tools { display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+.month-tools label { font-size: 12.5px; color: rgba(70,76,88,.75); font-weight: 600; }
+.month-tools select { font-size: 12.5px; padding: 5px 8px; border-radius: 8px; border: 1px solid rgba(30,38,54,.16); background: #fff; color: #333; }
 .month-tab {
   cursor: pointer; user-select: none; font-size: 12.5px; font-weight: 600;
   padding: 5px 14px; border-radius: 999px;
@@ -397,6 +401,9 @@ select { cursor: pointer; }
 /* ---------- 链接 ---------- */
 .link { color: #2f6fe0; cursor: pointer; font-weight: 600; transition: color .15s ease; }
 .link:hover { color: #1f5fd0; text-decoration: none; }
+.ops .link + .link { margin-left: 18px; }
+.ops .link.del { color: #d64541; }
+.ops .link.del:hover { color: #b03430; }
 .right { text-align: right; }
 
 /* ---------- 弹窗（液态玻璃居中卡片） ---------- */
@@ -524,7 +531,7 @@ select { cursor: pointer; }
 </head>
 <body>
 <div id="app-root"></div>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>/* store.js */
 /*
@@ -1617,6 +1624,8 @@ select { cursor: pointer; }
   // 云端管理员登录态（仅网页版使用）：保存登录后的密码内存态，用于后续保存到云端
   var cloudAdminPassword = null;
   var cloudAdminVerified = false;
+  // 管理员登录持久化：刷新后保持登录，除非手动退出
+  var ADMIN_LOGIN_KEY = 'STUDENT_ADMIN_LOGIN';
 
   var doc = null;
   var store = null;
@@ -1663,6 +1672,7 @@ select { cursor: pointer; }
             cloudAdminPassword = v;
             cloudAdminVerified = true;
             isAdmin = true;
+            persistAdminLogin(v);
             closeModal();
             refresh();
           } else {
@@ -1688,11 +1698,13 @@ select { cursor: pointer; }
         if (v.length < 4) { err.textContent = '密码至少 4 位'; return false; }
         setAdminPass(v);
         isAdmin = true;
+        persistAdminLogin(null);
         refresh();
         return true;
       }
       if (v === getAdminPass()) {
         isAdmin = true;
+        persistAdminLogin(null);
         refresh();
         return true;
       }
@@ -1717,7 +1729,29 @@ select { cursor: pointer; }
       return true;
     }, '保存');
   }
-  function logoutAdmin() { isAdmin = false; cloudAdminPassword = null; cloudAdminVerified = false; refresh(); }
+  function logoutAdmin() { isAdmin = false; cloudAdminPassword = null; cloudAdminVerified = false; clearAdminLogin(); refresh(); }
+
+  // ---- 管理员登录持久化：刷新保持登录，除非手动退出 ----
+  function persistAdminLogin(pwd) {
+    try { if (typeof localStorage !== 'undefined') localStorage.setItem(ADMIN_LOGIN_KEY, JSON.stringify({ adminLoggedIn: true, adminPwd: pwd || null })); } catch (e) {}
+  }
+  function clearAdminLogin() {
+    try { if (typeof localStorage !== 'undefined') localStorage.removeItem(ADMIN_LOGIN_KEY); } catch (e) {}
+  }
+  function restoreAdminLogin() {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      var raw = localStorage.getItem(ADMIN_LOGIN_KEY);
+      if (!raw) return false;
+      var d = JSON.parse(raw);
+      if (d && d.adminLoggedIn) {
+        isAdmin = true;
+        if (d.adminPwd) { cloudAdminPassword = d.adminPwd; cloudAdminVerified = true; }
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
 
   // ---------- DOM helpers ----------
   function el(tag, props, children) {
@@ -1773,8 +1807,9 @@ select { cursor: pointer; }
       // 本地数据损坏：给出提示，不覆盖，等待用户从备份恢复
       if (typeof alert === 'function') alert('本地数据读取失败：' + e.message + '\n请用“导入恢复”从备份还原。');
     }
-    // 云端只读版：强制普通只读模式，不显示管理员入口
-    if (READONLY_MODE) isAdmin = false;
+    // 云端只读版：默认普通只读；若有持久化登录态则恢复管理员
+    restoreAdminLogin();
+    if (READONLY_MODE && !isAdmin) isAdmin = false;
     buildLayout();
     switchTo(state.current);
     updateBackupRemind();
@@ -2132,7 +2167,19 @@ select { cursor: pointer; }
     body.appendChild(actions);
     mask.appendChild(body);
     mask.addEventListener('click', function (e) { if (e.target === mask) closeModal(mask); });
+    // 需求6：弹窗内按回车 = 点击确定/登录按钮（.btn.primary）；取消只能通过点击“取消”按钮
+    mask.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.keyCode === 13) {
+        var primary = mask.querySelector('.btn.primary');
+        if (primary) { e.preventDefault(); primary.click(); }
+      }
+    });
     doc.getElementById('modal-root').appendChild(mask);
+    // 打开后聚焦弹窗内第一个输入框（如有），便于直接回车确认
+    var firstInput = body.querySelector('input, select, textarea');
+    if (firstInput && typeof firstInput.focus === 'function') {
+      try { firstInput.focus(); } catch (e) {}
+    }
     return mask;
   }
   function closeModal(mask) { if (mask && mask.parentNode) mask.parentNode.removeChild(mask); }
@@ -2298,7 +2345,7 @@ select { cursor: pointer; }
 
   // ---------- 学生信息 ----------
   var studentsFilter = { grade: '', gender: '', keyword: '' };
-  var scoreFilter = { grade: '高一', keyword: '' };
+  var scoreFilter = { grade: '高一', keyword: '', classLabel: '' };
   var scoreSort = 'class';
   var discFilter = { grade: '', keyword: '' };
   var discSort = 'count-desc';
@@ -2637,22 +2684,47 @@ select { cursor: pointer; }
   function renderScore(root) {
     scoreMonths = C.activeScoreMonths(store.getState().settings);
     if (!scoreMonth || scoreMonths.indexOf(scoreMonth) === -1) scoreMonth = scoreMonths.length ? scoreMonths[scoreMonths.length - 1] : null;
-    var sortSel = el('select', { id: 'score-sort', onchange: function (e) { scoreSort = e.target.value; renderScoreTable(); } }, [
-      el('option', { value: 'score-desc' }, ['量化分（高→低）']),
-      el('option', { value: 'score-asc' }, ['量化分（低→高）']),
-      el('option', { value: 'class' }, ['按班级'])
-    ]);
-    sortSel.value = scoreSort;
-    var gradeSel = el('select', { id: 'score-flt-grade', onchange: function (e) { scoreFilter.grade = e.target.value; renderScoreTable(); } },
+    var gradeSel = el('select', { id: 'score-flt-grade', onchange: function (e) { scoreFilter.grade = e.target.value; scoreFilter.classLabel = ''; renderClassOptions(); renderScoreTable(); } },
       [el('option', { value: '' }, ['全部年级'])].concat(C.GRADES.map(function (g) { return el('option', { value: g }, [g]); })));
     gradeSel.value = scoreFilter.grade || '';
     var search = el('input', { type: 'text', id: 'score-kw', placeholder: '搜索姓名/班级', oninput: function (e) { scoreFilter.keyword = e.target.value; renderScoreTable(); } });
     root.appendChild(el('div', { class: 'toolbar' }, [
-      search, gradeSel, el('span', { text: '排序' }), sortSel
+      search, gradeSel
     ]));
-    // 月份 tab（可自定义：添加 + 删除）
+    // 月份栏 + 右侧两个选项：①选单独班级查看 ②手动点击按量化分由高到低排序
+    var monthRow = el('div', { class: 'month-row' });
     var monthBar = el('div', { class: 'month-bar', id: 'score-month-bar' });
-    root.appendChild(monthBar);
+    monthRow.appendChild(monthBar);
+    // ① 班级筛选下拉（跟随年级：只列出当前年级的班级）
+    var classSel = el('select', { id: 'score-flt-class', onchange: function (e) { scoreFilter.classLabel = e.target.value; renderScoreTable(); } });
+    function renderClassOptions() {
+      var g = scoreFilter.grade || '';
+      var opts = [{ v: '', t: '全部班级' }];
+      var seen = {};
+      C.sortStudentsByClass(store.getState().students).forEach(function (s) {
+        if (!s.class || seen[s.class]) return;
+        if (g && C.studentGrade(s.class) !== g) return;
+        seen[s.class] = true;
+        opts.push({ v: s.class, t: s.class });
+      });
+      clear(classSel);
+      opts.forEach(function (o) { classSel.appendChild(el('option', { value: o.v }, [o.t])); });
+      classSel.value = scoreFilter.classLabel || '';
+    }
+    renderClassOptions();
+    // ② 排序下拉（默认按班级=年级→班级→姓名拼音；可选量化分高→低）
+    var sortSel = el('select', { id: 'score-sort', onchange: function (e) { scoreSort = e.target.value; renderScoreTable(); } }, [
+      el('option', { value: 'class' }, ['按班级']),
+      el('option', { value: 'score-desc' }, ['量化分（高→低）']),
+      el('option', { value: 'score-asc' }, ['量化分（低→高）'])
+    ]);
+    sortSel.value = scoreSort;
+    var monthTools = el('div', { class: 'month-tools' }, [
+      el('label', { text: '班级' }), classSel,
+      el('label', { text: '排序' }), sortSel
+    ]);
+    monthRow.appendChild(monthTools);
+    root.appendChild(monthRow);
     root.appendChild(el('p', { class: 'muted', id: 'score-formula-hint' }));
     root.appendChild(el('div', { class: 'panel', id: 'score-panel' }));
     renderScoreMonthBar();
@@ -2816,6 +2888,8 @@ select { cursor: pointer; }
     var list = C.filterStudents(st.students, discFilter);
     if (discSort === 'class') list = C.sortStudentsByClass(list);
     else list = list.slice().sort(function (a, b) { return (counts[b.id] || 0) - (counts[a.id] || 0); });
+    // 只显示有违纪记录的学生（删除违纪后该生从列表消失；学生信息仍保留）
+    list = list.filter(function (s) { return (counts[s.id] || 0) > 0; });
     var table = el('table', {}, [el('thead', {}, [el('tr', {}, [
       el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '违纪次数' }), el('th', { text: '操作' })])])]);
     var tb = el('tbody', {});
@@ -2824,11 +2898,9 @@ select { cursor: pointer; }
       tb.appendChild(el('tr', { 'data-id': s.id }, [
         el('td', { text: s.class }), el('td', { text: s.name }),
         el('td', { class: (cnt > 0 ? 'score-red' : ''), text: String(cnt) }),
-        el('td', {}, [
+        el('td', { class: 'ops' }, [
           isAdmin ? el('span', { class: 'link', onclick: function () { openRecordDiscipline(s.id); } }, ['记一笔']) : null,
-          isAdmin ? el('span', { text: '  ' }) : null,
           el('span', { class: 'link', onclick: function () { openDisciplineDetail(s.id); } }, ['明细']),
-          isAdmin ? el('span', { text: '  ' }) : null,
           isAdmin ? el('span', { class: 'link del', onclick: function () {
             openModal('删除违纪记录', [
               el('p', {}, [s.class + ' ' + s.name + ' 的全部违纪记录（共 ', el('b', { text: String(cnt) }), ' 次）将被删除。']),
