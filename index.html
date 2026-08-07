@@ -420,11 +420,75 @@ select { cursor: pointer; }
   .card:hover, .btn:hover { transform: none; }
 }
 
+/* ============================================================
+   移动端适配（手机 / 窄屏，≤820px）
+   侧边栏改顶部横排导航；表格在面板内横向滚动；卡片重排。
+   纯 CSS，不影响任何 JS 逻辑与测试契约。
+   ============================================================ */
+@media (max-width: 820px) {
+  /* 应用壳改为纵向：顶部导航 + 内容区 */
+  #app { flex-direction: column; height: 100vh; height: 100dvh; }
+
+  /* 侧边栏 → 顶部横排导航条（可横向滑动） */
+  #sidebar {
+    width: 100%; flex: none; flex-direction: row; align-items: center;
+    padding: 9px 10px; gap: 2px; overflow-x: auto; overflow-y: hidden;
+    border-right: none; border-bottom: 1px solid rgba(255,255,255,.55);
+    -webkit-overflow-scrolling: touch;
+  }
+  #sidebar .brand { padding: 0 10px 0 4px; font-size: 13px; white-space: nowrap; }
+  #sidebar .brand::before { width: 8px; height: 8px; }
+  .nav-item { flex: none; white-space: nowrap; padding: 8px 11px; margin: 0 2px; }
+  .nav-item .lg-icon-wrap { display: none; }   /* 窄屏隐藏图标，更紧凑 */
+  .nav-item.active::before { left: 14%; right: 14%; top: auto; bottom: -9px; width: auto; height: 3px; }
+
+  /* 顶部工具栏压缩 */
+  #topbar {
+    height: 48px; padding: 0 10px; gap: 7px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  #topbar .btn { flex: none; padding: 5px 10px; font-size: 12.5px; }
+  #today-date { display: none; }               /* 窄屏隐藏日期，节省空间 */
+  #backup-remind { display: none; }            /* 窄屏隐藏备份提醒条（不破坏 hidden 类逻辑） */
+  #admin-status { font-size: 11px; margin-right: 2px; }
+
+  /* 内容区 */
+  #content { padding: 14px 12px 26px; }
+
+  /* 首页卡片：两列自适应 */
+  .cards { grid-template-columns: repeat(auto-fit, minmax(142px, 1fr)); gap: 11px; }
+  .card { padding: 22px 14px 20px; min-height: 104px; border-radius: 14px; }
+  .card .num { font-size: 22px; }
+  .card .lbl { font-size: 11.5px; }
+  .trend-chart svg { height: 84px; }
+
+  /* 面板内表格横向滚动（标题不滚动，表格可左右滑） */
+  .panel { padding: 14px 12px; }
+  .panel h3 { font-size: 13.5px; }
+  table { min-width: 560px; }                  /* 触发面板内横向滚动 */
+  th, td { padding: 8px 10px; font-size: 12.5px; }
+  td[data-field] input, td[data-field] select { min-width: 48px; }
+
+  /* 双栏布局 → 纵向堆叠 */
+  .two-col { flex-direction: column; gap: 12px; }
+  .two-col > div { width: 100%; }
+
+  /* 弹窗贴近屏幕边距 */
+  .modal { width: 94vw; max-width: 94vw; padding: 18px 16px; border-radius: 16px; }
+  .modal h3 { font-size: 14px; }
+
+  /* 大文本框 / 结果框降低默认高度 */
+  textarea, .result-box { min-height: 200px; }
+
+  /* 工具条更紧凑 */
+  .toolbar { gap: 7px; margin-bottom: 11px; }
+  .month-tab, .month-add { padding: 5px 11px; }
+}
+
 </style>
 </head>
 <body>
 <div id="app-root"></div>
-<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>/* store.js */
 /*
@@ -1861,39 +1925,67 @@ select { cursor: pointer; }
     try { if (typeof localStorage !== 'undefined') localStorage.setItem(CLOUD_STORAGE_KEY, t || ''); } catch (e) {}
   }
   // 把当前本地数据推送到云端（管理员）
-  // 本地版：secret key 直写；云端网页版：需要管理员密码，走 admin_write RPC
+  // 本地版与云端网页版统一走 RPC（admin_write），不再使用 secret key：
+  // 需要云端管理员密码，首次同步时会弹窗让用户输入并记住（会话内）。
   function pushToCloud() {
     if (!guardAdmin('同步到云端')) return Promise.reject(new Error('无权限'));
     if (cloudStatus.busy) return Promise.reject(new Error('正在同步中，请稍候'));
     if (!AppCloudLib) { alert('云端模块未加载，请确认此版本为本地管理员版'); return Promise.reject(new Error('cloud 模块缺失')); }
-    if (READONLY_MODE && !cloudAdminPassword) {
-      alert('请先点击右上角「管理员登录」，输入云端管理员密码后再保存。');
-      return Promise.reject(new Error('未登录云端管理员'));
-    }
-    cloudStatus.busy = true;
-    updateCloudUI();
-    var payload = store.getState();
-    var doPush;
-    if (READONLY_MODE) {
-      // 网页版：通过数据库函数校验密码后写入
-      doPush = AppCloudLib.adminWrite ? AppCloudLib.adminWrite(payload, cloudAdminPassword) : AppCloudLib.push(payload, cloudAdminPassword);
-    } else {
-      // 本地版：secret key 直写
-      doPush = AppCloudLib.push(payload);
-    }
-    return doPush.then(function () {
-      setCloudLastPush(C.todayStr() + ' ' + new Date().toTimeString().slice(0, 8));
-      cloudStatus.lastError = null;
-      cloudStatus.busy = false;
+    // 统一要求云端管理员密码（RPC 安全写入，不依赖 secret key）
+    function doPushLocal() {
+      cloudStatus.busy = true;
       updateCloudUI();
-      if (typeof alert === 'function') alert('已保存到云端 ✓\n刷新网页即可看到最新数据。');
-      return true;
-    }).catch(function (err) {
-      cloudStatus.lastError = err.message;
-      cloudStatus.busy = false;
-      updateCloudUI();
-      if (typeof alert === 'function') alert('保存失败：' + err.message);
-      throw err;
+      var payload = store.getState();
+      var doPush = AppCloudLib.adminWrite
+        ? AppCloudLib.adminWrite(payload, cloudAdminPassword)
+        : AppCloudLib.push(payload, cloudAdminPassword);
+      return doPush.then(function () {
+        setCloudLastPush(C.todayStr() + ' ' + new Date().toTimeString().slice(0, 8));
+        cloudStatus.lastError = null;
+        cloudStatus.busy = false;
+        updateCloudUI();
+        if (typeof alert === 'function') alert('已保存到云端 ✓\n刷新网页即可看到最新数据。');
+        return true;
+      }).catch(function (err) {
+        cloudStatus.lastError = err.message;
+        cloudStatus.busy = false;
+        updateCloudUI();
+        if (typeof alert === 'function') alert('保存失败：' + err.message);
+        throw err;
+      });
+    }
+    if (cloudAdminPassword) return doPushLocal();
+    // 首次同步：弹窗输入云端管理员密码
+    return new Promise(function (resolve, reject) {
+      var cp = el('input', { type: 'password', id: 'admin-pass-input', placeholder: '请输入云端管理员密码' });
+      var cerr = el('p', { class: 'muted', style: 'color:#e5484d;min-height:1.2em', id: 'admin-pass-err' });
+      var btnGo = el('button', { class: 'btn primary', type: 'button' }, ['保存到云端']);
+      openModal('同步到云端（需要管理员密码）', [
+        el('div', { class: 'form-row' }, [el('label', { text: '云端管理员密码' }), cp]),
+        cerr,
+        el('div', { class: 'toolbar', style: 'margin-top:4px' }, [btnGo])
+      ], null, null);
+      btnGo.onclick = function () {
+        var v = cp.value.trim();
+        if (!v) { cerr.textContent = '请输入密码'; return; }
+        if (!AppCloudLib || !AppCloudLib.verifyAdmin) { cerr.textContent = '云端模块未加载'; return; }
+        btnGo.disabled = true;
+        cerr.textContent = '验证中…';
+        AppCloudLib.verifyAdmin(v).then(function (ok) {
+          if (ok) {
+            cloudAdminPassword = v;
+            cloudAdminVerified = true;
+            closeModal();
+            doPushLocal().then(resolve, reject);
+          } else {
+            btnGo.disabled = false;
+            cerr.textContent = '密码错误，请重试';
+          }
+        }).catch(function (err) {
+          btnGo.disabled = false;
+          cerr.textContent = '验证失败：' + (err && err.message ? err.message : '网络错误');
+        });
+      };
     });
   }
   // 从云端拉取覆盖本地（管理员）
