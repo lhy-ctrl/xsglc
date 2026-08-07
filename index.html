@@ -2827,7 +2827,17 @@ select { cursor: pointer; }
         el('td', {}, [
           isAdmin ? el('span', { class: 'link', onclick: function () { openRecordDiscipline(s.id); } }, ['记一笔']) : null,
           isAdmin ? el('span', { text: '  ' }) : null,
-          el('span', { class: 'link', onclick: function () { openDisciplineDetail(s.id); } }, ['明细'])
+          el('span', { class: 'link', onclick: function () { openDisciplineDetail(s.id); } }, ['明细']),
+          isAdmin ? el('span', { text: '  ' }) : null,
+          isAdmin ? el('span', { class: 'link del', onclick: function () {
+            openModal('删除违纪记录', [
+              el('p', {}, [s.class + ' ' + s.name + ' 的全部违纪记录（共 ', el('b', { text: String(cnt) }), ' 次）将被删除。']),
+              el('p', { class: 'muted', text: '删除后将回退相关月份政扣（每次 20 分），且不可恢复。' })
+            ], function () {
+              deleteStudentDiscipline(s.id);
+              return true;
+            }, '删除');
+          } }, ['删除']) : null
         ])
       ]));
     });
@@ -2871,25 +2881,10 @@ select { cursor: pointer; }
     var body = [el('p', {}, [s.class + ' ' + s.name + '，违纪 ', el('b', { text: String(logs.length) }), ' 次']) ];
     if (logs.length === 0) body.push(el('p', { class: 'muted', text: '暂无记录' }));
     else {
-      var heads = [el('th', { text: '日期' }), el('th', { text: '违纪说明' }), el('th', { text: '说明' })];
-      if (isAdmin) heads.push(el('th', { text: '操作' }));
-      var table = el('table', {}, [el('thead', {}, [el('tr', {}, heads)])]);
+      var table = el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '日期' }), el('th', { text: '违纪说明' }), el('th', { text: '说明' })])])]);
       var tb = el('tbody', {});
       logs.forEach(function (lg) {
-        var cells = [el('td', { text: lg.date }), el('td', { text: lg.reason || lg.type || '' }), el('td', { text: lg.note || '' })];
-        if (isAdmin) {
-          cells.push(el('td', {}, [el('span', { class: 'link del', onclick: function () {
-            openModal('删除违纪记录', [
-              el('p', {}, [s.class + ' ' + s.name + ' 于 ', el('b', { text: lg.date }), ' 的违纪记录将被删除。']),
-              el('p', { class: 'muted', text: '删除后将回退该月政扣 20 分，且不可恢复。' })
-            ], function () {
-              deleteDiscipline(lg.id);
-              openDisciplineDetail(studentId);
-              return true;
-            }, '删除');
-          } }, ['删除'])]));
-        }
-        tb.appendChild(el('tr', {}, cells));
+        tb.appendChild(el('tr', {}, [el('td', { text: lg.date }), el('td', { text: lg.reason || lg.type || '' }), el('td', { text: lg.note || '' })]));
       });
       table.appendChild(tb);
       body.push(table);
@@ -2909,6 +2904,22 @@ select { cursor: pointer; }
     store.save();
     if (state.current === 'discipline') renderDisciplineTable();
     return log;
+  }
+
+  // 删除某学生的全部违纪记录；按每条回退对应月份政扣 20 分
+  function deleteStudentDiscipline(studentId) {
+    if (!guardAdmin('删除违纪')) return false;
+    var st = store.getState();
+    var logs = st.disciplineLogs.filter(function (l) { return l.studentId === studentId; });
+    if (logs.length === 0) return false;
+    st.disciplineLogs = st.disciplineLogs.filter(function (l) { return l.studentId !== studentId; });
+    logs.forEach(function (lg) {
+      var month = (lg.date || '').slice(0, 7);
+      if (month) C.setMonthScore(st.scoreMonthly, studentId, month, { zhengKou: -20 }, 'add');
+    });
+    store.save();
+    if (state.current === 'discipline') renderDisciplineTable();
+    return true;
   }
 
   // 删除某条违纪记录；若该条曾扣除当月政扣 20 分，则同步回退
@@ -3363,6 +3374,7 @@ select { cursor: pointer; }
     setScoreSort: function (v) { scoreSort = v; renderScoreTable(); },
     setScoreFilter: function (f) { Object.assign(scoreFilter, f); renderScoreTable(); },
     recordDiscipline: recordDiscipline,
+    deleteStudentDiscipline: deleteStudentDiscipline,
     deleteDiscipline: deleteDiscipline,
     studentDisciplineLogs: studentDisciplineLogs,
     saveLeaveRecord: saveLeaveRecord,
