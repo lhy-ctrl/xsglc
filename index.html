@@ -462,9 +462,9 @@ select { cursor: pointer; }
   .trend-chart svg { height: 84px; }
 
   /* 面板内表格横向滚动（标题不滚动，表格可左右滑） */
-  .panel { padding: 14px 12px; }
+  .panel { padding: 14px 12px; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
   .panel h3 { font-size: 13.5px; }
-  table { min-width: 560px; }                  /* 触发面板内横向滚动 */
+  table { min-width: 640px; }                  /* 触发面板内横向滚动（覆盖学生/量化/违纪等宽表） */
   th, td { padding: 8px 10px; font-size: 12.5px; }
   td[data-field] input, td[data-field] select { min-width: 48px; }
 
