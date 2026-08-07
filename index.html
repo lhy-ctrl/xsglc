@@ -2594,12 +2594,10 @@ select { cursor: pointer; }
       monthBar.appendChild(btn);
     });
     if (isAdmin) monthBar.appendChild(el('span', { class: 'month-add', id: 'btn-add-month', text: '＋ 添加月份', onclick: addScoreMonth }));
-    // 同步统计月份提示（不显示公式文字）
+    // 同步统计月份提示（不含自定义月份/公式说明文字）
     var hint = $('#score-formula-hint');
     if (hint) {
-      var customNote = (Array.isArray(store.getState().settings.scoreMonths) && store.getState().settings.scoreMonths.length > 0)
-        ? '（手动自定义月份）' : (isAdmin ? '（默认最近 5 个月，可点“＋ 添加月份”自定义）' : '（默认最近 5 个月）');
-      hint.textContent = '统计月份：' + (scoreMonths.length ? scoreMonths[0] + ' ~ ' + scoreMonths[scoreMonths.length - 1] : '（无）') + '，共 ' + scoreMonths.length + ' 个月' + customNote + '。' + (isAdmin ? '点击数字可直接修改当月数据。' : '当前为只读模式，数据由管理员维护。');
+      hint.textContent = '统计月份：' + (scoreMonths.length ? scoreMonths[0] + ' ~ ' + scoreMonths[scoreMonths.length - 1] : '（无）') + '，共 ' + scoreMonths.length + ' 个月。' + (isAdmin ? '点击数字可直接修改当月数据。' : '当前为只读模式，数据由管理员维护。');
     }
   }
   function addScoreMonth() {
