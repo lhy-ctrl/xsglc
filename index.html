@@ -422,25 +422,25 @@ select { cursor: pointer; }
 
 /* ============================================================
    移动端适配（手机 / 窄屏，≤820px）
-   侧边栏改顶部横排导航；表格在面板内横向滚动；卡片重排。
+   导航栏保持左侧竖排（收窄侧栏）；表格在面板内横向滚动；卡片重排。
    纯 CSS，不影响任何 JS 逻辑与测试契约。
    ============================================================ */
 @media (max-width: 820px) {
-  /* 应用壳改为纵向：顶部导航 + 内容区 */
-  #app { flex-direction: column; height: 100vh; height: 100dvh; }
+  /* 应用壳保持横向布局：左侧导航 + 主区 */
+  #app { flex-direction: row; height: 100vh; height: 100dvh; }
 
-  /* 侧边栏 → 顶部横排导航条（可横向滑动） */
+  /* 侧边栏：保持左侧竖排，收窄宽度适配窄屏 */
   #sidebar {
-    width: 100%; flex: none; flex-direction: row; align-items: center;
-    padding: 9px 10px; gap: 2px; overflow-x: auto; overflow-y: hidden;
-    border-right: none; border-bottom: 1px solid rgba(255,255,255,.55);
+    width: 148px; flex: none; flex-direction: column; align-items: stretch;
+    padding: 14px 10px; gap: 0; overflow-x: hidden; overflow-y: auto;
+    border-right: 1px solid rgba(255,255,255,.55); border-bottom: none;
     -webkit-overflow-scrolling: touch;
   }
-  #sidebar .brand { padding: 0 10px 0 4px; font-size: 13px; white-space: nowrap; }
+  #sidebar .brand { padding: 4px 10px 14px; font-size: 13px; white-space: normal; }
   #sidebar .brand::before { width: 8px; height: 8px; }
-  .nav-item { flex: none; white-space: nowrap; padding: 8px 11px; margin: 0 2px; }
-  .nav-item .lg-icon-wrap { display: none; }   /* 窄屏隐藏图标，更紧凑 */
-  .nav-item.active::before { left: 14%; right: 14%; top: auto; bottom: -9px; width: auto; height: 3px; }
+  .nav-item { flex: none; white-space: nowrap; padding: 9px 10px; margin: 2px 0; }
+  .nav-item .lg-icon-wrap { display: inline-flex; }   /* 保留图标 */
+  .nav-item.active::before { left: -10px; right: auto; top: 22%; bottom: 22%; width: 3px; height: auto; }
 
   /* 顶部工具栏压缩 */
   #topbar {
