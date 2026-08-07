@@ -1632,15 +1632,31 @@ select { cursor: pointer; }
   var state = { current: 'home' };
   // 权限：isAdmin=false 为普通模式（仅请假/通报可操作，其余只读）；true 为管理员（全功能）
   var isAdmin = false;
+  // 管理员角色：'full' 全权限（可改一切）/ 'limited' 受限（不可改学生信息、数据与设置，其余可用）/ null 非管理员
+  var adminRole = null;
 
   // ---------- 权限守卫 ----------
   function getAdminPass() { return (store && store.getState().settings.adminPass) || null; }
   function setAdminPass(p) { store.getState().settings.adminPass = p; store.save(); }
   // 管理员是否已初始化密码
   function hasAdminPass() { return !!getAdminPass(); }
+  // 受限管理员不可修改学生信息
+  function canEditStudents() { return isAdmin && adminRole !== 'limited'; }
+  // 受限管理员不可修改数据与设置
+  function canEditSettings() { return isAdmin && adminRole !== 'limited'; }
   // 普通模式守卫：非管理员且操作被拦截时给出提示，返回 false
   function guardAdmin(actionName) {
     if (isAdmin) return true;
+    if (typeof alert === 'function') alert('当前为只读模式，此操作（' + (actionName || '修改数据') + '）需要管理员登录后使用。');
+    return false;
+  }
+  // 受限守卫：仅全权限管理员可执行（学生信息 / 数据与设置相关操作）
+  function guardFull(actionName) {
+    if (isAdmin && adminRole !== 'limited') return true;
+    if (isAdmin && adminRole === 'limited') {
+      if (typeof alert === 'function') alert('当前为受限管理员，此操作（' + (actionName || '修改数据') + '）需要全权限管理员。');
+      return false;
+    }
     if (typeof alert === 'function') alert('当前为只读模式，此操作（' + (actionName || '修改数据') + '）需要管理员登录后使用。');
     return false;
   }
@@ -1655,25 +1671,36 @@ select { cursor: pointer; }
       var cerr = el('p', { class: 'muted', style: 'color:#e5484d;min-height:1.2em', id: 'admin-pass-err' });
       var btnLogin = el('button', { class: 'btn primary', type: 'button' }, ['登录']);
       var loginHint = el('p', { class: 'muted', style: 'margin-top:8px', text: '登录后即可修改并保存到云端。' });
-      openModal('管理员登录（云端）', [
+      var loginMask = openModal('管理员登录（云端）', [
         el('div', { class: 'form-row' }, [el('label', { text: '密码' }), cp]),
         cerr,
         el('div', { class: 'toolbar', style: 'margin-top:4px' }, [btnLogin]),
         loginHint
-      ], null, null);
+      ], null, null, true);
       btnLogin.onclick = function () {
         var v = cp.value.trim();
         if (!v) { cerr.textContent = '请输入密码'; return; }
         if (!AppCloudLib || !AppCloudLib.verifyAdmin) { cerr.textContent = '云端模块未加载'; return; }
         btnLogin.disabled = true;
         cerr.textContent = '验证中…';
-        AppCloudLib.verifyAdmin(v).then(function (ok) {
-          if (ok) {
+        AppCloudLib.verifyAdmin(v).then(function (role) {
+          // verify_admin 返回角色：'full' 全权限 / 'limited' 受限 / 其他（密码错误）
+          if (role === 'full' || role === 'limited') {
             cloudAdminPassword = v;
             cloudAdminVerified = true;
             isAdmin = true;
-            persistAdminLogin(v);
-            closeModal();
+            adminRole = role;
+            persistAdminLogin(v, role);
+            closeModal(loginMask);
+            refresh();
+          } else if (role === true) {
+            // 兼容旧版 SQL（verify_admin 仅返回布尔）：一律视为全权限
+            cloudAdminPassword = v;
+            cloudAdminVerified = true;
+            isAdmin = true;
+            adminRole = 'full';
+            persistAdminLogin(v, 'full');
+            closeModal(loginMask);
             refresh();
           } else {
             btnLogin.disabled = false;
@@ -1698,13 +1725,15 @@ select { cursor: pointer; }
         if (v.length < 4) { err.textContent = '密码至少 4 位'; return false; }
         setAdminPass(v);
         isAdmin = true;
-        persistAdminLogin(null);
+        adminRole = 'full';
+        persistAdminLogin(null, 'full');
         refresh();
         return true;
       }
       if (v === getAdminPass()) {
         isAdmin = true;
-        persistAdminLogin(null);
+        adminRole = 'full';
+        persistAdminLogin(null, 'full');
         refresh();
         return true;
       }
@@ -1729,11 +1758,11 @@ select { cursor: pointer; }
       return true;
     }, '保存');
   }
-  function logoutAdmin() { isAdmin = false; cloudAdminPassword = null; cloudAdminVerified = false; clearAdminLogin(); refresh(); }
+  function logoutAdmin() { isAdmin = false; adminRole = null; cloudAdminPassword = null; cloudAdminVerified = false; clearAdminLogin(); refresh(); }
 
   // ---- 管理员登录持久化：刷新保持登录，除非手动退出 ----
-  function persistAdminLogin(pwd) {
-    try { if (typeof localStorage !== 'undefined') localStorage.setItem(ADMIN_LOGIN_KEY, JSON.stringify({ adminLoggedIn: true, adminPwd: pwd || null })); } catch (e) {}
+  function persistAdminLogin(pwd, role) {
+    try { if (typeof localStorage !== 'undefined') localStorage.setItem(ADMIN_LOGIN_KEY, JSON.stringify({ adminLoggedIn: true, adminPwd: pwd || null, adminRole: role || 'full' })); } catch (e) {}
   }
   function clearAdminLogin() {
     try { if (typeof localStorage !== 'undefined') localStorage.removeItem(ADMIN_LOGIN_KEY); } catch (e) {}
@@ -1746,6 +1775,8 @@ select { cursor: pointer; }
       var d = JSON.parse(raw);
       if (d && d.adminLoggedIn) {
         isAdmin = true;
+        // 兼容旧版持久化数据（无 adminRole 字段）：默认视为全权限
+        adminRole = (d.adminRole === 'limited') ? 'limited' : 'full';
         if (d.adminPwd) { cloudAdminPassword = d.adminPwd; cloudAdminVerified = true; }
         return true;
       }
@@ -1953,12 +1984,12 @@ select { cursor: pointer; }
       if (READONLY_MODE) {
         var last = cloudStatus.lastPullAt;
         if (isAdmin) {
-          status.textContent = '管理员已登录（云端）';
+          status.textContent = adminRole === 'limited' ? '受限管理员已登录（云端）' : '管理员已登录（云端）';
         } else {
           status.textContent = '只读网页版' + (last ? ' · 更新于 ' + last.toTimeString().slice(0, 8) : ' · 加载中…');
         }
       } else {
-        status.textContent = isAdmin ? '管理员' : '只读模式';
+        status.textContent = isAdmin ? (adminRole === 'limited' ? '受限管理员' : '管理员') : '只读模式';
       }
     }
   }
@@ -1987,7 +2018,7 @@ select { cursor: pointer; }
   }
 
   function doExport() {
-    if (!guardAdmin('导出备份')) return;
+    if (!guardFull('导出备份')) return;
     var text = store.exportJSON();
     downloadText('学生管理数据备份_' + C.todayStr() + '.json', text, 'application/json');
     store.getState().settings.lastBackupAt = C.todayStr();
@@ -2006,7 +2037,7 @@ select { cursor: pointer; }
     };
     reader.readAsText(file);
   }
-  function doImportText(str) { if (!guardAdmin('导入恢复')) return; store.importJSON(str); refresh(); return store.getState(); }
+  function doImportText(str) { if (!guardFull('导入恢复')) return; store.importJSON(str); refresh(); return store.getState(); }
 
   // ---------- 云端同步 ----------
   function cloudLastPush() {
@@ -2055,11 +2086,11 @@ select { cursor: pointer; }
       var cp = el('input', { type: 'password', id: 'admin-pass-input', placeholder: '请输入云端管理员密码' });
       var cerr = el('p', { class: 'muted', style: 'color:#e5484d;min-height:1.2em', id: 'admin-pass-err' });
       var btnGo = el('button', { class: 'btn primary', type: 'button' }, ['保存到云端']);
-      openModal('同步到云端（需要管理员密码）', [
+      var pushMask = openModal('同步到云端（需要管理员密码）', [
         el('div', { class: 'form-row' }, [el('label', { text: '云端管理员密码' }), cp]),
         cerr,
         el('div', { class: 'toolbar', style: 'margin-top:4px' }, [btnGo])
-      ], null, null);
+      ], null, null, true);
       btnGo.onclick = function () {
         var v = cp.value.trim();
         if (!v) { cerr.textContent = '请输入密码'; return; }
@@ -2070,7 +2101,7 @@ select { cursor: pointer; }
           if (ok) {
             cloudAdminPassword = v;
             cloudAdminVerified = true;
-            closeModal();
+            closeModal(pushMask);
             doPushLocal().then(resolve, reject);
           } else {
             btnGo.disabled = false;
@@ -2151,19 +2182,22 @@ select { cursor: pointer; }
   }
 
   // ---------- 弹窗 ----------
-  function openModal(title, bodyNodes, onOk, okText) {
+  function openModal(title, bodyNodes, onOk, okText, hidePrimary) {
     var mask = el('div', { class: 'modal-mask' });
     var body = el('div', { class: 'modal' }, [el('h3', { text: title })]);
     (bodyNodes || []).forEach(function (n) { body.appendChild(n); });
     var actions = el('div', { class: 'modal-actions' }, [
-      el('button', { class: 'btn', onclick: function () { closeModal(mask); } }, ['取消']),
-      el('button', {
+      el('button', { class: 'btn', onclick: function () { closeModal(mask); } }, ['取消'])
+    ]);
+    // 当 hidePrimary 为 true（弹窗体内已有“登录/保存”按钮）时不额外生成确定按钮
+    if (!hidePrimary) {
+      actions.appendChild(el('button', {
         class: 'btn primary', onclick: function () {
           if (onOk) { var ok = onOk(); if (ok === false) return; }
           closeModal(mask);
         }
-      }, [okText || '确定'])
-    ]);
+      }, [okText || '确定']));
+    }
     body.appendChild(actions);
     mask.appendChild(body);
     mask.addEventListener('click', function (e) { if (e.target === mask) closeModal(mask); });
@@ -2361,10 +2395,10 @@ select { cursor: pointer; }
     var search = el('input', { type: 'text', id: 'flt-kw', placeholder: '搜索姓名/班级', oninput: function (e) { studentsFilter.keyword = e.target.value; renderStudentTable(); } });
 
     var toolbar = el('div', { class: 'toolbar' }, [
-      isAdmin ? el('button', { class: 'btn primary', id: 'btn-import-student', onclick: function () { fileInput.click(); } }, ['批量导入']) : null,
-      isAdmin ? el('button', { class: 'btn', id: 'btn-add-student', onclick: openAddStudent }, ['手动添加']) : null,
-      isAdmin ? el('button', { class: 'btn', id: 'btn-export-student', onclick: exportStudentsCSV }, ['导出CSV']) : null,
-      isAdmin ? el('button', { class: 'btn', id: 'btn-tpl-student', onclick: downloadStudentTemplate }, ['下载模板']) : null,
+      canEditStudents() ? el('button', { class: 'btn primary', id: 'btn-import-student', onclick: function () { fileInput.click(); } }, ['批量导入']) : null,
+      canEditStudents() ? el('button', { class: 'btn', id: 'btn-add-student', onclick: openAddStudent }, ['手动添加']) : null,
+      canEditStudents() ? el('button', { class: 'btn', id: 'btn-export-student', onclick: exportStudentsCSV }, ['导出CSV']) : null,
+      canEditStudents() ? el('button', { class: 'btn', id: 'btn-tpl-student', onclick: downloadStudentTemplate }, ['下载模板']) : null,
       el('span', { class: 'topbar-spacer' }),
       search, gradeSel, genderSel, fileInput
     ]);
@@ -2378,22 +2412,22 @@ select { cursor: pointer; }
     if (!panel) return;
     clear(panel);
     var list = C.sortStudentsByClass(C.filterStudents(store.getState().students, studentsFilter));
-    panel.appendChild(el('div', { class: 'muted', id: 'student-count', text: '共 ' + list.length + ' 名学生' + (isAdmin ? '（点击单元格可直接修改）' : '（只读模式，由管理员维护）') }));
+    panel.appendChild(el('div', { class: 'muted', id: 'student-count', text: '共 ' + list.length + ' 名学生' + (canEditStudents() ? '（点击单元格可直接修改）' : (isAdmin ? '（当前为受限管理员，学生信息只读）' : '（只读模式，由管理员维护）')) }));
     var table = el('table', {}, [
       el('thead', {}, [el('tr', {}, [
         el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '性别' }),
-        el('th', { text: '量化分' }), el('th', { text: '走读/住校' }), isAdmin ? el('th', { text: '操作' }) : null
+        el('th', { text: '量化分' }), el('th', { text: '走读/住校' }), canEditStudents() ? el('th', { text: '操作' }) : null
       ])])
     ]);
     var tbody = el('tbody', {});
     list.forEach(function (s) {
       var tr = el('tr', { 'data-id': s.id }, [
-        isAdmin ? editableCell('class', s.class, s.id, tr) : el('td', { text: s.class }),
-        isAdmin ? editableCell('name', s.name, s.id, tr) : el('td', { text: s.name }),
-        isAdmin ? editableCell('gender', s.gender, s.id, tr, { select: ['男', '女'] }) : el('td', { text: s.gender }),
+        canEditStudents() ? editableCell('class', s.class, s.id, tr) : el('td', { text: s.class }),
+        canEditStudents() ? editableCell('name', s.name, s.id, tr) : el('td', { text: s.name }),
+        canEditStudents() ? editableCell('gender', s.gender, s.id, tr, { select: ['男', '女'] }) : el('td', { text: s.gender }),
         el('td', { class: C.scoreClass(s.score), text: String(s.score), 'data-field': 'score' }),
-        isAdmin ? editableCell('boarding', s.boarding || '未设', s.id, tr, { select: ['走读', '住校'], emptyLabel: '未设' }) : el('td', { text: s.boarding || '未设' }),
-        isAdmin ? el('td', {}, [
+        canEditStudents() ? editableCell('boarding', s.boarding || '未设', s.id, tr, { select: ['走读', '住校'], emptyLabel: '未设' }) : el('td', { text: s.boarding || '未设' }),
+        canEditStudents() ? el('td', {}, [
           el('span', { class: 'link', onclick: function () { openEditStudent(s.id); } }, ['改']),
           el('span', { text: '  ' }),
           el('span', { class: 'link del', onclick: function () { deleteStudent(s.id); } }, ['删'])
@@ -2486,7 +2520,7 @@ select { cursor: pointer; }
   }
 
   function openAddStudent() {
-    if (!guardAdmin('添加学生')) return;
+    if (!guardFull('添加学生')) return;
     var form = studentFormNodes({ score: 100 });
     openModal('手动添加学生', form.nodes, function () {
       var d = form.read();
@@ -2495,7 +2529,7 @@ select { cursor: pointer; }
     }, '添加');
   }
   function openEditStudent(id) {
-    if (!guardAdmin('编辑学生')) return;
+    if (!guardFull('编辑学生')) return;
     var s = store.getState().students.filter(function (x) { return x.id === id; })[0];
     if (!s) return;
     var form = studentFormNodes(s);
@@ -2507,7 +2541,7 @@ select { cursor: pointer; }
   }
 
   function addStudent(data) {
-    if (!guardAdmin('添加学生')) return;
+    if (!guardFull('添加学生')) return;
     var s = {
       id: C.uid('s'),
       class: data.class || '',
@@ -2520,7 +2554,7 @@ select { cursor: pointer; }
     store.save(); renderStudentTable(); return s;
   }
   function updateStudent(id, data, skipRender) {
-    if (!guardAdmin('编辑学生')) return;
+    if (!guardFull('编辑学生')) return;
     var list = store.getState().students;
     for (var i = 0; i < list.length; i++) {
       if (list[i].id === id) { Object.assign(list[i], data); break; }
@@ -2529,7 +2563,7 @@ select { cursor: pointer; }
     if (!skipRender) renderStudentTable();
   }
   function deleteStudent(id) {
-    if (!guardAdmin('删除学生')) return;
+    if (!guardFull('删除学生')) return;
     var s = store.getState().students.filter(function (x) { return x.id === id; })[0];
     var name = s ? (s.class + ' ' + s.name) : '';
     openModal('删除学生', [
@@ -2549,7 +2583,7 @@ select { cursor: pointer; }
 
   // 导入
   function importStudentsFromRows(rows) {
-    if (!guardAdmin('导入学生')) return;
+    if (!guardFull('导入学生')) return;
     var built = C.buildStudents(rows);
     var list = store.getState().students;
     built.forEach(function (b) { list.push(b); });
@@ -2594,14 +2628,14 @@ select { cursor: pointer; }
     }, '确认导入');
   }
   function exportStudentsCSV() {
-    if (!guardAdmin('导出学生名单')) return;
+    if (!guardFull('导出学生名单')) return;
     var list = C.sortStudentsByClass(store.getState().students);
     var lines = ['班级,姓名,性别,走读/住校,量化分'];
     list.forEach(function (s) { lines.push([s.class, s.name, s.gender, s.boarding || '', s.score].map(csvCell).join(',')); });
     downloadText('学生名单_' + C.todayStr() + '.csv', '\uFEFF' + lines.join('\n'), 'text/csv');
   }
   function downloadStudentTemplate() {
-    if (!guardAdmin('下载导入模板')) return;
+    if (!guardFull('下载导入模板')) return;
     downloadText('学生导入模板.csv', '\uFEFF班级,姓名,性别,走读/住校,量化分\n高一1班,张三,男,住校,100\n高一1班,李四,女,走读,\n', 'text/csv');
   }
   function csvCell(v) {
@@ -3189,7 +3223,7 @@ select { cursor: pointer; }
     // 1. 量化项目库
     var itemPanel = el('div', { class: 'panel', id: 'score-item-panel' }, [
       el('h3', {}, ['量化项目库 ', el('span', { class: 'muted', text: '（加/扣分预设项）' })]),
-      el('div', { class: 'toolbar' }, [isAdmin ? el('button', { class: 'btn primary', id: 'btn-add-item', onclick: openAddScoreItem }, ['新增项目']) : null]),
+      el('div', { class: 'toolbar' }, [canEditSettings() ? el('button', { class: 'btn primary', id: 'btn-add-item', onclick: openAddScoreItem }, ['新增项目']) : null]),
       el('div', { id: 'score-item-list' })
     ]);
     // 2. 寝室对照表
@@ -3197,9 +3231,9 @@ select { cursor: pointer; }
     var dormPanel = el('div', { class: 'panel', id: 'dorm-panel' }, [
       el('h3', {}, ['班级 ↔ 寝室号 对照表 ', el('span', { class: 'muted', text: '（每日通报核对用，以寝室号为准）' })]),
       el('div', { class: 'toolbar' }, [
-        isAdmin ? el('button', { class: 'btn primary', id: 'btn-add-dorm', onclick: openAddDorm }, ['新增']) : null,
-        isAdmin ? el('button', { class: 'btn', id: 'btn-import-dorm', onclick: function () { dormFile.click(); } }, ['导入对照表']) : null,
-        isAdmin ? el('button', { class: 'btn', id: 'btn-tpl-dorm', onclick: downloadDormTemplate }, ['下载模板']) : null,
+        canEditSettings() ? el('button', { class: 'btn primary', id: 'btn-add-dorm', onclick: openAddDorm }, ['新增']) : null,
+        canEditSettings() ? el('button', { class: 'btn', id: 'btn-import-dorm', onclick: function () { dormFile.click(); } }, ['导入对照表']) : null,
+        canEditSettings() ? el('button', { class: 'btn', id: 'btn-tpl-dorm', onclick: downloadDormTemplate }, ['下载模板']) : null,
         dormFile
       ]),
       el('div', { id: 'dorm-list' })
@@ -3209,9 +3243,9 @@ select { cursor: pointer; }
       el('h3', { text: '数据备份' }),
       el('p', { class: 'muted', text: '建议每天用完导出一份备份文件，防止清理浏览器数据导致丢失。' }),
       el('div', { class: 'toolbar' }, [
-        isAdmin ? el('button', { class: 'btn primary', id: 'btn-backup-export', onclick: doExport }, ['导出备份']) : null,
-        isAdmin ? el('button', { class: 'btn', id: 'btn-backup-import', onclick: triggerImport }, ['导入恢复']) : null,
-        isAdmin ? el('button', { class: 'btn danger', id: 'btn-clear', onclick: confirmClear }, ['清空数据']) : null
+        canEditSettings() ? el('button', { class: 'btn primary', id: 'btn-backup-export', onclick: doExport }, ['导出备份']) : null,
+        canEditSettings() ? el('button', { class: 'btn', id: 'btn-backup-import', onclick: triggerImport }, ['导入恢复']) : null,
+        canEditSettings() ? el('button', { class: 'btn danger', id: 'btn-clear', onclick: confirmClear }, ['清空数据']) : null
       ]),
       el('p', { class: 'muted', id: 'last-backup', text: lastBackupText() })
     ]);
@@ -3244,15 +3278,15 @@ select { cursor: pointer; }
   function renderScoreItemList() {
     var box = $('#score-item-list'); if (!box) return; clear(box);
     var items = store.getState().scoreItems;
-    if (items.length === 0) { box.appendChild(el('p', { class: 'muted', text: isAdmin ? '暂无项目，点“新增项目”添加' : '暂无项目' })); return; }
+    if (items.length === 0) { box.appendChild(el('p', { class: 'muted', text: canEditSettings() ? '暂无项目，点“新增项目”添加' : '暂无项目' })); return; }
     var table = el('table', {}, [el('thead', {}, [el('tr', {}, [
-      el('th', { text: '类型' }), el('th', { text: '项目名称' }), el('th', { text: '分值' }), isAdmin ? el('th', { text: '操作' }) : null])])]);
+      el('th', { text: '类型' }), el('th', { text: '项目名称' }), el('th', { text: '分值' }), canEditSettings() ? el('th', { text: '操作' }) : null])])]);
     var tb = el('tbody', {});
     items.forEach(function (it) {
       tb.appendChild(el('tr', { 'data-id': it.id }, [
         el('td', { text: it.type }), el('td', { text: it.name }),
         el('td', { text: (it.delta > 0 ? '+' : '') + it.delta }),
-        isAdmin ? el('td', {}, [
+        canEditSettings() ? el('td', {}, [
           el('span', { class: 'link', onclick: function () { openEditScoreItem(it.id); } }, ['改']),
           el('span', { text: '  ' }),
           el('span', { class: 'link', onclick: function () { deleteScoreItem(it.id); } }, ['删'])
@@ -3281,7 +3315,7 @@ select { cursor: pointer; }
     };
   }
   function openAddScoreItem() {
-    if (!guardAdmin('新增量化项目')) return;
+    if (!guardFull('新增量化项目')) return;
     var f = scoreItemForm({ type: '扣分' });
     openModal('新增量化项目', f.nodes, function () {
       var d = f.read(); if (!d.name) { if (typeof alert === 'function') alert('请填写项目名称'); return false; }
@@ -3289,7 +3323,7 @@ select { cursor: pointer; }
     }, '添加');
   }
   function openEditScoreItem(id) {
-    if (!guardAdmin('编辑量化项目')) return;
+    if (!guardFull('编辑量化项目')) return;
     var it = store.getState().scoreItems.filter(function (x) { return x.id === id; })[0]; if (!it) return;
     var f = scoreItemForm(it);
     openModal('编辑量化项目', f.nodes, function () {
@@ -3297,9 +3331,9 @@ select { cursor: pointer; }
       updateScoreItem(id, d);
     }, '保存');
   }
-  function addScoreItem(d) { if (!guardAdmin('新增量化项目')) return; var it = { id: C.uid('i'), type: d.type, name: d.name, delta: d.delta }; store.getState().scoreItems.push(it); store.save(); renderScoreItemList(); return it; }
-  function updateScoreItem(id, d) { if (!guardAdmin('编辑量化项目')) return; var l = store.getState().scoreItems; for (var i = 0; i < l.length; i++) if (l[i].id === id) { Object.assign(l[i], d); break; } store.save(); renderScoreItemList(); }
-  function deleteScoreItem(id) { if (!guardAdmin('删除量化项目')) return; if (typeof confirm === 'function' && !confirm('确定删除该项目？')) return; var s = store.getState(); s.scoreItems = s.scoreItems.filter(function (x) { return x.id !== id; }); store.setState(s); renderScoreItemList(); }
+  function addScoreItem(d) { if (!guardFull('新增量化项目')) return; var it = { id: C.uid('i'), type: d.type, name: d.name, delta: d.delta }; store.getState().scoreItems.push(it); store.save(); renderScoreItemList(); return it; }
+  function updateScoreItem(id, d) { if (!guardFull('编辑量化项目')) return; var l = store.getState().scoreItems; for (var i = 0; i < l.length; i++) if (l[i].id === id) { Object.assign(l[i], d); break; } store.save(); renderScoreItemList(); }
+  function deleteScoreItem(id) { if (!guardFull('删除量化项目')) return; if (typeof confirm === 'function' && !confirm('确定删除该项目？')) return; var s = store.getState(); s.scoreItems = s.scoreItems.filter(function (x) { return x.id !== id; }); store.setState(s); renderScoreItemList(); }
 
   function renderDormList() {
     var box = $('#dorm-list'); if (!box) return; clear(box);
@@ -3328,7 +3362,7 @@ select { cursor: pointer; }
         el('span', { class: 'muted', text: '（' + g.items.length + ' 条）' })
       ]));
       var table = el('table', {}, [el('thead', {}, [el('tr', {}, [
-        el('th', { text: '寝室号' }), el('th', { text: '班级' }), isAdmin ? el('th', { text: '操作' }) : null])])]);
+        el('th', { text: '寝室号' }), el('th', { text: '班级' }), canEditSettings() ? el('th', { text: '操作' }) : null])])]);
       var tb = el('tbody', {});
       // 同寝室号合并展示（混寝）：按寝室号分组渲染
       var byRoom = {};
@@ -3346,7 +3380,7 @@ select { cursor: pointer; }
             el('span', { text: items.map(function (it) { return it.d.class; }).join('、') }),
             items.length > 1 ? el('span', { class: 'tag', text: '混寝' }) : null
           ]),
-          isAdmin ? el('td', {}, [
+          canEditSettings() ? el('td', {}, [
             el('span', { class: 'link', onclick: function () { openEditDorm(main.idx); } }, ['改']),
             el('span', { text: '  ' }),
             el('span', { class: 'link', onclick: function () { deleteDorm(main.idx); } }, ['删'])
@@ -3374,21 +3408,21 @@ select { cursor: pointer; }
     };
   }
   function openAddDorm() {
-    if (!guardAdmin('新增对照')) return;
+    if (!guardFull('新增对照')) return;
     var f = dormForm();
     openModal('新增对照', f.nodes, function () { var d = f.read(); if (!d.room) { if (typeof alert === 'function') alert('请填写寝室号'); return false; } addDormMap(d); }, '添加');
   }
   function openEditDorm(idx) {
-    if (!guardAdmin('编辑对照')) return;
+    if (!guardFull('编辑对照')) return;
     var d = store.getState().dormMap[idx]; if (!d) return;
     var f = dormForm(d);
     openModal('编辑对照', f.nodes, function () { var nd = f.read(); if (!nd.room) { if (typeof alert === 'function') alert('请填写寝室号'); return false; } updateDormMap(idx, nd); }, '保存');
   }
-  function addDormMap(d) { if (!guardAdmin('新增对照')) return; store.getState().dormMap.push({ room: d.room, class: d.class, area: d.area || '' }); store.save(); renderDormList(); return d; }
-  function updateDormMap(idx, d) { if (!guardAdmin('编辑对照')) return; var l = store.getState().dormMap; if (l[idx]) { l[idx] = { room: d.room, class: d.class, area: d.area || '' }; store.save(); renderDormList(); } }
-  function deleteDorm(idx) { if (!guardAdmin('删除对照')) return; if (typeof confirm === 'function' && !confirm('确定删除该对照？')) return; var s = store.getState(); s.dormMap.splice(idx, 1); store.setState(s); renderDormList(); }
+  function addDormMap(d) { if (!guardFull('新增对照')) return; store.getState().dormMap.push({ room: d.room, class: d.class, area: d.area || '' }); store.save(); renderDormList(); return d; }
+  function updateDormMap(idx, d) { if (!guardFull('编辑对照')) return; var l = store.getState().dormMap; if (l[idx]) { l[idx] = { room: d.room, class: d.class, area: d.area || '' }; store.save(); renderDormList(); } }
+  function deleteDorm(idx) { if (!guardFull('删除对照')) return; if (typeof confirm === 'function' && !confirm('确定删除该对照？')) return; var s = store.getState(); s.dormMap.splice(idx, 1); store.setState(s); renderDormList(); }
   function importDormMapFromRows(rows) {
-    if (!guardAdmin('导入对照表')) return;
+    if (!guardFull('导入对照表')) return;
     var built = C.buildDormMapFromRows(rows);
     var l = store.getState().dormMap;
     built.forEach(function (b) { l.push(b); });
@@ -3410,14 +3444,14 @@ select { cursor: pointer; }
     }
     e.target.value = '';
   }
-  function downloadDormTemplate() { if (!guardAdmin('下载对照模板')) return; downloadText('寝室对照表模板.csv', '\uFEFF寝室号,区域,班级\n428,女寝,高一4班\n502,男寝,高二3班\n211,男寝,高二9班\n', 'text/csv'); }
+  function downloadDormTemplate() { if (!guardFull('下载对照模板')) return; downloadText('寝室对照表模板.csv', '\uFEFF寝室号,区域,班级\n428,女寝,高一4班\n502,男寝,高二3班\n211,男寝,高二9班\n', 'text/csv'); }
 
   function confirmClear() {
     if (typeof confirm === 'function' && !confirm('确定清空全部数据？此操作不可撤销，建议先导出备份。')) return;
     clearAllData();
     if (typeof alert === 'function') alert('数据已清空');
   }
-  function clearAllData() { if (!guardAdmin('清空数据')) return; store.clear(); refresh(); }
+  function clearAllData() { if (!guardFull('清空数据')) return; store.clear(); refresh(); }
 
   function renderSettingsPlaceholderRemoved() {}
 
@@ -3466,8 +3500,11 @@ select { cursor: pointer; }
     getAdminPass: getAdminPass,
     hasAdminPass: hasAdminPass,
     get isAdmin() { return isAdmin; },
+    get adminRole() { return adminRole; },
     // 仅供测试：直接设定管理员状态（绕过弹窗）
-    setAdminForTest: function (v) { isAdmin = !!v; refresh(); },
+    setAdminForTest: function (v) { isAdmin = !!v; if (!v) adminRole = null; else if (adminRole !== 'limited') adminRole = 'full'; refresh(); },
+    // 仅供测试：设定受限管理员角色
+    setLimitedForTest: function () { isAdmin = true; adminRole = 'limited'; refresh(); },
     get state() { return state; },
     get store() { return store; },
     get core() { return C; }
