@@ -107,6 +107,23 @@ body { position: relative; }
 /* ---------- 主区 ---------- */
 #main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
 
+/* ---------- 侧边导航折叠按钮 ---------- */
+#btn-sidebar-toggle {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 8px; width: 30px; height: 30px;
+}
+#sidebar-toggle-icon { display: inline-flex; align-items: center; justify-content: center; }
+#sidebar-toggle-icon svg { width: 16px; height: 16px; display: block; }
+
+/* ---------- 侧边导航收起态（点击展开按钮切换） ---------- */
+#app.sidebar-collapsed #sidebar { width: 60px; padding: 18px 6px; }
+#app.sidebar-collapsed #sidebar .brand { display: none; }
+#app.sidebar-collapsed .nav-item { justify-content: center; padding: 11px 0; gap: 0; }
+#app.sidebar-collapsed .nav-item .nav-label { display: none; }
+#app.sidebar-collapsed .nav-item .lg-icon-wrap { display: inline-flex; width: 20px; height: 20px; }
+#app.sidebar-collapsed .nav-item .lg-icon { width: 20px; height: 20px; }
+#app.sidebar-collapsed .nav-item.active::before { display: none; }
+
 /* ---------- 顶部工具栏（液态玻璃） ---------- */
 #topbar {
   height: 56px; flex-shrink: 0;
@@ -429,12 +446,13 @@ select { cursor: pointer; }
   /* 应用壳保持横向布局：左侧导航 + 主区 */
   #app { flex-direction: row; height: 100vh; height: 100dvh; }
 
-  /* 侧边栏：窄左侧竖排导航（文字竖向排列，缩小占比） */
+  /* 侧边栏：默认收起为窄图标条，展开为竖排文字导航 */
   #sidebar {
     width: 64px; flex: none; flex-direction: column; align-items: center;
     padding: 14px 6px; gap: 2px; overflow-x: hidden; overflow-y: auto;
     border-right: 1px solid rgba(255,255,255,.55); border-bottom: none;
     -webkit-overflow-scrolling: touch;
+    transition: width .22s ease;
   }
   #sidebar .brand {
     flex-direction: column; padding: 2px 0 14px; font-size: 11px;
@@ -450,6 +468,15 @@ select { cursor: pointer; }
     writing-mode: vertical-rl; white-space: nowrap; letter-spacing: 2px; font-size: 12.5px;
   }
   .nav-item.active::before { left: -6px; right: auto; top: 20%; bottom: 20%; width: 3px; height: auto; }
+
+  /* 收起态：只显示图标，进一步缩小 */
+  #app.sidebar-collapsed #sidebar { width: 46px; padding: 14px 3px; }
+  #app.sidebar-collapsed #sidebar .brand { display: none; }
+  #app.sidebar-collapsed .nav-item { padding: 12px 0; }
+  #app.sidebar-collapsed .nav-item .lg-icon-wrap { display: inline-flex; }
+  #app.sidebar-collapsed .nav-item .lg-icon { width: 20px; height: 20px; }
+  #app.sidebar-collapsed .nav-item .nav-label { display: none; }
+  #app.sidebar-collapsed .nav-item.active::before { display: none; }
 
   /* 顶部工具栏压缩 */
   #topbar {
@@ -1808,6 +1835,9 @@ select { cursor: pointer; }
 
     // 顶栏
     var topbar = el('div', { id: 'topbar' }, [
+      el('button', { class: 'btn sidebar-toggle', id: 'btn-sidebar-toggle', title: '收起 / 展开导航', onclick: toggleSidebar }, [
+        el('span', { class: 'sidebar-toggle-icon', id: 'sidebar-toggle-icon' })
+      ]),
       el('span', { id: 'module-title', text: '首页' }),
       el('span', { id: 'today-date', text: C.todayStr() }),
       el('span', { class: 'topbar-spacer' }),
@@ -1824,8 +1854,13 @@ select { cursor: pointer; }
     var modalRoot = el('div', { id: 'modal-root' });
 
     var appDiv = el('div', { id: 'app' }, [bgLayer, sidebar, main]);
+    // 移动端默认收起导航（点击展开）；桌面端默认展开（也可点击切换）
+    if (typeof window !== 'undefined' && window.innerWidth <= 820) {
+      appDiv.classList.add('sidebar-collapsed');
+    }
     appRoot.appendChild(appDiv);
     appRoot.appendChild(modalRoot);
+    updateSidebarToggleIcon();
   }
 
   function switchTo(key) {
@@ -1840,6 +1875,22 @@ select { cursor: pointer; }
     var content = $('#content');
     clear(content);
     MODULES[key].render(content);
+  }
+
+  function toggleSidebar() {
+    var app = $('#app');
+    if (!app) return;
+    app.classList.toggle('sidebar-collapsed');
+    updateSidebarToggleIcon();
+  }
+  function updateSidebarToggleIcon() {
+    var app = $('#app');
+    var icon = $('#sidebar-toggle-icon');
+    if (!app || !icon) return;
+    var collapsed = app.classList.contains('sidebar-collapsed');
+    icon.innerHTML = collapsed
+      ? '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M3 12h12"/><path d="M3 18h18"/></svg>'
+      : '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M9 12h12"/><path d="M3 18h18"/></svg>';
   }
 
   function refresh() { switchTo(state.current); updateBackupRemind(); updateAdminBar(); }
