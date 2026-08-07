@@ -2849,16 +2849,24 @@ select { cursor: pointer; }
     if (presetId) stuSel.value = presetId;
     var typeSel = el('input', { type: 'text', id: 'dr-type', placeholder: '违纪类型（如 迟到/旷课/打架）', list: 'disc-types' });
     var datalist = el('datalist', { id: 'disc-types' }, ['迟到', '旷课', '打架', '玩手机', '违规带物', '其他'].map(function (t) { return el('option', { value: t }); }));
+    var reasonSel = el('select', { id: 'dr-reason' }, [
+      el('option', { value: '', text: '（不选）' }),
+      el('option', { value: '吸烟' }, ['吸烟']),
+      el('option', { value: '携带违禁品' }, ['携带违禁品']),
+      el('option', { value: '打架' }, ['打架']),
+      el('option', { value: '谈恋爱' }, ['谈恋爱'])
+    ]);
     var dateInp = el('input', { type: 'date', id: 'dr-date', value: C.todayStr() });
     var note = el('input', { type: 'text', id: 'dr-note', placeholder: '说明（可选）' });
     openModal('记一笔违纪', [
       el('div', { class: 'form-row' }, [el('label', { text: '学生' }), stuSel]),
       el('div', { class: 'form-row' }, [el('label', { text: '违纪类型' }), typeSel, datalist]),
+      el('div', { class: 'form-row' }, [el('label', { text: '违纪说明' }), reasonSel]),
       el('div', { class: 'form-row' }, [el('label', { text: '日期' }), dateInp]),
       el('div', { class: 'form-row' }, [el('label', { text: '说明' }), note])
     ], function () {
       var t = typeSel.value.trim(); if (!t) { if (typeof alert === 'function') alert('请填写违纪类型'); return false; }
-      recordDiscipline(stuSel.value, { type: t, date: dateInp.value || C.todayStr(), note: note.value.trim() });
+      recordDiscipline(stuSel.value, { type: t, date: dateInp.value || C.todayStr(), note: note.value.trim(), reason: reasonSel.value });
     }, '保存');
   }
   function openDisciplineDetail(studentId) {
@@ -2866,15 +2874,15 @@ select { cursor: pointer; }
     var logs = studentDisciplineLogs(studentId);
     var body = [el('p', {}, [s.class + ' ' + s.name + '，违纪 ', el('b', { text: String(logs.length) }), ' 次']) ];
     if (logs.length === 0) body.push(el('p', { class: 'muted', text: '暂无记录' }));
-    else { var table = el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '日期' }), el('th', { text: '类型' }), el('th', { text: '说明' })])])]); var tb = el('tbody', {});
-      logs.forEach(function (lg) { tb.appendChild(el('tr', {}, [el('td', { text: lg.date }), el('td', { text: lg.type }), el('td', { text: lg.note || '' })])); });
+    else { var table = el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '日期' }), el('th', { text: '类型' }), el('th', { text: '违纪说明' }), el('th', { text: '说明' })])])]); var tb = el('tbody', {});
+      logs.forEach(function (lg) { tb.appendChild(el('tr', {}, [el('td', { text: lg.date }), el('td', { text: lg.type }), el('td', { text: lg.reason || '' }), el('td', { text: lg.note || '' })])); });
       table.appendChild(tb); body.push(table); }
     openModal('违纪明细', body, null, '关闭');
   }
   function recordDiscipline(studentId, info) {
     if (!guardAdmin('记违纪')) return null;
     // 只写违纪记录，绝不改动量化分
-    var log = { id: C.uid('d'), studentId: studentId, date: info.date || C.todayStr(), type: info.type || '', note: info.note || '' };
+    var log = { id: C.uid('d'), studentId: studentId, date: info.date || C.todayStr(), type: info.type || '', note: info.note || '', reason: info.reason || '' };
     store.getState().disciplineLogs.push(log);
     store.save();
     if (state.current === 'discipline') renderDisciplineTable();
