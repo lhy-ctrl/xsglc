@@ -1,0 +1,6 @@
+.DS_Store
+node_modules/
+_android/app-shell/node_modules/
+_android/app-shell/android/build/
+_android/app-shell/android/app/build/
+*.log
