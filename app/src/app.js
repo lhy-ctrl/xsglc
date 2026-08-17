@@ -715,6 +715,16 @@
     updateCloudUI();
     return AppCloudLib.pull().then(function (payload) {
       if (!payload) { throw new Error('云端暂无数据'); }
+      // 安全检查：云端学生数明显少于本地时，提示用户确认，避免误覆盖
+      var localCount = (store.getState().students || []).length;
+      var cloudCount = (payload.students || []).length;
+      if (!READONLY_MODE && localCount > 0 && cloudCount < localCount * 0.5) {
+        if (typeof confirm === 'function' && !confirm('云端数据仅 ' + cloudCount + ' 人，本地有 ' + localCount + ' 人。\n用云端数据覆盖本地可能导致数据丢失，确定继续？')) {
+          cloudStatus.busy = false;
+          updateCloudUI();
+          return null;
+        }
+      }
       // 同时从云端 secondary_admins 表获取二级管理员列表（优先用云端密码，其次用本地管理员密码）
       var adminPwdForList = cloudAdminPassword || (adminRole === 'full' ? getAdminPass() : null);
       var listPromise = (adminPwdForList && AppCloudLib.listSecondary)
