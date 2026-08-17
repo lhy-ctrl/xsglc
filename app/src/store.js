@@ -125,7 +125,15 @@
 
     function save() {
       ensureLoaded();
-      backend.set(storageKey, JSON.stringify(state));
+      try {
+        backend.set(storageKey, JSON.stringify(state));
+      } catch (e) {
+        // localStorage 配额不足或写入失败时，提示用户但不中断操作
+        if (typeof console !== 'undefined') console.error('数据保存失败：', e);
+        if (typeof global !== 'undefined' && global.onStoreSaveError) {
+          try { global.onStoreSaveError(e); } catch (_) {}
+        }
+      }
       return state;
     }
 

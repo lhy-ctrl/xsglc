@@ -354,6 +354,12 @@
   function init(rootDoc, backend) {
     doc = rootDoc || (typeof document !== 'undefined' ? document : null);
     store = AppStoreLib.createStore(backend || AppStoreLib.localStorageBackend());
+    // 本地存储写入失败（如配额不足）时提示用户
+    if (typeof window !== 'undefined') {
+      window.onStoreSaveError = function (e) {
+        if (typeof alert === 'function') alert('本地数据保存失败（可能存储空间不足）：' + e.message + '\n建议立即导出备份，清理空间后再使用。');
+      };
+    }
     try { store.load(); } catch (e) {
       // 本地数据损坏：给出提示，不覆盖，等待用户从备份恢复
       if (typeof alert === 'function') alert('本地数据读取失败：' + e.message + '\n请用“导入恢复”从备份还原。');
@@ -417,9 +423,9 @@
     return AppCloudLib.pull().then(function (payload) {
       if (payload) {
         cloudStatus.lastPullAt = new Date();
-        // 本地版未登录云端管理员时：不覆盖本地数据（避免覆盖用户的本地修改）
-        // 云端只读版 / 本地版已登录云端管理员：以云端为准覆盖
-        var shouldOverride = READONLY_MODE || !!cloudAdminPassword;
+        // 仅云端只读版自动覆盖本地；本地版即使登录云端管理员也不自动覆盖，避免本地修改被旧云端数据冲掉
+        // 本地版需要用户手动点击"从云端拉取"才覆盖
+        var shouldOverride = READONLY_MODE;
         if (shouldOverride) {
           migrateClassFormatInPlace(payload);
           // 合并二级管理员：优先从云端 secondary_admins 表获取（listSecondary），其次用 payload 中的，最后保留本地
