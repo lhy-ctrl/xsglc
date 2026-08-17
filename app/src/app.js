@@ -1833,6 +1833,12 @@
     var r = C.formatLeave(raw, store.getState().students);
     $('#leave-result').textContent = r.text;
     var issues = $('#leave-issues'); clear(issues);
+    if (r.mismatched && r.mismatched.length) {
+      issues.appendChild(el('div', { class: 'issues', style: 'border-color:rgba(229,72,77,.6)' }, [
+        el('b', { text: '⚠ 以下 ' + r.mismatched.length + ' 人班级姓名与学生信息不对照，请核对：' }),
+        el('div', { text: r.mismatched.join('、') })
+      ]));
+    }
     if (r.removedWalkers && r.removedWalkers.length) {
       issues.appendChild(el('div', { class: 'issues', style: 'border-color:rgba(255,149,0,.5)' }, [
         el('b', { text: '⚠ 已去掉走读生 ' + r.removedWalkers.length + ' 人：' }),

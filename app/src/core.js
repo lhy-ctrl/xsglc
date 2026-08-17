@@ -483,16 +483,24 @@
     return { grades: grades, unresolved: unresolved };
   }
 
-  // 整理成固定格式；返回 { text, unresolved, removedWalkers }
+  // 整理成固定格式；返回 { text, unresolved, removedWalkers, mismatched }
   // 可选第二参数 students：当提供时，请假名单中出现的“走读生”姓名会被直接去掉，并标注提醒
   function formatLeave(raw, students) {
     var parsed = parseLeaveText(raw);
     var walkers = {};
+    var nameSet = {};       // 所有学生姓名集合（用于判断同名不同班）
+    var classNames = {};    // 班级+姓名 → true（用于精确匹配）
     var hasStudents = Array.isArray(students);
     if (hasStudents) {
-      students.forEach(function (s) { if (s && s.boarding === '走读' && s.name) walkers[s.name] = true; });
+      students.forEach(function (s) {
+        if (!s || !s.name) return;
+        nameSet[s.name] = true;
+        if (s.class) classNames[s.class + '|' + s.name] = true;
+        if (s.boarding === '走读') walkers[s.name] = true;
+      });
     }
     var removedWalkers = [];
+    var mismatched = []; // 班级姓名与学生信息不对照（同名不同班不算）
     var out = [];
     GRADES.forEach(function (grade) {
       var block = [grade + '请假名单'];
@@ -505,6 +513,7 @@
           if (idx > 0) block.push('');
           block.push(grade + cn + '班');
           var cls = g[cn];
+          var classLabel = grade + cn + '班'; // 如 高一1班
           var rooms = cls.order.slice().sort(function (a, b) { return Number(a) - Number(b); });
           rooms.forEach(function (room) {
             // 去掉走读生姓名（仅当提供学生库时）
@@ -513,6 +522,16 @@
               names = names.filter(function (n) {
                 if (walkers[n]) { removedWalkers.push(n); return false; }
                 return true;
+              });
+            }
+            // 检测班级姓名不对照
+            if (hasStudents) {
+              names.forEach(function (n) {
+                var key = classLabel + '|' + n;
+                if (!classNames[key] && !nameSet[n]) {
+                  // 学生库中既没有这个班级+姓名，也没有这个姓名（同名不同班不算）
+                  if (mismatched.indexOf(classLabel + ' ' + n) === -1) mismatched.push(classLabel + ' ' + n);
+                }
               });
             }
             if (names.length) block.push('·' + room + ' ' + names.join(' '));
@@ -525,7 +544,7 @@
     });
     // 去重提醒（同一姓名可能出现在多个房间）
     removedWalkers = removedWalkers.filter(function (v, i) { return removedWalkers.indexOf(v) === i; });
-    return { text: out.join('\n\n'), unresolved: parsed.unresolved, removedWalkers: removedWalkers };
+    return { text: out.join('\n\n'), unresolved: parsed.unresolved, removedWalkers: removedWalkers, mismatched: mismatched };
   }
 
   // ================= 每日查寝通报整理器 =================
