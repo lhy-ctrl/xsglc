@@ -13,6 +13,8 @@
   // 只读版强制全只读（连请假/通报也不可操作），并定时从云端拉取刷新
   var READONLY_MODE = (typeof global !== 'undefined' && global.READONLY_MODE) ||
     (typeof window !== 'undefined' && window.READONLY_MODE) || false;
+  // 是否APK环境（Capacitor）：未登录时也自动从云端拉取同步，登录后可编辑推送
+  var IS_APK = (typeof window !== 'undefined' && (window.Capacitor || (navigator && navigator.userAgent && /Capacitor|Android.*wv/i.test(navigator.userAgent)))) || false;
   var CLOUD_REFRESH_MS = 30000; // 只读版每 30 秒从云端拉取一次
   // 同步状态缓存：{ lastPushAt: string|null, lastError: string|null, busy: bool, lastPullAt: Date|null }
   var cloudStatus = { lastPushAt: null, lastError: null, busy: false, lastPullAt: null };
@@ -423,9 +425,8 @@
     return AppCloudLib.pull().then(function (payload) {
       if (payload) {
         cloudStatus.lastPullAt = new Date();
-        // 仅云端只读版自动覆盖本地；本地版即使登录云端管理员也不自动覆盖，避免本地修改被旧云端数据冲掉
-        // 本地版需要用户手动点击"从云端拉取"才覆盖
-        var shouldOverride = READONLY_MODE;
+        // 云端只读版：自动覆盖；APK未登录时：自动拉取同步（只读展示）；本地版登录后：不自动覆盖，避免本地修改被冲掉
+        var shouldOverride = READONLY_MODE || (IS_APK && !isAdmin);
         if (shouldOverride) {
           migrateClassFormatInPlace(payload);
           // 合并二级管理员：优先从云端 secondary_admins 表获取（listSecondary），其次用 payload 中的，最后保留本地
