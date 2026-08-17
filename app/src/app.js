@@ -961,12 +961,7 @@
             el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '量化分' })
           ])]),
           el('tbody', {}, list.map(function (w) {
-            var ws = '';
-            if (typeof w.score === 'number' && !isNaN(w.score)) {
-              if (w.score < 0) ws = 'background-color:#fc3434';
-              else if (w.score < 60) ws = 'background-color:#face3d';
-            }
-            return el('tr', { style: ws }, [
+            return el('tr', {}, [
               el('td', { text: w.class }),
               el('td', { text: C.formatName(w.name) }),
               el('td', { class: C.scoreClass(w.score), text: String(w.score) })
