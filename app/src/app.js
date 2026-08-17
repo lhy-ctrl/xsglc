@@ -2480,7 +2480,7 @@
         map[r].push(d);
       }
     });
-    var table = el('table', { class: 'dorm-room-table', id: 'dorm-room-table' });
+    var table = el('table', { class: 'dorm-room-table', id: 'dorm-room-table', style: 'table-layout:fixed;width:100%' });
     var thead = el('thead');
     thead.appendChild(el('tr', {}, [
       el('th', { text: '寝室号' }),
