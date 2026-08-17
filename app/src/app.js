@@ -1093,7 +1093,7 @@
     if (pageCount > 1) panel.appendChild(pagerNode('student', studentPage, pageCount, classGroups));
   }
 
-  // 通用翻页栏：上一页 / 页码或班级 / 下一页
+  // 通用翻页栏：上一页 / 页码或班级 / 下一页 / 跳转
   function pagerNode(kind, page, pageCount, classGroups) {
     var nav = el('div', { class: 'pager' });
     nav.appendChild(el('button', { class: 'btn pager-btn', onclick: function () {
@@ -1111,6 +1111,19 @@
       if (kind === 'student') { studentPage = Math.min(pageCount, studentPage + 1); renderStudentTable(); }
       else { scorePage = Math.min(pageCount, scorePage + 1); renderScoreTable(); }
     }, disabled: page >= pageCount }, ['下一页']));
+    // 跳转控件
+    var jumpInput = el('input', { type: 'number', class: 'pager-jump-input', min: '1', max: String(pageCount), placeholder: '页码', style: 'width:50px;margin-left:8px;padding:2px 4px;font-size:12px' });
+    var jumpBtn = el('button', { class: 'btn pager-btn', style: 'margin-left:4px;padding:2px 8px;font-size:12px', onclick: function () {
+      var v = parseInt(jumpInput.value, 10);
+      if (isNaN(v) || v < 1) v = 1;
+      if (v > pageCount) v = pageCount;
+      if (kind === 'student') { studentPage = v; renderStudentTable(); }
+      else { scorePage = v; renderScoreTable(); }
+    } }, ['跳转']);
+    jumpInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); jumpBtn.click(); }
+    });
+    nav.appendChild(el('span', { class: 'pager-jump', style: 'margin-left:8px' }, [jumpInput, jumpBtn]));
     return nav;
   }
 
