@@ -1038,7 +1038,7 @@
     var countText = '共 ' + total + ' 名学生 · ' + pageCount + ' 个班级';
     if (pageCount > 1) countText += ' · 第 ' + studentPage + '/' + pageCount + ' 页（' + (currentClass ? currentClass.name : '') + '）';
     panel.appendChild(el('div', { class: 'muted', id: 'student-count', text: countText }));
-    var table = el('table', {}, [
+    var table = el('table', { style: 'table-layout:fixed;width:100%' }, [
       el('thead', {}, [el('tr', {}, [
         el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '性别' }),
         el('th', { text: '班扣' }), el('th', { text: '班奖' }), el('th', { text: '政扣' }), el('th', { text: '政奖' }),
@@ -1110,14 +1110,14 @@
       var raw = cur[field];
       var input;
       if (opts.select) {
-        input = el('select', { 'data-field': field });
+        input = el('select', { 'data-field': field, style: 'width:100%;box-sizing:border-box' });
         opts.select.forEach(function (opt) {
           input.appendChild(el('option', { value: opt }, [opt]));
         });
         if (opts.emptyLabel) input.appendChild(el('option', { value: '' }, [opts.emptyLabel]));
         input.value = raw || '';
       } else {
-        input = el('input', { type: 'text', 'data-field': field, value: raw == null ? '' : String(raw) });
+        input = el('input', { type: 'text', 'data-field': field, value: raw == null ? '' : String(raw), style: 'width:100%;box-sizing:border-box' });
       }
       clear(td);
       td.appendChild(input);
@@ -1156,22 +1156,17 @@
       el('option', { value: '男' }, ['男']), el('option', { value: '女' }, ['女'])
     ]);
     gender.value = data.gender || '男';
-    var boarding = el('select', { id: 'f-boarding' }, [
-      el('option', { value: '' }, ['未设']), el('option', { value: '走读' }, ['走读']), el('option', { value: '住校' }, ['住校'])
-    ]);
-    boarding.value = data.boarding || '';
     var score = el('input', { type: 'number', id: 'f-score', value: (data.score != null ? String(data.score) : '100') });
     return {
       nodes: [
         el('div', { class: 'form-row' }, [el('label', { text: '班级（如 高一3班）' }), cls]),
         el('div', { class: 'form-row' }, [el('label', { text: '姓名' }), name]),
         el('div', { class: 'form-row' }, [el('label', { text: '性别' }), gender]),
-        el('div', { class: 'form-row' }, [el('label', { text: '走读/住校' }), boarding]),
         el('div', { class: 'form-row' }, [el('label', { text: '量化分' }), score])
       ],
       read: function () {
         var sc = Number(score.value);
-        return { class: cls.value.trim(), name: name.value.trim(), gender: gender.value, boarding: boarding.value, score: isNaN(sc) ? 100 : sc };
+        return { class: cls.value.trim(), name: name.value.trim(), gender: gender.value, score: isNaN(sc) ? 100 : sc };
       }
     };
   }
@@ -1477,7 +1472,7 @@
       }
       panel.appendChild(el('div', { class: 'muted', id: 'score-count', text: countText }));
     }
-    var table = el('table', {}, [el('thead', {}, [el('tr', {}, [
+    var table = el('table', { style: 'table-layout:fixed;width:100%' }, [el('thead', {}, [el('tr', {}, [
       el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '性别' }),
       el('th', { text: '班扣' }), el('th', { text: '班奖' }), el('th', { text: '政扣' }), el('th', { text: '政奖' }),
       el('th', { text: '量化分' }), el('th', { text: '操作' })
@@ -1655,24 +1650,29 @@
     if (!guardAdmin('记违纪')) return;
     var students = C.sortStudentsByClass(store.getState().students);
     if (students.length === 0) { if (typeof alert === 'function') alert('请先在“学生信息”里添加学生'); return; }
-    var stuSel = el('select', { id: 'dr-student' }, students.map(function (s) { return el('option', { value: s.id }, [s.class + ' ' + s.name]); }));
-    if (presetId) stuSel.value = presetId;
+    var stuList = el('datalist', { id: 'dr-student-list' }, students.map(function (s) { return el('option', { value: s.class + ' ' + s.name }); }));
+    var stuInp = el('input', { type: 'text', id: 'dr-student', list: 'dr-student-list', placeholder: '输入或选择学生（班级 姓名）' });
+    if (presetId) { var ps = students.filter(function (s) { return s.id === presetId; })[0]; if (ps) stuInp.value = ps.class + ' ' + ps.name; }
     var reasonSel = el('select', { id: 'dr-reason' }, [
       el('option', { value: '', text: '（不选）' }),
       el('option', { value: '吸烟' }, ['吸烟']),
       el('option', { value: '携带违禁品' }, ['携带违禁品']),
       el('option', { value: '打架' }, ['打架']),
-      el('option', { value: '谈恋爱' }, ['谈恋爱'])
+      el('option', { value: '谈恋爱' }, ['谈恋爱']),
+      el('option', { value: '顶撞老师' }, ['顶撞老师'])
     ]);
     var dateInp = el('input', { type: 'date', id: 'dr-date', value: C.todayStr() });
     var note = el('input', { type: 'text', id: 'dr-note', placeholder: '说明（可选）' });
     openModal('记一笔违纪', [
-      el('div', { class: 'form-row' }, [el('label', { text: '学生' }), stuSel]),
+      el('div', { class: 'form-row' }, [el('label', { text: '学生' }), stuInp, stuList]),
       el('div', { class: 'form-row' }, [el('label', { text: '违纪说明' }), reasonSel]),
       el('div', { class: 'form-row' }, [el('label', { text: '日期' }), dateInp]),
       el('div', { class: 'form-row' }, [el('label', { text: '说明' }), note])
     ], function () {
-      recordDiscipline(stuSel.value, { date: dateInp.value || C.todayStr(), note: note.value.trim(), reason: reasonSel.value });
+      var val = stuInp.value.trim();
+      var matched = students.filter(function (s) { return (s.class + ' ' + s.name) === val || s.name === val; })[0];
+      if (!matched) { if (typeof alert === 'function') alert('未找到匹配的学生，请检查输入'); return false; }
+      recordDiscipline(matched.id, { date: dateInp.value || C.todayStr(), note: note.value.trim(), reason: reasonSel.value });
     }, '保存');
   }
   // 更改违纪说明：列出该生全部违纪记录，可逐条修改 reason（违纪原因）
@@ -1688,7 +1688,8 @@
         el('option', { value: '吸烟' }, ['吸烟']),
         el('option', { value: '携带违禁品' }, ['携带违禁品']),
         el('option', { value: '打架' }, ['打架']),
-        el('option', { value: '谈恋爱' }, ['谈恋爱'])
+        el('option', { value: '谈恋爱' }, ['谈恋爱']),
+        el('option', { value: '顶撞老师' }, ['顶撞老师'])
       ]);
       sel.value = lg.reason || '';
       selByLog[lg.id] = sel;
