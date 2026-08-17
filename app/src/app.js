@@ -946,7 +946,7 @@
           el('tbody', {}, list.map(function (w) {
             return el('tr', {}, [
               el('td', { text: w.class }),
-              el('td', { text: w.name }),
+              el('td', { text: C.formatName(w.name) }),
               el('td', { class: C.scoreClass(w.score), text: String(w.score) })
             ]);
           }))
@@ -1054,7 +1054,7 @@
         : { banKou: 0, banJiang: 0, zhengKou: 0, zhengJiang: 0, score: Number(s.score) || 100 };
       var tr = el('tr', { 'data-id': s.id }, [
         canEditStudents() ? editableCell('class', s.class, s.id, tr) : el('td', { text: s.class }),
-        canEditStudents() ? editableCell('name', s.name, s.id, tr) : el('td', { text: s.name }),
+        canEditStudents() ? editableCell('name', C.formatName(s.name), s.id, tr) : el('td', { text: C.formatName(s.name) }),
         canEditStudents() ? editableCell('gender', s.gender, s.id, tr, { select: ['男', '女'] }) : el('td', { text: s.gender }),
         el('td', { text: String(totals.banKou) }),
         el('td', { text: String(totals.banJiang) }),
@@ -1475,22 +1475,19 @@
     var table = el('table', { style: 'table-layout:fixed;width:100%' }, [el('thead', {}, [el('tr', {}, [
       el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '性别' }),
       el('th', { text: '班扣' }), el('th', { text: '班奖' }), el('th', { text: '政扣' }), el('th', { text: '政奖' }),
-      el('th', { text: '量化分' }), el('th', { text: '操作' })
+      el('th', { text: '量化分' })
     ])])]);
     var tb = el('tbody', {});
     pageList.forEach(function (s) {
       var ms = scoreMonths.length ? C.monthScore(sm, s.id, scoreMonth) : { banKou: 0, banJiang: 0, zhengKou: 0, zhengJiang: 0 };
       var q = scoreMonths.length ? C.computeQuantized(sm, s.id, scoreMonths) : { score: s.score };
       tb.appendChild(el('tr', { 'data-id': s.id }, [
-        el('td', { text: s.class }), el('td', { text: s.name }), el('td', { text: s.gender }),
+        el('td', { text: s.class }), el('td', { text: C.formatName(s.name) }), el('td', { text: s.gender }),
         scoreMonthCell(s.id, 'banKou', ms.banKou),
         scoreMonthCell(s.id, 'banJiang', ms.banJiang),
         scoreMonthCell(s.id, 'zhengKou', ms.zhengKou),
         scoreMonthCell(s.id, 'zhengJiang', ms.zhengJiang),
-        el('td', { class: C.scoreClass(q.score), text: String(q.score) }),
-        el('td', {}, [
-          el('span', { class: 'link', onclick: function () { openScoreDetail(s.id); } }, ['明细'])
-        ])
+        el('td', { class: C.scoreClass(q.score), text: String(q.score) })
       ]));
     });
     table.appendChild(tb); panel.appendChild(table);
@@ -1555,7 +1552,7 @@
   function openScoreDetail(studentId) {
     var s = store.getState().students.filter(function (x) { return x.id === studentId; })[0]; if (!s) return;
     var logs = studentScoreLogs(studentId);
-    var body = [el('p', {}, [s.class + ' ' + s.name + '，当前量化分：', el('b', { text: String(s.score) })])];
+    var body = [el('p', {}, [s.class + ' ' + C.formatName(s.name) + '，当前量化分：', el('b', { text: String(s.score) })])];
     if (logs.length === 0) body.push(el('p', { class: 'muted', text: '暂无记录' }));
     else {
       var table = el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '日期' }), el('th', { text: '项目/原因' }), el('th', { text: '分值' }), el('th', { text: '记后分' })])])]);
@@ -1624,7 +1621,7 @@
       var cnt = counts[s.id] || 0;
       var reasons = C.studentDisciplineReasons(st.disciplineLogs, s.id);
       tb.appendChild(el('tr', { 'data-id': s.id }, [
-        el('td', { text: s.class }), el('td', { text: s.name }),
+        el('td', { text: s.class }), el('td', { text: C.formatName(s.name) }),
         el('td', { class: (cnt > 0 ? 'score-red' : ''), text: String(cnt) }),
         el('td', { class: 'disc-reasons', text: reasons.length ? reasons.join('、') : '—' }),
         el('td', { class: 'ops' }, [
@@ -2758,7 +2755,8 @@
       panel.appendChild(el('div', { class: 'dorm-blank-line', text: '空白宿舍：' + blanks.map(function (a) { return a.area + ' ' + a.blank + ' 间'; }).join(' · ') }));
     }
     // 汇总住校男女生
-    panel.appendChild(el('div', { class: 'dorm-summary-line', text: '住校男生 ' + d.male + ' 人 · 住校女生 ' + d.female + ' 人' }));
+    var totalCap = d.areas.reduce(function (sum, a) { return sum + a.totalCapacity; }, 0);
+    panel.appendChild(el('div', { class: 'dorm-summary-line', text: '共可住 ' + totalCap + ' 人 · 已住男生 ' + d.male + ' 人 · 已住女生 ' + d.female + ' 人' }));
     return panel;
   }
 

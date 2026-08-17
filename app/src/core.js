@@ -219,6 +219,13 @@
   function studentGrade(cls) { var pc = parseClass(cls); return pc ? pc.grade : ''; }
   function studentClassNo(cls) { var pc = parseClass(cls); return pc ? pc.classNo : null; }
 
+  // 姓名对齐：两个字中间加全角空格，三个字/四个字保持原样
+  function formatName(name) {
+    var s = String(name == null ? '' : name);
+    if (s.length === 2) return s.charAt(0) + '　' + s.charAt(1);
+    return s;
+  }
+
   // 学生筛选
   function filterStudents(list, opts) {
     opts = opts || {};
@@ -876,6 +883,7 @@
     scoreClass: scoreClass,
     studentGrade: studentGrade,
     studentClassNo: studentClassNo,
+    formatName: formatName,
     filterStudents: filterStudents,
     sortStudentsByClass: sortStudentsByClass,
     buildDormMapFromRows: buildDormMapFromRows,
