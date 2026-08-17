@@ -962,7 +962,7 @@
   }
 
   // ---------- 学生信息 ----------
-  var studentsFilter = { grade: '', gender: '', keyword: '' };
+  var studentsFilter = { grade: '', classLabel: '', gender: '', keyword: '' };
   var scoreFilter = { grade: '高一', keyword: '', classLabel: '' };
   var scoreSort = 'class';
   var discFilter = { grade: '', keyword: '' };
@@ -976,7 +976,9 @@
     var st = store.getState();
     // 工具栏
     var fileInput = el('input', { type: 'file', id: 'student-file', accept: '.csv,.xlsx,.xls', style: 'display:none', onchange: onStudentFile });
-    var gradeSel = el('select', { id: 'flt-grade', onchange: function (e) { studentsFilter.grade = e.target.value; studentPage = 1; renderStudentTable(); } },
+    var classSel = el('select', { id: 'flt-class', onchange: function (e) { studentsFilter.classLabel = e.target.value; studentPage = 1; renderStudentTable(); } },
+      [el('option', { value: '' }, ['全部班级'])]);
+    var gradeSel = el('select', { id: 'flt-grade', onchange: function (e) { studentsFilter.grade = e.target.value; studentsFilter.classLabel = ''; studentPage = 1; updateClassOptions(classSel, e.target.value); renderStudentTable(); } },
       [el('option', { value: '' }, ['全部年级'])].concat(C.GRADES.map(function (g) { return el('option', { value: g }, [g]); })));
     var genderSel = el('select', { id: 'flt-gender', onchange: function (e) { studentsFilter.gender = e.target.value; studentPage = 1; renderStudentTable(); } },
       [el('option', { value: '' }, ['全部性别']), el('option', { value: '男' }, ['男']), el('option', { value: '女' }, ['女'])]);
@@ -986,11 +988,30 @@
       canEditStudents() ? el('button', { class: 'btn primary', id: 'btn-import-student', onclick: function () { fileInput.click(); } }, ['批量导入']) : null,
       canEditStudents() ? el('button', { class: 'btn', id: 'btn-add-student', onclick: openAddStudent }, ['手动添加']) : null,
       el('span', { class: 'topbar-spacer' }),
-      search, gradeSel, genderSel, fileInput
+      search, gradeSel, classSel, genderSel, fileInput
     ]);
     root.appendChild(toolbar);
     root.appendChild(el('div', { class: 'panel', id: 'student-panel' }));
+    updateClassOptions(classSel, studentsFilter.grade);
+    if (studentsFilter.classLabel) classSel.value = studentsFilter.classLabel;
     renderStudentTable();
+  }
+
+  function updateClassOptions(sel, grade) {
+    var classes = {};
+    store.getState().students.forEach(function (s) {
+      if (!grade || C.studentGrade(s.class) === grade) classes[s.class] = true;
+    });
+    var opts = [el('option', { value: '' }, ['全部班级'])].concat(
+      Object.keys(classes).sort(function (a, b) {
+        var ga = C.gradeIndex(C.studentGrade(a)), gb = C.gradeIndex(C.studentGrade(b));
+        if (ga !== gb) return ga - gb;
+        var ca = C.studentClassNo(a) || 999, cb = C.studentClassNo(b) || 999;
+        return ca - cb;
+      }).map(function (c) { return el('option', { value: c }, [c]); })
+    );
+    clear(sel);
+    opts.forEach(function (o) { sel.appendChild(o); });
   }
 
   function renderStudentTable() {
