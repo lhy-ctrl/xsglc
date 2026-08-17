@@ -961,7 +961,12 @@
             el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '量化分' })
           ])]),
           el('tbody', {}, list.map(function (w) {
-            return el('tr', {}, [
+            var ws = '';
+            if (typeof w.score === 'number' && !isNaN(w.score)) {
+              if (w.score < 0) ws = 'background-color:#fc3434';
+              else if (w.score < 60) ws = 'background-color:#face3d';
+            }
+            return el('tr', { style: ws }, [
               el('td', { text: w.class }),
               el('td', { text: C.formatName(w.name) }),
               el('td', { class: C.scoreClass(w.score), text: String(w.score) })
@@ -1070,7 +1075,12 @@
       var hasMonthly = (st.scoreMonthly || []).some(function (x) { return x.studentId === s.id; });
       var totals = hasMonthly ? C.studentScoreTotals(st.scoreMonthly, s.id)
         : { banKou: 0, banJiang: 0, zhengKou: 0, zhengJiang: 0, score: Number(s.score) || 100 };
-      var tr = el('tr', { 'data-id': s.id }, [
+      var rowStyle = '';
+      if (typeof totals.score === 'number' && !isNaN(totals.score)) {
+        if (totals.score < 0) rowStyle = 'background-color:#fc3434';
+        else if (totals.score < 60) rowStyle = 'background-color:#face3d';
+      }
+      var tr = el('tr', { 'data-id': s.id, style: rowStyle }, [
         canEditStudents() ? editableCell('class', s.class, s.id, tr) : el('td', { text: s.class }),
         canEditStudents() ? editableCell('name', C.formatName(s.name), s.id, tr) : el('td', { text: C.formatName(s.name) }),
         canEditStudents() ? editableCell('gender', s.gender, s.id, tr, { select: ['男', '女'] }) : el('td', { text: s.gender }),
@@ -1533,7 +1543,12 @@
     pageList.forEach(function (s) {
       var ms = scoreMonths.length ? C.monthScore(sm, s.id, scoreMonth) : { banKou: 0, banJiang: 0, zhengKou: 0, zhengJiang: 0 };
       var q = scoreMonths.length ? C.computeQuantized(sm, s.id, scoreMonths) : { score: s.score };
-      tb.appendChild(el('tr', { 'data-id': s.id }, [
+      var rowStyle = '';
+      if (typeof q.score === 'number' && !isNaN(q.score)) {
+        if (q.score < 0) rowStyle = 'background-color:#fc3434';
+        else if (q.score < 60) rowStyle = 'background-color:#face3d';
+      }
+      tb.appendChild(el('tr', { 'data-id': s.id, style: rowStyle }, [
         el('td', { text: s.class }), el('td', { text: C.formatName(s.name) }), el('td', { text: s.gender }),
         scoreMonthCell(s.id, 'banKou', ms.banKou),
         scoreMonthCell(s.id, 'banJiang', ms.banJiang),
