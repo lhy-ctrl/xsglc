@@ -1003,6 +1003,7 @@
     var toolbar = el('div', { class: 'toolbar' }, [
       canEditStudents() ? el('button', { class: 'btn primary', id: 'btn-import-student', onclick: function () { fileInput.click(); } }, ['批量导入']) : null,
       canEditStudents() ? el('button', { class: 'btn', id: 'btn-add-student', onclick: openAddStudent }, ['手动添加']) : null,
+      canEditStudents() ? el('button', { class: 'btn danger', id: 'btn-clear-students', onclick: deleteAllStudents }, ['删除所有学生']) : null,
       el('span', { class: 'topbar-spacer' }),
       search, gradeSel, classSel, genderSel, fileInput
     ]);
@@ -1256,6 +1257,27 @@
       store.setState(st); renderStudentTable();
       return true;
     }, '删除');
+  }
+
+  function deleteAllStudents() {
+    if (!guardFull('删除所有学生')) return;
+    var count = store.getState().students.length;
+    if (count === 0) { if (typeof alert === 'function') alert('当前没有学生数据'); return; }
+    openModal('删除所有学生', [
+      el('p', { class: 'muted', text: '确定删除全部 ' + count + ' 名学生？' }),
+      el('p', { class: 'muted', style: 'color:#e5484d', text: '所有学生的量化流水、违纪记录与按月量化数据将一并清空，此操作不可恢复！' })
+    ], function () {
+      var st = store.getState();
+      st.students = [];
+      st.scoreLogs = [];
+      st.disciplineLogs = [];
+      st.scoreMonthly = [];
+      studentPage = 1;
+      store.setState(st);
+      renderStudentTable();
+      if (typeof alert === 'function') alert('已清空全部学生数据');
+      return true;
+    }, '全部删除');
   }
 
   // 导入
