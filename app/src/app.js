@@ -2354,24 +2354,47 @@
 
       var tbody = el('tbody');
       var totalActual = 0;
-      staffList.forEach(function (person) {
+      // 收集所有行（员工 + 额外行）
+      var allRows = staffList.slice();
+      Object.keys(salaryData).forEach(function (key) {
+        if (key.indexOf('extra_') === 0 && salaryData[key].isExtra) {
+          allRows.push({ id: key, name: salaryData[key].name || '', gender: salaryData[key].gender || 'male', isExtra: true });
+        }
+      });
+      allRows.forEach(function (person) {
         var sid = person.id;
         var s = salaryData[sid] || {
           workDays: 30, baseSalary: 3500, attendance: 300, performance: 1200,
           allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: ''
         };
-        // 从教官绩效记录自动获取当月扣除和原因
-        var empDed = getEmployeeDeduction(sid, salaryYear, salaryMonth);
-        if (empDed.amount > 0) {
-          s.deduction = empDed.amount;
-          s.reason = empDed.reason;
+        // 从教官绩效记录自动获取当月扣除和原因（仅正式员工）
+        if (!person.isExtra) {
+          var empDed = getEmployeeDeduction(sid, salaryYear, salaryMonth);
+          if (empDed.amount > 0) {
+            s.deduction = empDed.amount;
+            s.reason = empDed.reason;
+          }
         }
         var actual = calcActual(s);
         totalActual += actual;
 
         var tr = el('tr');
-        tr.appendChild(el('td', { class: 'salary-name', text: formatName(person.name) }));
-        tr.appendChild(el('td', { class: 'salary-center', text: person.gender === 'male' ? '男' : '女' }));
+        // 姓名列
+        if (person.isExtra) {
+          var nameInput = el('input', { type: 'text', value: person.name || '', placeholder: '姓名' });
+          nameInput.oninput = function () { s.name = this.value; s.isExtra = true; salaryData[sid] = s; saveSalaryData(salaryYear, salaryMonth, salaryData); };
+          tr.appendChild(el('td', { class: 'salary-name' }, [nameInput]));
+          // 性别列（可编辑）
+          var genderSel = el('select', { style: 'width:100%;border:none;background:transparent;font-size:12px;text-align:center' });
+          genderSel.appendChild(el('option', { value: 'male', text: '男' }));
+          genderSel.appendChild(el('option', { value: 'female', text: '女' }));
+          genderSel.value = person.gender || 'male';
+          genderSel.onchange = function () { s.gender = this.value; salaryData[sid] = s; saveSalaryData(salaryYear, salaryMonth, salaryData); };
+          tr.appendChild(el('td', { class: 'salary-center' }, [genderSel]));
+        } else {
+          tr.appendChild(el('td', { class: 'salary-name', text: formatName(person.name) }));
+          tr.appendChild(el('td', { class: 'salary-center', text: person.gender === 'male' ? '男' : '女' }));
+        }
         // 工作时间
         var daysInput = el('input', { type: 'number', value: s.workDays, min: '0', max: '31', step: '0.5' });
         daysInput.oninput = function () { s.workDays = parseFloat(this.value) || 0; updateRow(); };
@@ -2433,6 +2456,21 @@
       });
       table.appendChild(tbody);
       salaryWrap.appendChild(table);
+
+      // 添加一行按钮
+      var addRowBtn = el('div', { class: 'salary-add-row' }, [
+        el('button', { class: 'btn', onclick: function () {
+          var extraId = 'extra_' + Date.now();
+          salaryData[extraId] = {
+            isExtra: true, name: '', gender: 'male',
+            workDays: 30, baseSalary: 3500, attendance: 300, performance: 1200,
+            allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: ''
+          };
+          saveSalaryData(salaryYear, salaryMonth, salaryData);
+          renderSalaryTable();
+        } }, ['+ 添加一行'])
+      ]);
+      salaryWrap.appendChild(addRowBtn);
 
       // 底部备注 + 总发工资
       var footer = el('div', { class: 'salary-footer' });
