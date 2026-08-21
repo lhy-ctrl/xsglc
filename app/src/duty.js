@@ -3215,9 +3215,21 @@ function DutyMainPage({
     staff,
     groupRotation
   } = useStore();
-  const [mode, setMode] = React.useState('all'); // all / group / gate
+  const [mode, setModeState] = React.useState(() => {
+    try {
+      return localStorage.getItem('duty_mode') || 'all';
+    } catch (e) {
+      return 'all';
+    }
+  });
   const [customAssignments, setCustomAssignments] = React.useState({});
   const [toast, setToast] = React.useState(null);
+  const setMode = m => {
+    setModeState(m);
+    try {
+      localStorage.setItem('duty_mode', m);
+    } catch (e) {}
+  };
   const showToast = msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
@@ -3331,19 +3343,7 @@ function DutyMainPage({
     onClick: () => setMode(tab.key)
   }, tab.label))), /*#__PURE__*/React.createElement("div", {
     className: "duty-row"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "duty-content"
-  }, mode === 'gate' ? /*#__PURE__*/React.createElement(GatePage, {
-    onNavigate: onNavigate,
-    embedded: true
-  }) : /*#__PURE__*/React.createElement(SchedulePage, {
-    mode: mode,
-    onNavigate: onNavigate,
-    embedded: true,
-    customAssignments: customAssignments,
-    setCustomAssignments: setCustomAssignments,
-    showToast: showToast
-  })), (mode === 'all' || mode === 'group') && /*#__PURE__*/React.createElement("div", {
+  }, (mode === 'all' || mode === 'group') && /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-panel"
   }, /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-header"
@@ -3410,7 +3410,19 @@ function DutyMainPage({
     className: "duty-custom-post-meta"
   }, "\u9ED8\u8BA4\u529E\u516C\u5BA4\u4EBA\u5458")), /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-readonly-value"
-  }, getCustomPerson('office', 0)?.name || '—'))))), toast && /*#__PURE__*/React.createElement("div", {
+  }, getCustomPerson('office', 0)?.name || '—')))), /*#__PURE__*/React.createElement("div", {
+    className: "duty-content"
+  }, mode === 'gate' ? /*#__PURE__*/React.createElement(GatePage, {
+    onNavigate: onNavigate,
+    embedded: true
+  }) : /*#__PURE__*/React.createElement(SchedulePage, {
+    mode: mode,
+    onNavigate: onNavigate,
+    embedded: true,
+    customAssignments: customAssignments,
+    setCustomAssignments: setCustomAssignments,
+    showToast: showToast
+  }))), toast && /*#__PURE__*/React.createElement("div", {
     className: "toast"
   }, toast));
 }

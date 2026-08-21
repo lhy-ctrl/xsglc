@@ -1,8 +1,15 @@
 function DutyMainPage({ onNavigate }) {
   const { staff, groupRotation } = useStore();
-  const [mode, setMode] = React.useState('all'); // all / group / gate
+  const [mode, setModeState] = React.useState(() => {
+    try { return localStorage.getItem('duty_mode') || 'all'; } catch (e) { return 'all'; }
+  });
   const [customAssignments, setCustomAssignments] = React.useState({});
   const [toast, setToast] = React.useState(null);
+
+  const setMode = (m) => {
+    setModeState(m);
+    try { localStorage.setItem('duty_mode', m); } catch (e) {}
+  };
 
   const showToast = (msg) => {
     setToast(msg);
@@ -71,24 +78,9 @@ function DutyMainPage({ onNavigate }) {
         ))}
       </div>
 
-      {/* 内容区：排班数据 + 自定义岗位 并列一排 */}
+      {/* 内容区：自定义岗位(左) + 排班数据(右) 并列一排 */}
       <div className="duty-row">
-        <div className="duty-content">
-          {mode === 'gate' ? (
-            <GatePage onNavigate={onNavigate} embedded />
-          ) : (
-            <SchedulePage
-              mode={mode}
-              onNavigate={onNavigate}
-              embedded
-              customAssignments={customAssignments}
-              setCustomAssignments={setCustomAssignments}
-              showToast={showToast}
-            />
-          )}
-        </div>
-
-        {/* 右侧：自定义岗位人员 */}
+        {/* 左侧：自定义岗位人员 */}
         {(mode === 'all' || mode === 'group') && (
           <div className="duty-custom-panel">
           <div className="duty-custom-header">
@@ -159,6 +151,22 @@ function DutyMainPage({ onNavigate }) {
           </div>
         </div>
       )}
+
+        {/* 右侧：排班数据 */}
+        <div className="duty-content">
+          {mode === 'gate' ? (
+            <GatePage onNavigate={onNavigate} embedded />
+          ) : (
+            <SchedulePage
+              mode={mode}
+              onNavigate={onNavigate}
+              embedded
+              customAssignments={customAssignments}
+              setCustomAssignments={setCustomAssignments}
+              showToast={showToast}
+            />
+          )}
+        </div>
       </div>
 
       {toast && <div className="toast">{toast}</div>}
