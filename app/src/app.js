@@ -1451,11 +1451,14 @@
       [el('option', { value: '' }, ['全部年级'])].concat(C.GRADES.map(function (g) { return el('option', { value: g }, [g]); })));
     gradeSel.value = scoreFilter.grade || '';
     var search = el('input', { type: 'text', id: 'score-kw', placeholder: '搜索姓名/班级', oninput: function (e) { scoreFilter.keyword = e.target.value; scorePage = 1; renderScoreTable(); } });
-    // 所有筛选和月份放在一排
+    // 所有筛选和月份放在一排：左侧搜索+年级+月份，右侧班级+排序
     var monthRow = el('div', { class: 'month-row' });
-    // 搜索框 + 年级
+    // 左侧：搜索框 + 年级
     monthRow.appendChild(search);
     monthRow.appendChild(gradeSel);
+    // 月份栏（含添加/删除按钮）
+    var monthBar = el('div', { class: 'month-bar', id: 'score-month-bar' });
+    monthRow.appendChild(monthBar);
     // ① 班级筛选下拉（跟随年级：只列出当前年级的班级）
     var classSel = el('select', { id: 'score-flt-class', onchange: function (e) { scoreFilter.classLabel = e.target.value; scorePage = 1; renderScoreTable(); } });
     function renderClassOptions() {
@@ -1485,9 +1488,6 @@
       el('label', { text: '排序' }), sortSel
     ]);
     monthRow.appendChild(monthTools);
-    // 月份栏（含添加/删除按钮）
-    var monthBar = el('div', { class: 'month-bar', id: 'score-month-bar' });
-    monthRow.appendChild(monthBar);
     root.appendChild(monthRow);
     root.appendChild(el('p', { class: 'muted', id: 'score-formula-hint' }));
     root.appendChild(el('div', { class: 'panel', id: 'score-panel' }));

@@ -19,11 +19,34 @@ function StaffPage({ onNavigate, canEdit }) {
 
   const handleAdd = () => {
     if (!editable) { showToast('当前账号无修改权限'); return; }
-    const maleCount = staff.filter(p => p.gender === 'male').length;
-    const defaultGender = maleCount < 7 ? 'male' : 'female';
-    const defaultGroup = staff.length % 2 === 0 ? 'A' : 'B';
-    addStaff({ name: '', gender: defaultGender, group: defaultGroup, role: 'member' });
+    const count = staff.length;
+    let role = 'member', group = 'A', gender = 'male';
+    if (count === 0) {
+      role = 'captain'; group = 'A'; gender = 'male';
+    } else if (count === 1) {
+      role = 'vice_captain'; group = 'A'; gender = 'male';
+    } else if (count === 2) {
+      role = 'leader_a'; group = 'A'; gender = 'male';
+    } else if (count >= 3 && count <= 7) {
+      role = 'member'; group = 'A'; gender = count % 2 === 0 ? 'female' : 'male';
+    } else if (count === 8) {
+      role = 'leader_b'; group = 'B'; gender = 'male';
+    } else {
+      role = 'member'; group = 'B'; gender = count % 2 === 0 ? 'female' : 'male';
+    }
+    addStaff({ name: '', gender, group, role });
   };
+
+  // 排序：队长、副队长、A组组长、A组员工、B组组长、B组员工
+  const roleOrder = { captain: 0, vice_captain: 1, leader_a: 2, member: 3, leader_b: 4 };
+  const sortedStaff = [...staff].sort((a, b) => {
+    const aOrder = roleOrder[a.role] ?? 5;
+    const bOrder = roleOrder[b.role] ?? 5;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    // 同角色内按A组在前、B组在后，再按id排序
+    if (a.group !== b.group) return a.group === 'A' ? -1 : 1;
+    return a.id - b.id;
+  });
 
   const handleDelete = (id) => {
     if (!editable) { showToast('当前账号无修改权限'); return; }
@@ -59,8 +82,8 @@ function StaffPage({ onNavigate, canEdit }) {
   const captain = staff.find(p => p.role === 'captain');
   const viceCaptain = staff.find(p => p.role === 'vice_captain');
 
-  // 筛选后的人员列表
-  const filteredStaff = staff.filter(p => {
+  // 筛选后的人员列表（基于排序后的列表）
+  const filteredStaff = sortedStaff.filter(p => {
     if (!filter) return true;
     if (filter === 'male') return p.gender === 'male';
     if (filter === 'female') return p.gender === 'female';

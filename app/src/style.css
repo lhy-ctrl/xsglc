@@ -307,18 +307,18 @@ td[data-cat] input { width: 100%; min-width: 48px; box-sizing: border-box; paddi
 
 /* 量化管理分：月份 tab */
 .month-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 2px 0 12px; }
-.month-bar { display: flex; gap: 8px; flex-wrap: wrap; }
-.month-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.month-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.month-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto; }
 .month-tools label { font-size: 12.5px; color: rgba(70,76,88,.75); font-weight: 600; }
-.month-tools select { font-size: 12.5px; padding: 5px 8px; border-radius: 8px; border: 1px solid rgba(30,38,54,.16); background: #fff; color: #333; }
+.month-tools select { font-size: 13px; padding: 7px 8px; border-radius: 8px; border: 1px solid rgba(30,38,54,.16); background: #fff; color: #333; }
 /* 大数据量分页栏 */
 .pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(30,38,54,.08); }
 .pager-btn { padding: 6px 16px; font-size: 13px; }
 .pager-btn[disabled] { opacity: .45; cursor: not-allowed; }
 .pager-info { font-size: 13px; color: rgba(70,76,88,.8); font-weight: 600; min-width: 56px; text-align: center; }
 .month-tab {
-  cursor: pointer; user-select: none; font-size: 12.5px; font-weight: 600;
-  padding: 5px 14px; border-radius: 999px;
+  cursor: pointer; user-select: none; font-size: 13px; font-weight: 600;
+  padding: 7px 14px; border-radius: 999px;
   color: rgba(70,76,88,.8);
   background: rgba(255,255,255,.5);
   border: 1px solid rgba(30,38,54,.1);
@@ -338,8 +338,8 @@ td[data-cat] input { width: 100%; min-width: 48px; box-sizing: border-box; paddi
 .month-tab.active .month-tab-del { color: #fff; opacity: .8; }
 .month-tab.active .month-tab-del:hover { color: #fff; opacity: 1; }
 .month-add {
-  cursor: pointer; user-select: none; font-size: 12.5px; font-weight: 600;
-  padding: 5px 14px; border-radius: 999px; color: #2f6fe0;
+  cursor: pointer; user-select: none; font-size: 13px; font-weight: 600;
+  padding: 7px 14px; border-radius: 999px; color: #2f6fe0;
   background: rgba(90,140,255,.08); border: 1px dashed rgba(60,130,255,.45);
   transition: all .16s ease;
 }
