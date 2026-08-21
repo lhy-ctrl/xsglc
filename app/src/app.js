@@ -351,7 +351,7 @@
     report: { title: '每日通报', render: renderReport },
     employee: { title: '教官绩效', render: renderEmployee },
     duty: { title: '值班排班', render: renderDutySchedule },
-    dutyStaff: { title: '排班人员', render: renderDutyStaff },
+    dutyStaff: { title: '员工管理', render: renderDutyStaff },
     settings: { title: '数据与设置', render: renderSettings },
     dorm: { title: '寝室数据', render: renderDormRoom }
   };
@@ -2001,7 +2001,7 @@
     var staff = getDutyStaff();
     var empSel = el('select', { style: 'width:100%;margin-bottom:10px' });
     if (staff.length === 0) {
-      empSel.appendChild(el('option', { text: '请先在「排班人员」中添加人员' }));
+      empSel.appendChild(el('option', { text: '请先在「员工管理」中添加人员' }));
     } else {
       empSel.appendChild(el('option', { value: '', text: '请选择员工' }));
       staff.forEach(function (e) {
@@ -2087,7 +2087,7 @@
       root.appendChild(el('div', { class: 'toolbar' }, [
         empSel, monthSel,
         el('button', { class: 'btn primary', onclick: function () {
-          if (dutyStaff.length === 0) { alert('请先在「排班人员」中添加人员'); return; }
+          if (dutyStaff.length === 0) { alert('请先在「员工管理」中添加人员'); return; }
           openEmployeeRecordModal(null);
         } }, ['+ 添加记录'])
       ]));
@@ -2215,10 +2215,10 @@
     }
 
     var content = null;
-    if (page === 'home') content = React.createElement(HomePage, { key: pageKey, onNavigate: navigate });
-    else if (page === 'staff') content = React.createElement(StaffPage, { key: pageKey, onNavigate: navigate });
+    if (page === 'home') content = React.createElement(DutyMainPage, { key: pageKey, onNavigate: navigate });
+    else if (page === 'staff') content = React.createElement(StaffPage, { key: pageKey, onNavigate: navigate, canEdit: isAdmin, autoBounce: true });
     else if (page === 'schedule') content = React.createElement(SchedulePage, { key: pageKey, mode: pageParams.mode || 'all', onNavigate: navigate });
-    else if (page === 'dutySelect') content = React.createElement(DutySelectPage, { key: pageKey, onNavigate: navigate });
+    else if (page === 'dutySelect') content = React.createElement(DutyMainPage, { key: pageKey, onNavigate: navigate });
     else if (page === 'gate') content = React.createElement(GatePage, { key: pageKey, onNavigate: navigate });
 
     return React.createElement(StoreProvider, null, content);

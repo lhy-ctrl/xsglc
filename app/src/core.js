@@ -22,7 +22,7 @@
     { key: 'dorm', label: '寝室数据' },
     { key: 'employee', label: '教官绩效' },
     { key: 'duty', label: '值班排班' },
-    { key: 'dutyStaff', label: '排班人员' },
+    { key: 'dutyStaff', label: '员工管理' },
     { key: 'settings', label: '数据与设置' }
   ];
 

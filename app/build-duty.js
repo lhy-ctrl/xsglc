@@ -13,6 +13,7 @@ const files = [
   'SchedulePage.jsx',
   'GatePage.jsx',
   'DutySelectPage.jsx',
+  'DutyMainPage.jsx',
   'App.jsx',
 ];
 

@@ -659,3 +659,144 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   from { opacity: 0; transform: translate(-50%, -10px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
+/* ===== 排班主页面：顶部切换 + 内容 + 底部自定义岗位 ===== */
+.duty-app .duty-main { display: flex; flex-direction: column; gap: 16px; }
+.duty-app .duty-tabs {
+  display: flex; gap: 8px; padding: 12px 16px;
+  background: rgba(255,255,255,.7); backdrop-filter: blur(10px);
+  border-radius: 12px; border: 1px solid rgba(60,80,120,.1);
+  box-shadow: 0 2px 12px rgba(60,80,120,.06);
+}
+.duty-app .duty-tab {
+  flex: 1; padding: 10px 16px; border: 1px solid rgba(60,80,120,.15);
+  border-radius: 10px; background: rgba(255,255,255,.8);
+  color: #5a6a8a; font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: all .18s ease; font-family: inherit;
+}
+.duty-app .duty-tab:hover { background: #fff; border-color: rgba(76,141,255,.35); color: #2878ef; }
+.duty-app .duty-tab.active {
+  background: linear-gradient(180deg, #4d93ff, #2878ef); color: #fff;
+  border-color: transparent; box-shadow: 0 2px 10px rgba(40,120,239,.3);
+}
+.duty-app .duty-content { min-height: 200px; }
+/* 底部自定义岗位面板 */
+.duty-app .duty-custom-panel {
+  background: rgba(255,255,255,.85); backdrop-filter: blur(10px);
+  border-radius: 14px; border: 1px solid rgba(60,80,120,.12);
+  box-shadow: 0 4px 20px rgba(60,80,120,.08); overflow: hidden;
+}
+.duty-app .duty-custom-header {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+  background: rgba(60,80,120,.04); border-bottom: 1px solid rgba(60,80,120,.08);
+}
+.duty-app .duty-custom-title { font-size: 15px; font-weight: 600; color: #2a3a55; }
+.duty-app .duty-custom-desc { font-size: 12px; color: #8a9ab5; flex: 1; }
+.duty-app .duty-group-hint {
+  padding: 8px 18px; font-size: 13px; color: #3a4a6a;
+  background: rgba(16,185,129,.06); border-bottom: 1px solid rgba(16,185,129,.12);
+}
+.duty-app .duty-custom-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px; padding: 16px 18px;
+}
+.duty-app .duty-custom-item { display: flex; flex-direction: column; gap: 6px; }
+.duty-app .duty-custom-post-label {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.duty-app .duty-custom-post-label > span:first-child {
+  font-size: 13px; font-weight: 600; color: #3a4a6a;
+}
+.duty-app .duty-custom-post-meta { font-size: 11px; color: #9aa8c0; }
+.duty-app .duty-custom-readonly {
+  padding: 10px 12px; background: rgba(60,80,120,.04);
+  border-radius: 8px; border: 1px dashed rgba(60,80,120,.15);
+}
+.duty-app .duty-custom-readonly-value {
+  font-size: 14px; font-weight: 500; color: #2a3a55; margin-top: 4px;
+}
+/* embedded 排班页样式 */
+.duty-app .duty-schedule-embedded { display: flex; flex-direction: column; gap: 16px; }
+.duty-app .duty-schedule-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px;
+}
+.duty-app .duty-schedule-toolbar-left, .duty-app .duty-schedule-toolbar-right {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.duty-app .duty-group-badge {
+  display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+  background: rgba(255,255,255,.8); border: 1px solid rgba(60,80,120,.12);
+  border-radius: 10px; font-size: 13.5px;
+}
+.duty-app .duty-group-badge-text { color: #3a4a6a; font-weight: 500; }
+.duty-app .duty-group-badge-sep { color: #9aa8c0; margin: 0 2px; }
+.duty-app .duty-empty-hint {
+  font-size: 13px; color: #7a8aa5; background: rgba(255,255,255,.7);
+  padding: 8px 14px; border-radius: 8px; border: 1px dashed rgba(60,80,120,.15);
+}
+.duty-app .duty-result-card, .duty-app .duty-history-card, .duty-app .duty-empty-card {
+  background: rgba(255,255,255,.85); backdrop-filter: blur(10px);
+  border-radius: 14px; border: 1px solid rgba(60,80,120,.12);
+  box-shadow: 0 2px 16px rgba(60,80,120,.06); overflow: hidden;
+}
+.duty-app .duty-result-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; background: rgba(60,80,120,.04);
+  border-bottom: 1px solid rgba(60,80,120,.08);
+}
+.duty-app .duty-result-title-row { display: flex; align-items: center; gap: 10px; }
+.duty-app .duty-result-title { font-size: 16px; font-weight: 600; color: #2a3a55; }
+.duty-app .duty-result-date { font-size: 13px; color: #7a8aa5; }
+.duty-app .duty-warnings {
+  padding: 12px 20px; background: rgba(245,158,11,.08);
+  border-bottom: 1px solid rgba(245,158,11,.2);
+  font-size: 13px; color: #92400e; line-height: 1.8;
+}
+.duty-app .duty-result-body { padding: 24px 28px; }
+.duty-app .duty-result-text {
+  margin: 0; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 15px; line-height: 2; color: #1f2937; white-space: pre-wrap;
+}
+.duty-app .duty-empty-card {
+  padding: 50px 20px; display: flex; flex-direction: column;
+  align-items: center; gap: 14px; border-style: dashed;
+}
+.duty-app .duty-empty-icon {
+  width: 68px; height: 68px; border-radius: 50%;
+  background: rgba(60,80,120,.06); display: flex;
+  align-items: center; justify-content: center;
+}
+.duty-app .duty-empty-title { font-size: 16px; font-weight: 500; color: #3a4a6a; margin: 0; }
+.duty-app .duty-empty-desc {
+  font-size: 13px; color: #8a9ab5; text-align: center;
+  max-width: 320px; line-height: 1.6; margin: 0;
+}
+.duty-app .duty-history-header {
+  display: flex; align-items: center; gap: 10px; padding: 14px 20px;
+  background: rgba(60,80,120,.04); border-bottom: 1px solid rgba(60,80,120,.08);
+}
+.duty-app .duty-history-title { font-size: 16px; font-weight: 600; color: #2a3a55; }
+.duty-app .duty-history-count { font-size: 13px; color: #8a9ab5; }
+.duty-app .duty-history-item {
+  padding: 12px 20px; display: flex; align-items: center;
+  justify-content: space-between; gap: 10px;
+}
+.duty-app .duty-history-item.border { border-bottom: 1px solid rgba(60,80,120,.06); }
+.duty-app .duty-history-item-main {
+  display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1; min-width: 0;
+}
+.duty-app .duty-history-date { font-size: 13px; font-weight: 600; color: #3a4a6a; min-width: 70px; }
+.duty-app .duty-history-week { font-size: 12px; color: #8a9ab5; }
+.duty-app .duty-history-group { font-size: 12px; color: #6a7a95; }
+.duty-app .duty-history-time { font-size: 11px; color: #b0bccd; }
+.duty-app .duty-history-ops { display: flex; gap: 6px; flex-shrink: 0; }
+/* embedded 大门口页 */
+.duty-app .duty-gate-embedded > main { padding: 0 !important; }
+/* 员工管理页面跳动动画 */
+@keyframes staffBounce {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-4px); }
+  50% { transform: translateY(0); }
+  75% { transform: translateY(-2px); }
+}
+.duty-app .staff-bounce { animation: staffBounce .6s ease-in-out; }

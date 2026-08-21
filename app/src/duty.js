@@ -843,7 +843,9 @@ Object.assign(window, {
 
 // --- StaffPage.jsx ---
 function StaffPage({
-  onNavigate
+  onNavigate,
+  canEdit,
+  autoBounce
 }) {
   const {
     staff,
@@ -856,11 +858,27 @@ function StaffPage({
   const [showGroup, setShowGroup] = React.useState(true);
   const [filter, setFilter] = React.useState(null); // null=全部, male/female/A/B
   const [toast, setToast] = React.useState(null);
+  const [bouncing, setBouncing] = React.useState(false);
+  const editable = canEdit !== false; // 默认可编辑，仅显式传 false 时只读
+
+  // 页面打开后一段时间自动跳动
+  React.useEffect(() => {
+    if (!autoBounce) return;
+    const timer = setTimeout(() => {
+      setBouncing(true);
+      setTimeout(() => setBouncing(false), 650);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
   const showToast = msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 2000);
   };
   const handleSave = () => {
+    if (!editable) {
+      showToast('当前账号无修改权限');
+      return;
+    }
     const invalid = staff.some(p => !p.name || !p.name.trim());
     if (invalid) {
       showToast('请填写所有人员姓名');
@@ -869,6 +887,10 @@ function StaffPage({
     showToast('保存成功');
   };
   const handleAdd = () => {
+    if (!editable) {
+      showToast('当前账号无修改权限');
+      return;
+    }
     const maleCount = staff.filter(p => p.gender === 'male').length;
     const defaultGender = maleCount < 7 ? 'male' : 'female';
     const defaultGroup = staff.length % 2 === 0 ? 'A' : 'B';
@@ -880,9 +902,21 @@ function StaffPage({
     });
   };
   const handleDelete = id => {
+    if (!editable) {
+      showToast('当前账号无修改权限');
+      return;
+    }
     deleteStaff(id);
   };
+  const handleReset = () => {
+    if (!editable) {
+      showToast('当前账号无修改权限');
+      return;
+    }
+    resetStaff();
+  };
   const handleRoleChange = (id, newRole) => {
+    if (!editable) return;
     if (['captain', 'vice_captain', 'leader_a', 'leader_b'].includes(newRole)) {
       staff.forEach(p => {
         if (p.role === newRole && p.id !== id) {
@@ -895,6 +929,10 @@ function StaffPage({
     updateStaff(id, {
       role: newRole
     });
+  };
+  const handleUpdate = (id, patch) => {
+    if (!editable) return;
+    updateStaff(id, patch);
   };
   const maleCount = staff.filter(p => p.gender === 'male').length;
   const femaleCount = staff.filter(p => p.gender === 'female').length;
@@ -976,8 +1014,14 @@ function StaffPage({
     borderColor: active ? '#2563eb' : '#e5e7eb',
     transition: 'all .15s'
   });
+  const readOnlyInputStyle = {
+    ...inputStyle,
+    background: '#f9fafb',
+    color: '#6b7280',
+    cursor: 'default'
+  };
   return /*#__PURE__*/React.createElement("div", {
-    className: "page-enter",
+    className: 'page-enter' + (bouncing ? ' staff-bounce' : ''),
     style: {
       minHeight: '100vh',
       display: 'flex',
@@ -1023,7 +1067,16 @@ function StaffPage({
       fontWeight: 600,
       color: '#111827'
     }
-  }, "\u4EBA\u5458\u7BA1\u7406")), /*#__PURE__*/React.createElement("div", {
+  }, "\u5458\u5DE5\u7BA1\u7406"), !editable && /*#__PURE__*/React.createElement("span", {
+    style: {
+      padding: '3px 10px',
+      borderRadius: '6px',
+      fontSize: '12px',
+      fontWeight: 500,
+      background: '#fef3c7',
+      color: '#b45309'
+    }
+  }, "\u53EA\u8BFB\u6A21\u5F0F")), /*#__PURE__*/React.createElement("div", {
     className: "radio-group"
   }, /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("input", {
     type: "radio",
@@ -1166,8 +1219,13 @@ function StaffPage({
       gap: '8px'
     }
   }, /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-secondary btn-sm",
-    onClick: handleAdd
+    className: 'btn btn-sm ' + (editable ? 'btn-secondary' : 'btn-ghost'),
+    onClick: handleAdd,
+    disabled: !editable,
+    style: !editable ? {
+      opacity: .5,
+      cursor: 'not-allowed'
+    } : {}
   }, /*#__PURE__*/React.createElement("svg", {
     width: "14",
     height: "14",
@@ -1183,8 +1241,13 @@ function StaffPage({
     d: "M5 12h14"
   })), "\u6DFB\u52A0\u4EBA\u5458"), /*#__PURE__*/React.createElement("button", {
     className: "btn btn-ghost btn-sm",
-    onClick: resetStaff,
-    style: {
+    onClick: handleReset,
+    disabled: !editable,
+    style: !editable ? {
+      color: '#c0c4cc',
+      opacity: .5,
+      cursor: 'not-allowed'
+    } : {
       color: '#6b7280'
     }
   }, "\u91CD\u7F6E\u4E3A\u9ED8\u8BA4"))), /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
@@ -1223,38 +1286,46 @@ function StaffPage({
         color: '#9ca3af',
         fontSize: '13px'
       }
-    }, idx + 1), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("input", {
+    }, idx + 1), /*#__PURE__*/React.createElement("td", null, editable ? /*#__PURE__*/React.createElement("input", {
       type: "text",
       value: person.name,
-      onChange: e => updateStaff(person.id, {
+      onChange: e => handleUpdate(person.id, {
         name: e.target.value
       }),
       placeholder: "\u8BF7\u8F93\u5165\u59D3\u540D",
       style: inputStyle,
       onFocus: e => e.target.style.borderColor = '#2563eb',
       onBlur: e => e.target.style.borderColor = '#d1d5db'
-    })), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("div", {
+    }) : /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '14px',
+        color: '#374151',
+        fontWeight: 500
+      }
+    }, person.name || '（未命名）')), /*#__PURE__*/React.createElement("td", null, editable ? /*#__PURE__*/React.createElement("div", {
       className: "radio-group"
     }, /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("input", {
       type: "radio",
       name: `gender-${person.id}`,
       checked: person.gender === 'male',
-      onChange: () => updateStaff(person.id, {
+      onChange: () => handleUpdate(person.id, {
         gender: 'male'
       })
     }), /*#__PURE__*/React.createElement("span", null, "\u7537")), /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("input", {
       type: "radio",
       name: `gender-${person.id}`,
       checked: person.gender === 'female',
-      onChange: () => updateStaff(person.id, {
+      onChange: () => handleUpdate(person.id, {
         gender: 'female'
       })
-    }), /*#__PURE__*/React.createElement("span", null, "\u5973")))), showGroup && /*#__PURE__*/React.createElement("td", null, isCapVice ? /*#__PURE__*/React.createElement("span", {
+    }), /*#__PURE__*/React.createElement("span", null, "\u5973"))) : /*#__PURE__*/React.createElement("span", {
+      className: 'tag ' + (person.gender === 'male' ? 'tag-male' : 'tag-female')
+    }, person.gender === 'male' ? '男' : '女')), showGroup && /*#__PURE__*/React.createElement("td", null, isCapVice ? /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: '13px',
         color: '#9ca3af'
       }
-    }, "\u2014 \u4E0D\u53C2\u4E0E\u5206\u7EC4 \u2014") : /*#__PURE__*/React.createElement("div", {
+    }, "\u2014 \u4E0D\u53C2\u4E0E\u5206\u7EC4 \u2014") : editable ? /*#__PURE__*/React.createElement("div", {
       className: "radio-group"
     }, /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("input", {
       type: "radio",
@@ -1263,7 +1334,7 @@ function StaffPage({
       onChange: () => {
         let newRole = person.role;
         if (person.group === 'B' && person.role === 'leader_b') newRole = 'member';
-        updateStaff(person.id, {
+        handleUpdate(person.id, {
           group: 'A',
           role: newRole
         });
@@ -1275,18 +1346,20 @@ function StaffPage({
       onChange: () => {
         let newRole = person.role;
         if (person.group === 'A' && person.role === 'leader_a') newRole = 'member';
-        updateStaff(person.id, {
+        handleUpdate(person.id, {
           group: 'B',
           role: newRole
         });
       }
-    }), /*#__PURE__*/React.createElement("span", null, "B\u7EC4")))), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("div", {
+    }), /*#__PURE__*/React.createElement("span", null, "B\u7EC4"))) : /*#__PURE__*/React.createElement("span", {
+      className: 'tag tag-group-' + (person.group === 'A' ? 'a' : 'b')
+    }, person.group, "\u7EC4")), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
         gap: '8px'
       }
-    }, /*#__PURE__*/React.createElement("select", {
+    }, editable ? /*#__PURE__*/React.createElement("select", {
       value: person.role,
       onChange: e => handleRoleChange(person.id, e.target.value),
       style: {
@@ -1301,7 +1374,7 @@ function StaffPage({
     }, roleOpts.map(opt => /*#__PURE__*/React.createElement("option", {
       key: opt.value,
       value: opt.value
-    }, opt.label))), /*#__PURE__*/React.createElement("span", {
+    }, opt.label))) : null, /*#__PURE__*/React.createElement("span", {
       style: {
         padding: '2px 8px',
         borderRadius: '4px',
@@ -1318,9 +1391,10 @@ function StaffPage({
     }, /*#__PURE__*/React.createElement("button", {
       className: "btn btn-danger btn-sm",
       onClick: () => handleDelete(person.id),
-      style: {
-        visibility: staff.length > 1 ? 'visible' : 'hidden'
-      }
+      disabled: !editable || staff.length <= 1,
+      style: !editable || staff.length <= 1 ? {
+        visibility: 'hidden'
+      } : {}
     }, "\u5220\u9664")));
   }))), filteredStaff.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1426,8 +1500,13 @@ function StaffPage({
     className: "btn btn-secondary",
     onClick: () => onNavigate('home')
   }, "\u8FD4\u56DE\u9996\u9875"), /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-primary",
-    onClick: handleSave
+    className: 'btn ' + (editable ? 'btn-primary' : 'btn-ghost'),
+    onClick: handleSave,
+    disabled: !editable,
+    style: !editable ? {
+      opacity: .5,
+      cursor: 'not-allowed'
+    } : {}
   }, "\u4FDD\u5B58\u8BBE\u7F6E"))), toast && /*#__PURE__*/React.createElement("div", {
     className: "toast"
   }, toast));
@@ -1448,7 +1527,11 @@ Object.assign(window, {
 // --- SchedulePage.jsx ---
 function SchedulePage({
   mode,
-  onNavigate
+  onNavigate,
+  embedded,
+  customAssignments,
+  setCustomAssignments,
+  showToast: propShowToast
 }) {
   const {
     generateSchedule,
@@ -1462,8 +1545,11 @@ function SchedulePage({
   } = useStore();
   const [schedule, setSchedule] = React.useState(null);
   const [afterSchoolPeople, setAfterSchoolPeople] = React.useState(null);
-  const [customAssignments, setCustomAssignments] = React.useState({});
-  const [toast, setToast] = React.useState(null);
+  const [localToast, setLocalToast] = React.useState(null);
+  const showToast = propShowToast || (msg => {
+    setLocalToast(msg);
+    setTimeout(() => setLocalToast(null), 2500);
+  });
   const isGroupMode = mode === 'group';
   const modeLabel = isGroupMode ? '分组模式' : '全员模式';
   const modeColor = isGroupMode ? '#059669' : '#2563eb';
@@ -1472,98 +1558,16 @@ function SchedulePage({
   const mainGroup = isAMain ? 'A' : 'B';
   const subGroup = isAMain ? 'B' : 'A';
   const activeStaff = staff.filter(p => p.role !== 'captain' && p.role !== 'vice_captain');
-  const showToast = msg => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2500);
-  };
-
-  // 岗位定义（用于自定义框）
-  const CUSTOM_POSTS = [{
-    key: 'gate',
-    label: '大门口',
-    gender: 'male',
-    type: 'main',
-    capacity: 1
-  }, {
-    key: 'garden',
-    label: '花园口',
-    gender: 'any',
-    type: 'sub',
-    capacity: 1
-  }, {
-    key: 'dorm_m',
-    label: '男寝',
-    gender: 'any',
-    type: 'main',
-    capacity: 1
-  }, {
-    key: 'playground',
-    label: '操场',
-    gender: 'male',
-    type: 'main',
-    capacity: 1
-  }, {
-    key: 'canteen',
-    label: '餐厅',
-    gender: 'any',
-    type: 'sub',
-    capacity: 4
-  }, {
-    key: 'canteenGate',
-    label: '餐厅口',
-    gender: 'any',
-    type: 'sub',
-    capacity: 1
-  }, {
-    key: 'dorm_f',
-    label: '女寝',
-    gender: 'female',
-    type: 'main',
-    capacity: 1
-  }, {
-    key: 'office',
-    label: '办公室',
-    gender: 'female',
-    type: 'main',
-    capacity: 1
-  }, {
-    key: 'tech',
-    label: '科技楼',
-    gender: 'male',
-    type: 'main',
-    capacity: 1
-  }];
-  const getPeopleForPost = post => {
-    // 分组模式也不限制组别，AB两组都可选
-    return activeStaff.filter(p => post.gender === 'any' || p.gender === post.gender);
-  };
-  const updateCustomPost = (postKey, personId, index = 0) => {
-    setCustomAssignments(prev => {
-      const next = {
-        ...prev
-      };
-      if (!next[postKey]) next[postKey] = [];
-      const person = activeStaff.find(p => p.id === personId);
-      next[postKey][index] = person || {
-        name: '待分配'
-      };
-      return next;
-    });
-  };
-  const getCustomPerson = (postKey, index = 0) => {
-    const arr = customAssignments[postKey];
-    return arr && arr[index] ? arr[index] : null;
-  };
   const handleGenerate = () => {
     if (activeStaff.length === 0) {
       showToast('暂无参与值班的人员');
       return;
     }
-    const hasCustom = Object.keys(customAssignments).length > 0 && Object.values(customAssignments).some(arr => arr && arr.some(p => p && p.id));
+    const hasCustom = customAssignments && Object.keys(customAssignments).length > 0 && Object.values(customAssignments).some(arr => arr && arr.some(p => p && p.id));
     const base = hasCustom ? customAssignments : null;
     const result = generateSchedule(mode, 1, base);
     setSchedule(result);
-    setCustomAssignments(result.assignments || {});
+    if (setCustomAssignments) setCustomAssignments(result.assignments || {});
     let afterSchool = null;
     if (isGroupMode) {
       afterSchool = getAfterSchoolGate();
@@ -1598,7 +1602,7 @@ function SchedulePage({
   };
   const handleUseRecord = record => {
     if (record.assignments) {
-      setCustomAssignments(record.assignments);
+      if (setCustomAssignments) setCustomAssignments(record.assignments);
       setSchedule({
         dateStr: record.dateStr,
         fullDateStr: record.fullDateStr,
@@ -1691,8 +1695,6 @@ function SchedulePage({
     deleteScheduleHistory(id);
     showToast('已删除该条记录');
   };
-
-  // 将自定义框内容整理为排班结果格式
   const buildScheduleFromCustom = () => {
     const mainPosts = [{
       key: 'gate',
@@ -1727,19 +1729,19 @@ function SchedulePage({
     }];
     const mainDuty = mainPosts.map(post => ({
       ...post,
-      person: customAssignments[post.key]?.[0] || {
+      person: customAssignments?.[post.key]?.[0] || {
         name: '待分配'
       }
     }));
     const subDuty = {
-      garden: customAssignments.garden?.[0] || {
+      garden: customAssignments?.garden?.[0] || {
         name: '待分配'
       },
-      canteenGate: customAssignments.canteenGate?.[0] || {
+      canteenGate: customAssignments?.canteenGate?.[0] || {
         name: '待分配'
       },
-      canteen: customAssignments.canteen || [],
-      toilet: customAssignments.canteen?.[0] || {
+      canteen: customAssignments?.canteen || [],
+      toilet: customAssignments?.canteen?.[0] || {
         name: '待分配'
       }
     };
@@ -1760,24 +1762,186 @@ function SchedulePage({
     };
   };
   const handleUseCustom = () => {
-    const hasContent = Object.values(customAssignments).some(arr => arr && arr.some(p => p && p.id));
+    const hasContent = customAssignments && Object.values(customAssignments).some(arr => arr && arr.some(p => p && p.id));
     if (!hasContent) {
-      showToast('请先在左侧填写岗位人员');
+      showToast('请先在底部填写岗位人员');
       return;
     }
     setSchedule(buildScheduleFromCustom());
     setAfterSchoolPeople(null);
-    showToast('已应用自定义排班到右侧');
+    showToast('已应用自定义排班');
   };
-  const selectStyle = {
-    width: '100%',
-    padding: '5px 8px',
-    border: 'none',
-    borderRadius: '5px',
-    fontSize: '13px',
-    background: '#f9fafb',
-    outline: 'none'
-  };
+
+  // embedded 模式：只渲染内容区（无 header、无左侧自定义区域）
+  if (embedded) {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "duty-schedule-embedded"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-schedule-toolbar"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-schedule-toolbar-left"
+    }, isGroupMode && schedule && /*#__PURE__*/React.createElement("div", {
+      className: "duty-group-badge"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "tag tag-group-a"
+    }, schedule.mainGroup, "\u7EC4"), /*#__PURE__*/React.createElement("span", {
+      className: "duty-group-badge-text"
+    }, "\u4E3B\u73ED"), /*#__PURE__*/React.createElement("span", {
+      className: "duty-group-badge-sep"
+    }, "/"), /*#__PURE__*/React.createElement("span", {
+      className: "tag tag-group-b"
+    }, schedule.subGroup, "\u7EC4"), /*#__PURE__*/React.createElement("span", {
+      className: "duty-group-badge-text"
+    }, "\u526F\u73ED")), !schedule && /*#__PURE__*/React.createElement("div", {
+      className: "duty-empty-hint"
+    }, "\u70B9\u51FB\"\u751F\u6210\u6392\u73ED\"\u67E5\u770B\u503C\u73ED\u5B89\u6392")), /*#__PURE__*/React.createElement("div", {
+      className: "duty-schedule-toolbar-right"
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-secondary btn-sm",
+      onClick: handleUseCustom
+    }, "\u4F7F\u7528\u8BE5\u6392\u73ED"), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: handleGenerate
+    }, /*#__PURE__*/React.createElement("svg", {
+      width: "16",
+      height: "16",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "2",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      style: {
+        marginRight: '4px'
+      }
+    }, /*#__PURE__*/React.createElement("polygon", {
+      points: "5 3 19 12 5 21 5 3"
+    })), "\u751F\u6210\u6392\u73ED"))), schedule ? /*#__PURE__*/React.createElement("div", {
+      className: "duty-result-card"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-result-header"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-result-title-row"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "duty-result-title"
+    }, "\u6392\u73ED\u7ED3\u679C"), /*#__PURE__*/React.createElement("span", {
+      className: "duty-result-date"
+    }, schedule.fullDateStr, " ", schedule.weekStr)), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-secondary btn-sm",
+      onClick: () => {
+        navigator.clipboard?.writeText(renderTextFromRecord(currentRecord));
+        showToast('已复制到剪贴板');
+      }
+    }, "\u590D\u5236\u6587\u672C")), (currentWarnings.emptyPosts.length > 0 || currentWarnings.unusedPeople.length > 0) && /*#__PURE__*/React.createElement("div", {
+      className: "duty-warnings"
+    }, currentWarnings.emptyPosts.length > 0 && /*#__PURE__*/React.createElement("div", null, "\u4EE5\u4E0B\u5C97\u4F4D\u65E0\u4EBA\uFF1A", /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 600
+      }
+    }, currentWarnings.emptyPosts.join('、'))), currentWarnings.unusedPeople.length > 0 && /*#__PURE__*/React.createElement("div", null, "\u4EE5\u4E0B\u4EBA\u5458\u672A\u53C2\u4E0E\u503C\u73ED\uFF1A", /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 600
+      }
+    }, currentWarnings.unusedPeople.map(p => p.name).join('、')))), /*#__PURE__*/React.createElement("div", {
+      className: "duty-result-body"
+    }, /*#__PURE__*/React.createElement("pre", {
+      className: "duty-result-text"
+    }, renderTextFromRecord(currentRecord)))) : /*#__PURE__*/React.createElement("div", {
+      className: "duty-empty-card"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-empty-icon"
+    }, /*#__PURE__*/React.createElement("svg", {
+      width: "36",
+      height: "36",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "#9ca3af",
+      strokeWidth: "1.5",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    }, /*#__PURE__*/React.createElement("rect", {
+      x: "3",
+      y: "4",
+      width: "18",
+      height: "18",
+      rx: "2",
+      ry: "2"
+    }), /*#__PURE__*/React.createElement("line", {
+      x1: "16",
+      y1: "2",
+      x2: "16",
+      y2: "6"
+    }), /*#__PURE__*/React.createElement("line", {
+      x1: "8",
+      y1: "2",
+      x2: "8",
+      y2: "6"
+    }), /*#__PURE__*/React.createElement("line", {
+      x1: "3",
+      y1: "10",
+      x2: "21",
+      y2: "10"
+    }))), /*#__PURE__*/React.createElement("h3", {
+      className: "duty-empty-title"
+    }, "\u6682\u65E0\u6392\u73ED\u6570\u636E"), /*#__PURE__*/React.createElement("p", {
+      className: "duty-empty-desc"
+    }, "\u53EF\u5728\u5E95\u90E8\u81EA\u5B9A\u4E49\u5C97\u4F4D\u4EBA\u5458\u4F5C\u4E3A\u57FA\u51C6\uFF0C\u6216\u76F4\u63A5\u70B9\u51FB\"\u751F\u6210\u6392\u73ED\""), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: handleGenerate
+    }, "\u7ACB\u5373\u751F\u6210")), modeHistory.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "duty-history-card"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-history-header"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-title"
+    }, "\u5386\u53F2\u8BB0\u5F55"), /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-count"
+    }, "\u6700\u8FD1 ", modeHistory.length, " \u6761\uFF08\u6700\u591A5\u6761\uFF09")), /*#__PURE__*/React.createElement("div", {
+      className: "duty-history-list"
+    }, modeHistory.map((record, idx) => /*#__PURE__*/React.createElement("div", {
+      key: record.id,
+      className: 'duty-history-item' + (idx < modeHistory.length - 1 ? ' border' : '')
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-history-item-main",
+      onClick: () => {
+        setSchedule({
+          dateStr: record.dateStr,
+          fullDateStr: record.fullDateStr,
+          weekStr: record.weekStr,
+          mainGroup: record.mainGroup,
+          subGroup: record.subGroup,
+          mainDuty: record.mainDuty,
+          subDuty: record.subDuty
+        });
+        setAfterSchoolPeople(record.afterSchool);
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-date"
+    }, record.dateStr), /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-week"
+    }, record.weekStr), record.mode === 'group' && /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-group"
+    }, record.mainGroup, "\u7EC4\u4E3B\u73ED/", record.subGroup, "\u7EC4\u526F\u73ED"), /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-time"
+    }, "\u751F\u6210\u4E8E ", record.createdAt)), /*#__PURE__*/React.createElement("div", {
+      className: "duty-history-ops"
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-ghost btn-sm",
+      onClick: () => handleUseRecord(record)
+    }, "\u4F7F\u7528\u8BE5\u6392\u73ED"), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-ghost btn-sm",
+      onClick: e => {
+        e.stopPropagation();
+        navigator.clipboard?.writeText(renderTextFromRecord(record));
+        showToast('已复制到剪贴板');
+      }
+    }, "\u590D\u5236"), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-danger btn-sm",
+      onClick: e => handleDeleteHistory(record.id, e)
+    }, "\u5220\u9664")))))));
+  }
+
+  // 非 embedded 模式（独立使用，保留原有布局）
   return /*#__PURE__*/React.createElement("div", {
     className: "page-enter",
     style: {
@@ -1863,184 +2027,7 @@ function SchedulePage({
   }, "\u660E\u5929"))), /*#__PURE__*/React.createElement("main", {
     style: {
       flex: 1,
-      padding: '24px 28px',
-      display: 'flex',
-      gap: '20px',
-      alignItems: 'flex-start'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: '300px',
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: '#fff',
-      borderRadius: '12px',
-      border: '1px solid #e5e7eb',
-      overflow: 'hidden'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '14px 16px',
-      background: '#f8fafc',
-      borderBottom: '1px solid #e5e7eb'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: '4px',
-      height: '16px',
-      background: modeColor,
-      borderRadius: '2px'
-    }
-  }), /*#__PURE__*/React.createElement("h3", {
-    style: {
-      fontSize: '15px',
-      fontWeight: 600,
-      color: '#111827'
-    }
-  }, "\u81EA\u5B9A\u4E49\u5C97\u4F4D\u4EBA\u5458")), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: '11px',
-      color: '#9ca3af',
-      marginTop: '4px',
-      lineHeight: 1.5
-    }
-  }, "\u586B\u5199\u540E\u4EE5\u6B64\u4E3A\u57FA\u51C6\u8F6E\u6362\uFF1B\u751F\u6210\u540E\u81EA\u52A8\u66F4\u65B0\u4E3A\u6700\u65B0\u7ED3\u679C")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '12px 14px'
-    }
-  }, isGroupMode && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginBottom: '10px',
-      padding: '6px 10px',
-      background: '#f0fdf4',
-      border: '1px solid #bbf7d0',
-      borderRadius: '6px',
-      fontSize: '12px',
-      color: '#166534'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "tag tag-group-a"
-  }, mainGroup, "\u7EC4"), "\u4E3B\u73ED /", /*#__PURE__*/React.createElement("span", {
-    className: "tag tag-group-b",
-    style: {
-      marginLeft: '4px'
-    }
-  }, subGroup, "\u7EC4"), "\u526F\u73ED"), CUSTOM_POSTS.map(post => /*#__PURE__*/React.createElement("div", {
-    key: post.key,
-    style: {
-      marginBottom: '10px'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: '4px'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: '13px',
-      fontWeight: 500,
-      color: '#374151'
-    }
-  }, post.label), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: '11px',
-      color: '#9ca3af'
-    }
-  }, post.type === 'main' ? '主班' : '副班', post.gender === 'male' ? ' · 男' : post.gender === 'female' ? ' · 女' : '')), Array.from({
-    length: post.capacity
-  }).map((_, idx) => {
-    const person = getCustomPerson(post.key, idx);
-    const options = getPeopleForPost(post);
-    return /*#__PURE__*/React.createElement("select", {
-      key: idx,
-      style: {
-        ...selectStyle,
-        marginBottom: idx < post.capacity - 1 ? '4px' : 0
-      },
-      value: person?.id || '',
-      onChange: e => updateCustomPost(post.key, e.target.value ? parseInt(e.target.value) : null, idx)
-    }, /*#__PURE__*/React.createElement("option", {
-      value: ""
-    }, "\u2014 \u8BF7\u9009\u62E9 \u2014"), options.map(p => /*#__PURE__*/React.createElement("option", {
-      key: p.id,
-      value: p.id
-    }, p.name)));
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: '10px',
-      padding: '8px 10px',
-      background: '#f9fafb',
-      borderRadius: '6px',
-      border: '1px dashed #e5e7eb'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: '12px',
-      color: '#6b7280',
-      marginBottom: '2px'
-    }
-  }, "\u5395\u6240\u53E3\uFF08\u9910\u5385\u7B2C1\u4EBA\u517C\u4EFB\uFF09"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: '13px',
-      fontWeight: 500,
-      color: '#374151'
-    }
-  }, getCustomPerson('canteen', 0)?.name || '—')), !isGroupMode && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: '8px',
-      padding: '8px 10px',
-      background: '#f9fafb',
-      borderRadius: '6px',
-      border: '1px dashed #e5e7eb'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: '12px',
-      color: '#6b7280',
-      marginBottom: '2px'
-    }
-  }, "\u4E2D\u5348\u6536\u5047\u6761\uFF08\u9ED8\u8BA4\u529E\u516C\u5BA4\u4EBA\u5458\uFF09"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: '13px',
-      fontWeight: 500,
-      color: '#374151'
-    }
-  }, getCustomPerson('office', 0)?.name || '—')), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: '8px',
-      marginTop: '12px'
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-primary btn-sm",
-    style: {
-      flex: 1,
-      fontSize: '13px'
-    },
-    onClick: handleUseCustom
-  }, "\u4F7F\u7528\u8BE5\u6392\u73ED"), /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    style: {
-      fontSize: '12px'
-    },
-    onClick: () => {
-      setCustomAssignments({});
-      showToast('已清空自定义框');
-    }
-  }, "\u6E05\u7A7A"))))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
+      padding: '24px 28px'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2392,9 +2379,9 @@ function SchedulePage({
       padding: '4px 10px'
     },
     onClick: e => handleDeleteHistory(record.id, e)
-  }, "\u5220\u9664"))))))))), toast && /*#__PURE__*/React.createElement("div", {
+  }, "\u5220\u9664")))))))), localToast && /*#__PURE__*/React.createElement("div", {
     className: "toast"
-  }, toast));
+  }, localToast));
 }
 Object.assign(window, {
   SchedulePage
@@ -2402,7 +2389,8 @@ Object.assign(window, {
 
 // --- GatePage.jsx ---
 function GatePage({
-  onNavigate
+  onNavigate,
+  embedded
 }) {
   const {
     generateGateDuty,
@@ -2522,13 +2510,13 @@ function GatePage({
   };
   const maleCount = staff.filter(p => p.gender === 'male').length;
   return /*#__PURE__*/React.createElement("div", {
-    className: "page-enter",
+    className: 'page-enter' + (embedded ? ' duty-gate-embedded' : ''),
     style: {
-      minHeight: '100vh',
+      minHeight: embedded ? 'auto' : '100vh',
       display: 'flex',
       flexDirection: 'column'
     }
-  }, /*#__PURE__*/React.createElement("header", {
+  }, !embedded && /*#__PURE__*/React.createElement("header", {
     style: {
       padding: '20px 32px',
       background: '#fff',
@@ -2606,9 +2594,9 @@ function GatePage({
   }, "\u660E\u5929"))), /*#__PURE__*/React.createElement("main", {
     style: {
       flex: 1,
-      padding: '28px 32px',
-      maxWidth: '800px',
-      margin: '0 auto',
+      padding: embedded ? '0' : '28px 32px',
+      maxWidth: embedded ? 'none' : '800px',
+      margin: embedded ? '0' : '0 auto',
       width: '100%'
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -3230,6 +3218,215 @@ Object.assign(window, {
   DutySelectPage
 });
 
+// --- DutyMainPage.jsx ---
+function DutyMainPage({
+  onNavigate
+}) {
+  const {
+    staff,
+    groupRotation
+  } = useStore();
+  const [mode, setMode] = React.useState('all'); // all / group / gate
+  const [customAssignments, setCustomAssignments] = React.useState({});
+  const [toast, setToast] = React.useState(null);
+  const showToast = msg => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
+  const activeStaff = staff.filter(p => p.role !== 'captain' && p.role !== 'vice_captain');
+  const isAMain = groupRotation === 0;
+  const mainGroup = isAMain ? 'A' : 'B';
+  const subGroup = isAMain ? 'B' : 'A';
+  const CUSTOM_POSTS = [{
+    key: 'gate',
+    label: '大门口',
+    gender: 'male',
+    type: 'main',
+    capacity: 1
+  }, {
+    key: 'garden',
+    label: '花园口',
+    gender: 'any',
+    type: 'sub',
+    capacity: 1
+  }, {
+    key: 'dorm_m',
+    label: '男寝',
+    gender: 'any',
+    type: 'main',
+    capacity: 1
+  }, {
+    key: 'playground',
+    label: '操场',
+    gender: 'male',
+    type: 'main',
+    capacity: 1
+  }, {
+    key: 'canteen',
+    label: '餐厅',
+    gender: 'any',
+    type: 'sub',
+    capacity: 4
+  }, {
+    key: 'canteenGate',
+    label: '餐厅口',
+    gender: 'any',
+    type: 'sub',
+    capacity: 1
+  }, {
+    key: 'dorm_f',
+    label: '女寝',
+    gender: 'female',
+    type: 'main',
+    capacity: 1
+  }, {
+    key: 'office',
+    label: '办公室',
+    gender: 'female',
+    type: 'main',
+    capacity: 1
+  }, {
+    key: 'tech',
+    label: '科技楼',
+    gender: 'male',
+    type: 'main',
+    capacity: 1
+  }];
+  const getPeopleForPost = post => {
+    return activeStaff.filter(p => post.gender === 'any' || p.gender === post.gender);
+  };
+  const updateCustomPost = (postKey, personId, index = 0) => {
+    setCustomAssignments(prev => {
+      const next = {
+        ...prev
+      };
+      if (!next[postKey]) next[postKey] = [];
+      const person = activeStaff.find(p => p.id === personId);
+      next[postKey][index] = person || {
+        name: '待分配'
+      };
+      return next;
+    });
+  };
+  const getCustomPerson = (postKey, index = 0) => {
+    const arr = customAssignments[postKey];
+    return arr && arr[index] ? arr[index] : null;
+  };
+  const tabs = [{
+    key: 'all',
+    label: '全员值班'
+  }, {
+    key: 'group',
+    label: '分组值班'
+  }, {
+    key: 'gate',
+    label: '大门口值班'
+  }];
+  const selectStyle = {
+    width: '100%',
+    padding: '6px 10px',
+    border: '1px solid rgba(60,80,120,.2)',
+    borderRadius: '8px',
+    fontSize: '13px',
+    background: '#fff',
+    outline: 'none',
+    color: '#2a3a55'
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "page-enter duty-main"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "duty-tabs"
+  }, tabs.map(tab => /*#__PURE__*/React.createElement("button", {
+    key: tab.key,
+    className: 'duty-tab' + (mode === tab.key ? ' active' : ''),
+    onClick: () => setMode(tab.key)
+  }, tab.label))), /*#__PURE__*/React.createElement("div", {
+    className: "duty-content"
+  }, mode === 'gate' ? /*#__PURE__*/React.createElement(GatePage, {
+    onNavigate: onNavigate,
+    embedded: true
+  }) : /*#__PURE__*/React.createElement(SchedulePage, {
+    mode: mode,
+    onNavigate: onNavigate,
+    embedded: true,
+    customAssignments: customAssignments,
+    setCustomAssignments: setCustomAssignments,
+    showToast: showToast
+  })), (mode === 'all' || mode === 'group') && /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-panel"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-header"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "duty-custom-title"
+  }, "\u81EA\u5B9A\u4E49\u5C97\u4F4D\u4EBA\u5458"), /*#__PURE__*/React.createElement("span", {
+    className: "duty-custom-desc"
+  }, "\u586B\u5199\u540E\u4EE5\u6B64\u4E3A\u57FA\u51C6\u8F6E\u6362\uFF1B\u751F\u6210\u540E\u81EA\u52A8\u66F4\u65B0\u4E3A\u6700\u65B0\u7ED3\u679C"), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => {
+      setCustomAssignments({});
+      showToast('已清空自定义框');
+    }
+  }, "\u6E05\u7A7A")), mode === 'group' && /*#__PURE__*/React.createElement("div", {
+    className: "duty-group-hint"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "tag tag-group-a"
+  }, mainGroup, "\u7EC4"), "\u4E3B\u73ED /", /*#__PURE__*/React.createElement("span", {
+    className: "tag tag-group-b",
+    style: {
+      marginLeft: '4px'
+    }
+  }, subGroup, "\u7EC4"), "\u526F\u73ED"), /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-grid"
+  }, CUSTOM_POSTS.map(post => /*#__PURE__*/React.createElement("div", {
+    key: post.key,
+    className: "duty-custom-item"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-post-label"
+  }, /*#__PURE__*/React.createElement("span", null, post.label), /*#__PURE__*/React.createElement("span", {
+    className: "duty-custom-post-meta"
+  }, post.type === 'main' ? '主班' : '副班', post.gender === 'male' ? ' · 男' : post.gender === 'female' ? ' · 女' : '')), Array.from({
+    length: post.capacity
+  }).map((_, idx) => {
+    const person = getCustomPerson(post.key, idx);
+    const options = getPeopleForPost(post);
+    return /*#__PURE__*/React.createElement("select", {
+      key: idx,
+      style: {
+        ...selectStyle,
+        marginBottom: idx < post.capacity - 1 ? '6px' : 0
+      },
+      value: person?.id || '',
+      onChange: e => updateCustomPost(post.key, e.target.value ? parseInt(e.target.value) : null, idx)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "\u2014 \u8BF7\u9009\u62E9 \u2014"), options.map(p => /*#__PURE__*/React.createElement("option", {
+      key: p.id,
+      value: p.id
+    }, p.name)));
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-item duty-custom-readonly"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-post-label"
+  }, /*#__PURE__*/React.createElement("span", null, "\u5395\u6240\u53E3"), /*#__PURE__*/React.createElement("span", {
+    className: "duty-custom-post-meta"
+  }, "\u9910\u5385\u7B2C1\u4EBA\u517C\u4EFB")), /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-readonly-value"
+  }, getCustomPerson('canteen', 0)?.name || '—')), mode === 'all' && /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-item duty-custom-readonly"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-post-label"
+  }, /*#__PURE__*/React.createElement("span", null, "\u4E2D\u5348\u6536\u5047\u6761"), /*#__PURE__*/React.createElement("span", {
+    className: "duty-custom-post-meta"
+  }, "\u9ED8\u8BA4\u529E\u516C\u5BA4\u4EBA\u5458")), /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-readonly-value"
+  }, getCustomPerson('office', 0)?.name || '—')))), toast && /*#__PURE__*/React.createElement("div", {
+    className: "toast"
+  }, toast));
+}
+Object.assign(window, {
+  DutyMainPage
+});
+
 // --- App.jsx ---
 function App() {
   const [page, setPage] = React.useState('home');
@@ -3246,7 +3443,7 @@ function App() {
   };
   let content;
   if (page === 'home') {
-    content = /*#__PURE__*/React.createElement(HomePage, {
+    content = /*#__PURE__*/React.createElement(DutyMainPage, {
       key: pageKey,
       onNavigate: navigate
     });
@@ -3262,7 +3459,7 @@ function App() {
       onNavigate: navigate
     });
   } else if (page === 'dutySelect') {
-    content = /*#__PURE__*/React.createElement(DutySelectPage, {
+    content = /*#__PURE__*/React.createElement(DutyMainPage, {
       key: pageKey,
       onNavigate: navigate
     });
