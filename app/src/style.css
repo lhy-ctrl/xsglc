@@ -691,8 +691,8 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   background: rgba(16,185,129,.06); border-bottom: 1px solid rgba(16,185,129,.12);
 }
 .duty-app .duty-custom-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 14px; padding: 16px 18px;
+  display: flex; flex-direction: column;
+  gap: 12px; padding: 16px 18px;
 }
 .duty-app .duty-custom-item { display: flex; flex-direction: column; gap: 6px; }
 .duty-app .duty-custom-post-label {
@@ -821,10 +821,10 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   font-size: 13px; font-weight: 600; color: #3a4a6a; margin-bottom: 10px;
 }
 .duty-app .duty-gate-timeblock-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  display: flex; flex-direction: row; align-items: flex-end; gap: 12px; flex-wrap: wrap;
 }
-.duty-app .duty-gate-timeblock-grid > div:last-child {
-  grid-column: 1 / -1;
+.duty-app .duty-gate-timeblock-grid > div {
+  flex: 0 0 auto;
 }
 .duty-app .duty-gate-label {
   font-size: 12px; color: #7a8aa5; margin-bottom: 4px; display: block; font-weight: 500;

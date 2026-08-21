@@ -2549,14 +2549,15 @@ function GatePage({
   const maleCount = staff.filter(p => p.gender === 'male').length;
   const totalNeeded = shifts * 2 + (enableSecond ? shifts2 * 2 : 0);
   const timeInputStyle = {
-    width: '100%',
-    padding: '8px 12px',
+    width: '90px',
+    padding: '8px 10px',
     border: '1px solid rgba(60,80,120,.2)',
     borderRadius: '8px',
     fontSize: '14px',
     outline: 'none',
     background: '#fff',
-    color: '#2a3a55'
+    color: '#2a3a55',
+    textAlign: 'center'
   };
 
   // embedded 模式：左右并列布局
