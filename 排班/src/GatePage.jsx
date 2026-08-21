@@ -115,7 +115,11 @@ function GatePage({ onNavigate, embedded }) {
       lines.push(`${s.start}——${s.end}  ${names}`);
     });
     lines.push('');
-    lines.push('所有教官按时到校打卡，路上注意安全！');
+    if (r.shiftList2 && r.shiftList2.length > 0) {
+      lines.push('上午值班教官准时到岗，其他教官13:40前到校打卡，路上注意安全！');
+    } else {
+      lines.push('所有教官13:40前到校打卡，路上注意安全！');
+    }
     return lines.join('\n');
   };
 
