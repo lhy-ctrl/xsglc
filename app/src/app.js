@@ -461,7 +461,8 @@
             store.setState(payload);
             // 单设备登录检查：如果云端活跃设备不是本机，自动退出
             checkLoginSession(payload);
-            if (state.current) {
+            // 排班模块使用独立的React状态和localStorage，云端数据同步后不需要重新渲染，避免自动刷新
+            if (state.current && state.current !== 'duty' && state.current !== 'dutyStaff') {
               try { switchTo(state.current); } catch (e) {}
             }
             updateCloudUI();
