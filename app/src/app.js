@@ -336,7 +336,9 @@
     report: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l4-6 4 8 4-5 6 8"/><path d="M3 20h18"/></svg>',
     employee: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.5-3.4 3-5 6-5s5.5 1.6 6 5"/><path d="M16 11l2 2 4-4"/></svg>',
     settings: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3 17 7M7 17l-1.7 1.7"/></svg>',
-    dorm: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/></svg>'
+    dorm: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/></svg>',
+    duty: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="15" r="2.2"/><path d="M12 13v2l1.4 1"/></svg>',
+    dutyStaff: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.6"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
   };
 
   // ---------- 模块注册 ----------
@@ -1970,69 +1972,43 @@
     return rec;
   }
 
-  // ---------- 员工奖惩管理 ----------
+  // ---------- 员工奖惩管理（员工数据源统一使用排班人员数据） ----------
   var employeeTab = 'records'; // records / summary
-  var empFilter = { keyword: '', employeeId: '', month: '' };
+  var empFilter = { employeeId: '', month: '' };
   var empSummaryMonth = '';
   var employeeContainer = null;
-  var employeeManageContainer = null;
+
+  // 从 localStorage 读取排班人员数据（与排班系统共享同一数据源）
+  function getDutyStaff() {
+    try {
+      var raw = (typeof localStorage !== 'undefined') ? localStorage.getItem('duty_staff') : null;
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
 
   function getEmployeeName(id) {
-    var st = store.getState();
-    var e = st.employees.find(function (x) { return x.id === id; });
+    var staff = getDutyStaff();
+    var e = staff.find(function (x) { return String(x.id) === String(id); });
     return e ? e.name : '（已删除）';
   }
 
   function refreshEmployee() {
     if (employeeContainer && state.current === 'employee') renderEmployee(employeeContainer);
-    if (employeeManageContainer && state.current === 'settings') renderEmployeeManage(employeeManageContainer);
-  }
-
-  function openEmployeeModal(emp) {
-    var isEdit = !!emp;
-    var nameInput = el('input', { type: 'text', value: emp ? emp.name : '', placeholder: '请输入姓名', style: 'width:100%;margin-bottom:10px' });
-    var genderSel = el('select', { style: 'width:100%' }, [
-      el('option', { value: '男', text: '男' }),
-      el('option', { value: '女', text: '女' })
-    ]);
-    if (emp) genderSel.value = emp.gender || '男';
-    openModal(isEdit ? '编辑员工' : '添加员工', [nameInput, genderSel], function () {
-      var name = nameInput.value.trim();
-      if (!name) { alert('请输入姓名'); return false; }
-      var st = store.getState();
-      if (isEdit) {
-        emp.name = name;
-        emp.gender = genderSel.value;
-      } else {
-        st.employees.push({ id: C.uid('emp'), name: name, gender: genderSel.value });
-      }
-      store.save();
-      refreshEmployee();
-    }, '保存');
-  }
-
-  function deleteEmployee(emp) {
-    if (!confirm('确定删除员工「' + emp.name + '」？该员工的所有奖惩记录也会被删除。')) return;
-    var st = store.getState();
-    st.employees = st.employees.filter(function (x) { return x.id !== emp.id; });
-    st.employeeRecords = st.employeeRecords.filter(function (r) { return r.employeeId !== emp.id; });
-    store.save();
-    refreshEmployee();
   }
 
   function openEmployeeRecordModal(rec) {
     var isEdit = !!rec;
-    var st = store.getState();
+    var staff = getDutyStaff();
     var empSel = el('select', { style: 'width:100%;margin-bottom:10px' });
-    if (st.employees.length === 0) {
-      empSel.appendChild(el('option', { text: '请先添加员工' }));
+    if (staff.length === 0) {
+      empSel.appendChild(el('option', { text: '请先在「排班人员」中添加人员' }));
     } else {
       empSel.appendChild(el('option', { value: '', text: '请选择员工' }));
-      st.employees.forEach(function (e) {
-        empSel.appendChild(el('option', { value: e.id, text: e.name }));
+      staff.forEach(function (e) {
+        empSel.appendChild(el('option', { value: String(e.id), text: e.name }));
       });
     }
-    if (rec) empSel.value = rec.employeeId;
+    if (rec) empSel.value = String(rec.employeeId);
     var dateInput = el('input', { type: 'date', value: rec ? rec.date : C.todayStr(), style: 'width:100%;margin-bottom:10px' });
     var reasonInput = el('input', { type: 'text', value: rec ? rec.reason : '', placeholder: '请输入事由（如：迟到、请假1天、旷工）', style: 'width:100%;margin-bottom:10px' });
     var amountInput = el('input', { type: 'number', value: rec ? rec.amount : '', placeholder: '请输入罚款金额（元）', style: 'width:100%', min: '0', step: '0.01' });
@@ -2076,41 +2052,6 @@
     return Object.keys(months).sort().reverse();
   }
 
-  // 员工管理（独立放在数据与设置页面）—— 一排两列卡片展示
-  function renderEmployeeManage(root) {
-    employeeManageContainer = root;
-    if (!isAdmin) return;
-    clear(root);
-    var st = store.getState();
-    var kw = empFilter.keyword || '';
-    var list = st.employees.filter(function (e) { return !kw || e.name.indexOf(kw) >= 0; });
-    var kwInput = el('input', { type: 'text', value: kw, placeholder: '搜索员工姓名', style: 'width:180px', oninput: function (e) { empFilter.keyword = e.target.value; renderEmployeeManage(root); } });
-    root.appendChild(el('div', { class: 'toolbar' }, [
-      kwInput,
-      el('button', { class: 'btn primary', onclick: function () { openEmployeeModal(null); } }, ['+ 添加员工'])
-    ]));
-    if (list.length === 0) {
-      root.appendChild(el('div', { class: 'muted', style: 'padding:20px;text-align:center', text: kw ? '未找到匹配的员工' : '暂无员工，点击「添加员工」开始录入' }));
-    } else {
-      var grid = el('div', { class: 'emp-grid' });
-      list.forEach(function (e) {
-        var card = el('div', { class: 'emp-card' }, [
-          el('div', { class: 'emp-card-main' }, [
-            el('span', { class: 'emp-name', text: e.name }),
-            el('span', { class: 'emp-gender', text: e.gender || '' })
-          ]),
-          el('div', { class: 'emp-card-ops' }, [
-            el('a', { href: 'javascript:;', class: 'link', onclick: function () { openEmployeeModal(e); }, text: '编辑' }),
-            el('span', { text: ' / ' }),
-            el('a', { href: 'javascript:;', class: 'link del', onclick: function () { deleteEmployee(e); }, text: '删除' })
-          ])
-        ]);
-        grid.appendChild(card);
-      });
-      root.appendChild(grid);
-    }
-  }
-
   function renderEmployee(root) {
     employeeContainer = root;
     if (!isAdmin) {
@@ -2127,13 +2068,14 @@
     root.appendChild(tabs);
 
     var st = store.getState();
+    var dutyStaff = getDutyStaff();
 
     if (employeeTab === 'records') {
       // 记录管理（无搜索框）
       var empSel = el('select', { style: 'width:140px', onchange: function (e) { empFilter.employeeId = e.target.value; renderEmployee(root); } });
       empSel.appendChild(el('option', { value: '', text: '全部员工' }));
-      st.employees.forEach(function (e) {
-        empSel.appendChild(el('option', { value: e.id, text: e.name }));
+      dutyStaff.forEach(function (e) {
+        empSel.appendChild(el('option', { value: String(e.id), text: e.name }));
       });
       empSel.value = empFilter.employeeId || '';
       var monthSel = el('select', { style: 'width:120px', onchange: function (e) { empFilter.month = e.target.value; renderEmployee(root); } });
@@ -2145,7 +2087,7 @@
       root.appendChild(el('div', { class: 'toolbar' }, [
         empSel, monthSel,
         el('button', { class: 'btn primary', onclick: function () {
-          if (st.employees.length === 0) { alert('请先在「数据与设置-员工管理」中添加员工'); return; }
+          if (dutyStaff.length === 0) { alert('请先在「排班人员」中添加人员'); return; }
           openEmployeeRecordModal(null);
         } }, ['+ 添加记录'])
       ]));
@@ -2193,15 +2135,15 @@
 
       // 按员工统计
       var empMap = {};
-      st.employees.forEach(function (e) {
-        empMap[e.id] = { name: e.name, count: 0, total: 0, reasons: {} };
+      dutyStaff.forEach(function (e) {
+        empMap[String(e.id)] = { name: e.name, count: 0, total: 0, reasons: {} };
       });
       st.employeeRecords.forEach(function (r) {
         if (!r.date || r.date.substring(0, 7) !== empSummaryMonth) return;
-        var info = empMap[r.employeeId];
+        var info = empMap[String(r.employeeId)];
         if (!info) {
           info = { name: getEmployeeName(r.employeeId), count: 0, total: 0, reasons: {} };
-          empMap[r.employeeId] = info;
+          empMap[String(r.employeeId)] = info;
         }
         info.count++;
         info.total += Number(r.amount) || 0;
@@ -2265,7 +2207,9 @@
     var pageKey = keyState[0], setPageKey = keyState[1];
 
     function navigate(target, params) {
-      setPage(target);
+      // 集成环境下：排班系统的"首页"重定向到值班排班选择页
+      var realTarget = (target === 'home') ? 'dutySelect' : target;
+      setPage(realTarget);
       setPageParams(params || {});
       setPageKey(function (k) { return k + 1; });
     }
@@ -2297,7 +2241,7 @@
 
   // ---------- 数据与设置 ----------
   function renderSettings(root) {
-    // 第一排：数据备份 + 员工管理
+    // 第一排：数据备份
     var row1 = el('div', { style: 'display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap' });
     // 1. 数据备份
     var backupPanel = el('div', { class: 'panel', id: 'backup-panel', style: 'flex:1;min-width:280px;margin:0' }, [
@@ -2310,16 +2254,6 @@
       el('p', { class: 'muted', id: 'last-backup', text: lastBackupText() })
     ]);
     row1.appendChild(backupPanel);
-    // 1.5 员工管理（管理员可见）
-    if (isAdmin) {
-      var empMgrPanel = el('div', { class: 'panel', id: 'employee-manage-panel', style: 'flex:1;min-width:280px;margin:0' }, [
-        el('h3', { text: '员工管理' })
-      ]);
-      var empMgrContent = el('div', { id: 'employee-manage-content' });
-      empMgrPanel.appendChild(empMgrContent);
-      row1.appendChild(empMgrPanel);
-      renderEmployeeManage(empMgrContent);
-    }
     root.appendChild(row1);
 
     // 第二排：云端网页 + 管理员 + 二级管理员
