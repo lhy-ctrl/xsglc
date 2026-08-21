@@ -2323,11 +2323,16 @@
     var printBtn = el('button', { class: 'btn primary', onclick: function () {
       var isPortrait = salaryWrap.classList.contains('salary-portrait');
       var style = document.createElement('style');
-      style.id = 'salary-print-style';
+      style.id = 'salary-print-size';
       style.textContent = '@page { size: A4 ' + (isPortrait ? 'portrait' : 'landscape') + '; margin: 0; }';
       document.head.appendChild(style);
-      window.print();
-      setTimeout(function () { var s = document.getElementById('salary-print-style'); if (s) s.parentNode.removeChild(s); }, 500);
+      var cleanup = function () {
+        var s = document.getElementById('salary-print-size');
+        if (s && s.parentNode) s.parentNode.removeChild(s);
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      setTimeout(function () { window.print(); }, 50);
     } }, ['打印']);
     toolbar.appendChild(el('span', { text: '年份：' }));
     toolbar.appendChild(yearSel);
@@ -2340,10 +2345,11 @@
     var salaryWrap = el('div', { class: 'salary-a4' });
     root.appendChild(salaryWrap);
 
-    // 创建工资表数字输入框：0值显示为空、点击全选
+    // 创建工资表数字输入框：0值显示为空、点击全选保持
     function mkNumInput(value, oninput) {
       var input = el('input', { type: 'number', value: value ? value : '', min: '0', step: '0.01' });
-      input.onfocus = function () { this.select(); };
+      input.onfocus = function () { var self = this; setTimeout(function () { self.select(); }, 0); };
+      input.onmouseup = function (e) { e.preventDefault(); };
       input.oninput = function () {
         var v = parseFloat(this.value);
         oninput(isNaN(v) ? 0 : v);
@@ -2392,7 +2398,7 @@
       allRows.forEach(function (person) {
         var sid = person.id;
         var s = salaryData[sid] || {
-          workDays: 30, baseSalary: 3500, attendance: 300, performance: 1200,
+          workDays: 30, baseSalary: 0, attendance: 0, performance: 0,
           allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: ''
         };
         // 从教官绩效记录自动获取当月扣除和原因（仅正式员工）
@@ -2455,8 +2461,19 @@
         reasonInput.onfocus = function () { this.select(); };
         reasonInput.oninput = function () { s.reason = this.value; salaryData[sid] = s; saveSalaryData(salaryYear, salaryMonth, salaryData); };
         tr.appendChild(el('td', { class: 'salary-reason' }, [reasonInput]));
-        // 签名
-        tr.appendChild(el('td', { class: 'salary-sign' }));
+        // 签名/删除
+        if (person.isExtra) {
+          var delBtn = el('button', { class: 'btn danger salary-del-btn', onclick: function () {
+            if (confirm('确定删除该行？')) {
+              delete salaryData[sid];
+              saveSalaryData(salaryYear, salaryMonth, salaryData);
+              renderSalaryTable();
+            }
+          } }, ['删除']);
+          tr.appendChild(el('td', { class: 'salary-sign' }, [delBtn]));
+        } else {
+          tr.appendChild(el('td', { class: 'salary-sign' }));
+        }
 
         tbody.appendChild(tr);
 
@@ -2483,7 +2500,7 @@
           var extraId = 'extra_' + Date.now();
           salaryData[extraId] = {
             isExtra: true, name: '', gender: 'male',
-            workDays: 30, baseSalary: 3500, attendance: 300, performance: 1200,
+            workDays: 30, baseSalary: 0, attendance: 0, performance: 0,
             allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: ''
           };
           saveSalaryData(salaryYear, salaryMonth, salaryData);
