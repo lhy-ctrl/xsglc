@@ -1520,7 +1520,8 @@ function SchedulePage({
   embedded,
   customAssignments,
   setCustomAssignments,
-  showToast: propShowToast
+  showToast: propShowToast,
+  externalSchedule
 }) {
   const {
     generateSchedule,
@@ -1535,6 +1536,18 @@ function SchedulePage({
   const [schedule, setSchedule] = React.useState(null);
   const [afterSchoolPeople, setAfterSchoolPeople] = React.useState(null);
   const [localToast, setLocalToast] = React.useState(null);
+
+  // 监听外部 schedule 变化（从自定义岗位"使用该排班"按钮触发）
+  React.useEffect(() => {
+    if (externalSchedule && externalSchedule.trigger) {
+      const {
+        trigger,
+        ...rest
+      } = externalSchedule;
+      setSchedule(rest);
+      setAfterSchoolPeople(null);
+    }
+  }, [externalSchedule]);
   const showToast = propShowToast || (msg => {
     setLocalToast(msg);
     setTimeout(() => setLocalToast(null), 2500);
@@ -2387,9 +2400,15 @@ function GatePage({
     staff,
     ROLE_LABELS
   } = useStore();
+  // 时间段1
   const [startTime, setStartTime] = React.useState('14:00');
   const [endTime, setEndTime] = React.useState('18:00');
   const [shifts, setShifts] = React.useState(4);
+  // 时间段2
+  const [startTime2, setStartTime2] = React.useState('18:00');
+  const [endTime2, setEndTime2] = React.useState('21:00');
+  const [shifts2, setShifts2] = React.useState(3);
+  const [enableSecond, setEnableSecond] = React.useState(false);
   const [dayOffset, setDayOffset] = React.useState(1);
   const [result, setResult] = React.useState(null);
   const [toast, setToast] = React.useState(null);
@@ -2419,7 +2438,8 @@ function GatePage({
     };
     const emptySlots = [];
     const assignedIds = new Set();
-    r.shiftList.forEach((s, i) => {
+    const allShifts = [...r.shiftList, ...(r.shiftList2 || [])];
+    allShifts.forEach((s, i) => {
       s.people.forEach((p, j) => {
         if (p.name === '待分配' || !p.id) {
           emptySlots.push(`${s.start}-${s.end}第${j + 1}人`);
@@ -2428,7 +2448,6 @@ function GatePage({
         }
       });
     });
-    // 未参与的男生（排除队长副队长，因为他们默认不参与）
     const normalMales = staff.filter(p => p.gender === 'male' && p.role !== 'captain' && p.role !== 'vice_captain' && p.name && p.name.trim());
     const unusedPeople = normalMales.filter(p => !assignedIds.has(p.id));
     return {
@@ -2443,30 +2462,50 @@ function GatePage({
       return;
     }
     if (!startTime || !endTime) {
-      showToast('请填写起止时间');
+      showToast('请填写时间段1的起止时间');
       return;
     }
     if (shifts < 1) {
-      showToast('班次数量至少为 1');
+      showToast('时间段1班次数量至少为 1');
       return;
     }
-    const r = generateGateDuty(startTime, endTime, shifts, dayOffset);
-    advanceGatePointer(r.nextPointer);
+    if (enableSecond && (!startTime2 || !endTime2)) {
+      showToast('请填写时间段2的起止时间');
+      return;
+    }
+    if (enableSecond && shifts2 < 1) {
+      showToast('时间段2班次数量至少为 1');
+      return;
+    }
+
+    // 生成时间段1
+    const r1 = generateGateDuty(startTime, endTime, shifts, dayOffset);
+    advanceGatePointer(r1.nextPointer);
+    let r2 = null;
+    if (enableSecond) {
+      // 生成时间段2（指针已前进）
+      r2 = generateGateDuty(startTime2, endTime2, shifts2, dayOffset);
+      advanceGatePointer(r2.nextPointer);
+    }
     const record = {
       id: Date.now(),
-      dateStr: r.dateStr,
-      weekStr: r.weekStr,
+      dateStr: r1.dateStr,
+      weekStr: r1.weekStr,
       startTime,
       endTime,
       shifts,
-      shiftList: r.shiftList,
-      usedCaptains: r.usedCaptains,
+      startTime2: enableSecond ? startTime2 : null,
+      endTime2: enableSecond ? endTime2 : null,
+      shifts2: enableSecond ? shifts2 : null,
+      enableSecond,
+      shiftList: r1.shiftList,
+      shiftList2: r2 ? r2.shiftList : null,
+      usedCaptains: r1.usedCaptains,
+      usedCaptains2: r2 ? r2.usedCaptains : null,
       createdAt: new Date().toLocaleString('zh-CN')
     };
     setResult(record);
     setHistory(prev => [record, ...prev].slice(0, 5));
-
-    // 提醒
     const warnings = computeWarnings(record);
     if (warnings.emptySlots.length > 0 || warnings.unusedPeople.length > 0) {
       let msg = '';
@@ -2481,11 +2520,22 @@ function GatePage({
     if (!r) return '';
     const lines = [];
     lines.push(`${r.dateStr}大门口值班`);
+    lines.push('');
+    lines.push('【时间段1】');
     r.shiftList.forEach(s => {
       const names = s.people.map(p => p?.name || '待分配').join('  ');
       lines.push(`${s.start}——${s.end}  ${names}`);
     });
-    lines.push('所有教官13:40前到校打卡，路上注意安全！');
+    if (r.shiftList2 && r.shiftList2.length > 0) {
+      lines.push('');
+      lines.push('【时间段2】');
+      r.shiftList2.forEach(s => {
+        const names = s.people.map(p => p?.name || '待分配').join('  ');
+        lines.push(`${s.start}——${s.end}  ${names}`);
+      });
+    }
+    lines.push('');
+    lines.push('所有教官按时到校打卡，路上注意安全！');
     return lines.join('\n');
   };
   const handleDeleteHistory = (id, e) => {
@@ -2498,14 +2548,314 @@ function GatePage({
     unusedPeople: []
   };
   const maleCount = staff.filter(p => p.gender === 'male').length;
+  const totalNeeded = shifts * 2 + (enableSecond ? shifts2 * 2 : 0);
+  const timeInputStyle = {
+    width: '100%',
+    padding: '8px 12px',
+    border: '1px solid rgba(60,80,120,.2)',
+    borderRadius: '8px',
+    fontSize: '14px',
+    outline: 'none',
+    background: '#fff',
+    color: '#2a3a55'
+  };
+
+  // embedded 模式：左右并列布局
+  if (embedded) {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-embedded"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-row"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-params"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-params-header"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "duty-gate-params-title"
+    }, "\u6392\u73ED\u53C2\u6570")), /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-params-body"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-timeblock"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-timeblock-title"
+    }, "\u65F6\u95F4\u6BB51"), /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-timeblock-grid"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "duty-gate-label"
+    }, "\u5F00\u59CB\u65F6\u95F4"), /*#__PURE__*/React.createElement("input", {
+      type: "time",
+      value: startTime,
+      onChange: e => {
+        setStartTime(e.target.value);
+        setResult(null);
+      },
+      style: timeInputStyle
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "duty-gate-label"
+    }, "\u7ED3\u675F\u65F6\u95F4"), /*#__PURE__*/React.createElement("input", {
+      type: "time",
+      value: endTime,
+      onChange: e => {
+        setEndTime(e.target.value);
+        setResult(null);
+      },
+      style: timeInputStyle
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "duty-gate-label"
+    }, "\u5206\u51E0\u73ED"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "number",
+      min: "1",
+      max: "12",
+      value: shifts,
+      onChange: e => {
+        const v = Math.max(1, Math.min(12, parseInt(e.target.value) || 1));
+        setShifts(v);
+        setResult(null);
+      },
+      style: {
+        ...timeInputStyle,
+        width: '80px',
+        textAlign: 'center'
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '13px',
+        color: '#7a8aa5'
+      }
+    }, "\u73ED"))))), /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-second-toggle"
+    }, /*#__PURE__*/React.createElement("label", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        cursor: 'pointer',
+        fontSize: '13px',
+        color: '#3a4a6a',
+        fontWeight: 500
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "checkbox",
+      checked: enableSecond,
+      onChange: e => {
+        setEnableSecond(e.target.checked);
+        setResult(null);
+      }
+    }), "\u542F\u7528\u65F6\u95F4\u6BB52")), enableSecond && /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-timeblock"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-timeblock-title"
+    }, "\u65F6\u95F4\u6BB52"), /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-timeblock-grid"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "duty-gate-label"
+    }, "\u5F00\u59CB\u65F6\u95F4"), /*#__PURE__*/React.createElement("input", {
+      type: "time",
+      value: startTime2,
+      onChange: e => {
+        setStartTime2(e.target.value);
+        setResult(null);
+      },
+      style: timeInputStyle
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "duty-gate-label"
+    }, "\u7ED3\u675F\u65F6\u95F4"), /*#__PURE__*/React.createElement("input", {
+      type: "time",
+      value: endTime2,
+      onChange: e => {
+        setEndTime2(e.target.value);
+        setResult(null);
+      },
+      style: timeInputStyle
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "duty-gate-label"
+    }, "\u5206\u51E0\u73ED"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "number",
+      min: "1",
+      max: "12",
+      value: shifts2,
+      onChange: e => {
+        const v = Math.max(1, Math.min(12, parseInt(e.target.value) || 1));
+        setShifts2(v);
+        setResult(null);
+      },
+      style: {
+        ...timeInputStyle,
+        width: '80px',
+        textAlign: 'center'
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '13px',
+        color: '#7a8aa5'
+      }
+    }, "\u73ED"))))), /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-params-info"
+    }, "\u73B0\u6709\u7537\u751F ", /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 600,
+        color: '#2a3a55'
+      }
+    }, maleCount), " \u4EBA\uFF0C \u9700 ", /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 600,
+        color: '#2a3a55'
+      }
+    }, totalNeeded), " \u4EBA\u6B21", maleCount < totalNeeded && /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: '#ea580c',
+        marginLeft: '6px'
+      }
+    }, "\uFF08\u4E0D\u8DB3\uFF0C\u5C06\u7531\u526F\u961F\u957F/\u961F\u957F\u8865\u8DB3\uFF09")), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-primary",
+      style: {
+        width: '100%'
+      },
+      onClick: handleGenerate
+    }, "\u751F\u6210\u6392\u73ED"))), /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-result"
+    }, result ? /*#__PURE__*/React.createElement("div", {
+      className: "duty-result-card"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-result-header"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-result-title-row"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "duty-result-title"
+    }, "\u6392\u73ED\u7ED3\u679C"), /*#__PURE__*/React.createElement("span", {
+      className: "duty-result-date"
+    }, result.dateStr, " ", result.weekStr)), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-secondary btn-sm",
+      onClick: () => {
+        navigator.clipboard?.writeText(renderTextFromRecord(result));
+        showToast('已复制到剪贴板');
+      }
+    }, "\u590D\u5236\u6587\u672C")), (currentWarnings.emptySlots.length > 0 || currentWarnings.unusedPeople.length > 0) && /*#__PURE__*/React.createElement("div", {
+      className: "duty-warnings"
+    }, currentWarnings.emptySlots.length > 0 && /*#__PURE__*/React.createElement("div", null, "\u4EE5\u4E0B\u65F6\u6BB5\u6709\u7A7A\u7F3A\uFF1A", /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 600
+      }
+    }, currentWarnings.emptySlots.join('、'))), currentWarnings.unusedPeople.length > 0 && /*#__PURE__*/React.createElement("div", null, "\u4EE5\u4E0B\u7537\u751F\u672A\u53C2\u4E0E\u503C\u73ED\uFF1A", /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 600
+      }
+    }, currentWarnings.unusedPeople.map(p => p.name).join('、')))), /*#__PURE__*/React.createElement("div", {
+      className: "duty-result-body"
+    }, /*#__PURE__*/React.createElement("pre", {
+      className: "duty-result-text"
+    }, renderTextFromRecord(result)), result.usedCaptains && result.usedCaptains.length > 0 || result.usedCaptains2 && result.usedCaptains2.length > 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: '16px',
+        padding: '10px 14px',
+        background: 'rgba(245,158,11,.08)',
+        border: '1px solid rgba(245,158,11,.2)',
+        borderRadius: '8px',
+        fontSize: '13px',
+        color: '#92400e'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 500
+      }
+    }, "\u63D0\u793A\uFF1A"), "\u7537\u751F\u4EBA\u6570\u4E0D\u8DB3\uFF0C\u4EE5\u4E0B\u5E72\u90E8\u53C2\u4E0E\u4E86\u503C\u73ED\uFF1A", [...(result.usedCaptains || []), ...(result.usedCaptains2 || [])].map((p, i) => /*#__PURE__*/React.createElement("span", {
+      key: i,
+      style: {
+        margin: '0 4px'
+      }
+    }, p.name, "\uFF08", ROLE_LABELS[p.role], "\uFF09"))) : null)) : /*#__PURE__*/React.createElement("div", {
+      className: "duty-empty-card"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-empty-icon"
+    }, /*#__PURE__*/React.createElement("svg", {
+      width: "36",
+      height: "36",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "#9ca3af",
+      strokeWidth: "1.5",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    }, /*#__PURE__*/React.createElement("circle", {
+      cx: "12",
+      cy: "12",
+      r: "10"
+    }), /*#__PURE__*/React.createElement("polyline", {
+      points: "12 6 12 12 16 14"
+    }))), /*#__PURE__*/React.createElement("h3", {
+      className: "duty-empty-title"
+    }, "\u6682\u65E0\u6392\u73ED"), /*#__PURE__*/React.createElement("p", {
+      className: "duty-empty-desc"
+    }, "\u8BBE\u7F6E\u597D\u8D77\u6B62\u65F6\u95F4\u548C\u73ED\u6B21\u6570\u91CF\u540E\uFF0C\u70B9\u51FB\"\u751F\u6210\u6392\u73ED\""), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: handleGenerate
+    }, "\u7ACB\u5373\u751F\u6210")), history.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "duty-history-card",
+      style: {
+        marginTop: '16px'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-history-header"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-title"
+    }, "\u5386\u53F2\u8BB0\u5F55"), /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-count"
+    }, "\u6700\u8FD1 ", history.length, " \u6761\uFF08\u6700\u591A5\u6761\uFF09")), /*#__PURE__*/React.createElement("div", {
+      className: "duty-history-list"
+    }, history.map((record, idx) => /*#__PURE__*/React.createElement("div", {
+      key: record.id,
+      className: 'duty-history-item' + (idx < history.length - 1 ? ' border' : '')
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "duty-history-item-main",
+      onClick: () => setResult({
+        ...record
+      })
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-date"
+    }, record.dateStr), /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-week"
+    }, record.weekStr), /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-group"
+    }, record.startTime, "-", record.endTime, " ", record.shifts, "\u73ED", record.enableSecond ? ' + 时段2' : ''), /*#__PURE__*/React.createElement("span", {
+      className: "duty-history-time"
+    }, "\u751F\u6210\u4E8E ", record.createdAt)), /*#__PURE__*/React.createElement("div", {
+      className: "duty-history-ops"
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-ghost btn-sm",
+      onClick: e => {
+        e.stopPropagation();
+        navigator.clipboard?.writeText(renderTextFromRecord(record));
+        showToast('已复制到剪贴板');
+      }
+    }, "\u590D\u5236"), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-danger btn-sm",
+      onClick: e => handleDeleteHistory(record.id, e)
+    }, "\u5220\u9664")))))))), toast && /*#__PURE__*/React.createElement("div", {
+      className: "toast"
+    }, toast));
+  }
+
+  // 非 embedded 模式（独立使用）
   return /*#__PURE__*/React.createElement("div", {
-    className: 'page-enter' + (embedded ? ' duty-gate-embedded' : ''),
+    className: "page-enter",
     style: {
-      minHeight: embedded ? 'auto' : '100vh',
+      minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column'
     }
-  }, !embedded && /*#__PURE__*/React.createElement("header", {
+  }, /*#__PURE__*/React.createElement("header", {
     style: {
       padding: '20px 32px',
       background: '#fff',
@@ -2583,18 +2933,25 @@ function GatePage({
   }, "\u660E\u5929"))), /*#__PURE__*/React.createElement("main", {
     style: {
       flex: 1,
-      padding: embedded ? '0' : '28px 32px',
-      maxWidth: embedded ? 'none' : '800px',
-      margin: embedded ? '0' : '0 auto',
+      padding: '28px 32px',
+      maxWidth: '1200px',
+      margin: '0 auto',
       width: '100%'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
+      display: 'flex',
+      gap: '20px',
+      alignItems: 'flex-start'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: '360px',
+      flexShrink: 0,
       background: '#fff',
       borderRadius: '12px',
       border: '1px solid #e5e7eb',
-      padding: '24px',
-      marginBottom: '20px'
+      padding: '20px'
     }
   }, /*#__PURE__*/React.createElement("h3", {
     style: {
@@ -2605,18 +2962,28 @@ function GatePage({
     }
   }, "\u6392\u73ED\u53C2\u6570"), /*#__PURE__*/React.createElement("div", {
     style: {
+      marginBottom: '16px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: '13px',
+      fontWeight: 600,
+      color: '#374151',
+      marginBottom: '10px'
+    }
+  }, "\u65F6\u95F4\u6BB51"), /*#__PURE__*/React.createElement("div", {
+    style: {
       display: 'grid',
-      gridTemplateColumns: '1fr 1fr 1fr',
-      gap: '20px',
-      marginBottom: '20px'
+      gridTemplateColumns: '1fr 1fr',
+      gap: '12px',
+      marginBottom: '10px'
     }
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: {
-      fontSize: '13px',
-      color: '#374151',
-      marginBottom: '6px',
-      display: 'block',
-      fontWeight: 500
+      fontSize: '12px',
+      color: '#6b7280',
+      marginBottom: '4px',
+      display: 'block'
     }
   }, "\u5F00\u59CB\u65F6\u95F4"), /*#__PURE__*/React.createElement("input", {
     type: "time",
@@ -2628,11 +2995,10 @@ function GatePage({
     style: timeInputStyle
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: {
-      fontSize: '13px',
-      color: '#374151',
-      marginBottom: '6px',
-      display: 'block',
-      fontWeight: 500
+      fontSize: '12px',
+      color: '#6b7280',
+      marginBottom: '4px',
+      display: 'block'
     }
   }, "\u7ED3\u675F\u65F6\u95F4"), /*#__PURE__*/React.createElement("input", {
     type: "time",
@@ -2642,13 +3008,12 @@ function GatePage({
       setResult(null);
     },
     style: timeInputStyle
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: {
-      fontSize: '13px',
-      color: '#374151',
-      marginBottom: '6px',
-      display: 'block',
-      fontWeight: 500
+      fontSize: '12px',
+      color: '#6b7280',
+      marginBottom: '4px',
+      display: 'block'
     }
   }, "\u5206\u51E0\u73ED"), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2678,16 +3043,114 @@ function GatePage({
     }
   }, "\u73ED")))), /*#__PURE__*/React.createElement("div", {
     style: {
+      marginBottom: '16px',
+      padding: '10px',
+      background: '#f9fafb',
+      borderRadius: '8px'
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      flexWrap: 'wrap',
-      gap: '12px'
+      gap: '8px',
+      cursor: 'pointer',
+      fontSize: '13px',
+      color: '#374151',
+      fontWeight: 500
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: enableSecond,
+    onChange: e => {
+      setEnableSecond(e.target.checked);
+      setResult(null);
+    }
+  }), "\u542F\u7528\u65F6\u95F4\u6BB52")), enableSecond && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: '16px'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: '13px',
+      fontWeight: 600,
+      color: '#374151',
+      marginBottom: '10px'
+    }
+  }, "\u65F6\u95F4\u6BB52"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: '12px',
+      marginBottom: '10px'
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: '12px',
+      color: '#6b7280',
+      marginBottom: '4px',
+      display: 'block'
+    }
+  }, "\u5F00\u59CB\u65F6\u95F4"), /*#__PURE__*/React.createElement("input", {
+    type: "time",
+    value: startTime2,
+    onChange: e => {
+      setStartTime2(e.target.value);
+      setResult(null);
+    },
+    style: timeInputStyle
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: '12px',
+      color: '#6b7280',
+      marginBottom: '4px',
+      display: 'block'
+    }
+  }, "\u7ED3\u675F\u65F6\u95F4"), /*#__PURE__*/React.createElement("input", {
+    type: "time",
+    value: endTime2,
+    onChange: e => {
+      setEndTime2(e.target.value);
+      setResult(null);
+    },
+    style: timeInputStyle
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: '12px',
+      color: '#6b7280',
+      marginBottom: '4px',
+      display: 'block'
+    }
+  }, "\u5206\u51E0\u73ED"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "1",
+    max: "12",
+    value: shifts2,
+    onChange: e => {
+      const v = Math.max(1, Math.min(12, parseInt(e.target.value) || 1));
+      setShifts2(v);
+      setResult(null);
+    },
+    style: {
+      ...timeInputStyle,
+      width: '80px',
+      textAlign: 'center'
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: '13px',
       color: '#6b7280'
+    }
+  }, "\u73ED")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: '13px',
+      color: '#6b7280',
+      marginBottom: '16px'
     }
   }, "\u73B0\u6709\u7537\u751F ", /*#__PURE__*/React.createElement("span", {
     style: {
@@ -2699,23 +3162,18 @@ function GatePage({
       fontWeight: 600,
       color: '#374151'
     }
-  }, shifts * 2), " \u4EBA\u6B21", maleCount < shifts * 2 && /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: '#ea580c',
-      marginLeft: '6px'
-    }
-  }, "\uFF08\u4E0D\u8DB3\uFF0C\u5C06\u7531\u526F\u961F\u957F/\u961F\u957F\u8865\u8DB3\uFF09")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: '10px'
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-secondary btn-sm",
-    onClick: () => onNavigate('staff')
-  }, "\u4EBA\u5458\u7BA1\u7406"), /*#__PURE__*/React.createElement("button", {
+  }, totalNeeded), " \u4EBA\u6B21"), /*#__PURE__*/React.createElement("button", {
     className: "btn btn-primary",
+    style: {
+      width: '100%'
+    },
     onClick: handleGenerate
-  }, "\u751F\u6210\u6392\u73ED")))), result ? /*#__PURE__*/React.createElement("div", {
+  }, "\u751F\u6210\u6392\u73ED")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, result ? /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#fff',
       borderRadius: '12px',
@@ -2761,56 +3219,20 @@ function GatePage({
       navigator.clipboard?.writeText(renderTextFromRecord(result));
       showToast('已复制到剪贴板');
     }
-  }, "\u590D\u5236\u6587\u672C")), (currentWarnings.emptySlots.length > 0 || currentWarnings.unusedPeople.length > 0) && /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '12px 20px',
-      background: '#fffbeb',
-      borderBottom: '1px solid #fcd34d',
-      fontSize: '13px',
-      color: '#92400e',
-      lineHeight: 1.8
-    }
-  }, currentWarnings.emptySlots.length > 0 && /*#__PURE__*/React.createElement("div", null, "\u26A0\uFE0F \u4EE5\u4E0B\u65F6\u6BB5\u6709\u7A7A\u7F3A\uFF1A", /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontWeight: 600
-    }
-  }, currentWarnings.emptySlots.join('、'))), currentWarnings.unusedPeople.length > 0 && /*#__PURE__*/React.createElement("div", null, "\u26A0\uFE0F \u4EE5\u4E0B\u7537\u751F\u672A\u53C2\u4E0E\u503C\u73ED\uFF1A", /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontWeight: 600
-    }
-  }, currentWarnings.unusedPeople.map(p => p.name).join('、')))), /*#__PURE__*/React.createElement("div", {
+  }, "\u590D\u5236\u6587\u672C")), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '24px 28px'
     }
   }, /*#__PURE__*/React.createElement("pre", {
     style: {
       margin: 0,
-      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
       fontSize: '15px',
       lineHeight: 2.2,
       color: '#1f2937',
       whiteSpace: 'pre-wrap'
     }
-  }, renderTextFromRecord(result)), result.usedCaptains && result.usedCaptains.length > 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: '16px',
-      padding: '10px 14px',
-      background: '#fffbeb',
-      border: '1px solid #fcd34d',
-      borderRadius: '8px',
-      fontSize: '13px',
-      color: '#92400e'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontWeight: 500
-    }
-  }, "\u63D0\u793A\uFF1A"), "\u7537\u751F\u4EBA\u6570\u4E0D\u8DB3\uFF0C\u4EE5\u4E0B\u5E72\u90E8\u53C2\u4E0E\u4E86\u503C\u73ED\uFF1A", result.usedCaptains.map((p, i) => /*#__PURE__*/React.createElement("span", {
-    key: i,
-    style: {
-      margin: '0 4px'
-    }
-  }, p.name, "\uFF08", ROLE_LABELS[p.role], "\uFF09"))))) : /*#__PURE__*/React.createElement("div", {
+  }, renderTextFromRecord(result)))) : /*#__PURE__*/React.createElement("div", {
     style: {
       background: '#fff',
       borderRadius: '12px',
@@ -2821,32 +3243,7 @@ function GatePage({
       alignItems: 'center',
       gap: '14px'
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: '72px',
-      height: '72px',
-      borderRadius: '50%',
-      background: '#fff7ed',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "36",
-    height: "36",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "#ea580c",
-    strokeWidth: "1.5",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("circle", {
-    cx: "12",
-    cy: "12",
-    r: "10"
-  }), /*#__PURE__*/React.createElement("polyline", {
-    points: "12 6 12 12 16 14"
-  }))), /*#__PURE__*/React.createElement("h3", {
+  }, /*#__PURE__*/React.createElement("h3", {
     style: {
       fontSize: '16px',
       fontWeight: 500,
@@ -2863,120 +3260,10 @@ function GatePage({
   }, "\u8BBE\u7F6E\u597D\u8D77\u6B62\u65F6\u95F4\u548C\u73ED\u6B21\u6570\u91CF\u540E\uFF0C\u70B9\u51FB\"\u751F\u6210\u6392\u73ED\""), /*#__PURE__*/React.createElement("button", {
     className: "btn btn-primary",
     onClick: handleGenerate
-  }, "\u7ACB\u5373\u751F\u6210")), history.length > 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: '24px',
-      background: '#fff',
-      borderRadius: '12px',
-      border: '1px solid #e5e7eb',
-      overflow: 'hidden'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '14px 20px',
-      background: '#f8fafc',
-      borderBottom: '1px solid #e5e7eb'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: '4px',
-      height: '18px',
-      background: '#6b7280',
-      borderRadius: '2px'
-    }
-  }), /*#__PURE__*/React.createElement("h3", {
-    style: {
-      fontSize: '16px',
-      fontWeight: 600,
-      color: '#111827'
-    }
-  }, "\u5386\u53F2\u8BB0\u5F55"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: '13px',
-      color: '#9ca3af'
-    }
-  }, "\u6700\u8FD1 ", history.length, " \u6761\uFF08\u6700\u591A5\u6761\uFF09"))), /*#__PURE__*/React.createElement("div", null, history.map((record, idx) => /*#__PURE__*/React.createElement("div", {
-    key: record.id,
-    style: {
-      borderBottom: idx < history.length - 1 ? '1px solid #f3f4f6' : 'none'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '12px 20px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      cursor: 'pointer',
-      flex: 1
-    },
-    onClick: () => setResult({
-      ...record
-    })
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: '13px',
-      fontWeight: 600,
-      color: '#374151',
-      minWidth: '80px'
-    }
-  }, record.dateStr), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: '12px',
-      color: '#9ca3af'
-    }
-  }, record.weekStr), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: '12px',
-      color: '#6b7280'
-    }
-  }, record.startTime, "-", record.endTime, " ", record.shifts, "\u73ED"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: '11px',
-      color: '#d1d5db'
-    }
-  }, "\u751F\u6210\u4E8E ", record.createdAt))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: '8px'
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: e => {
-      e.stopPropagation();
-      navigator.clipboard?.writeText(renderTextFromRecord(record));
-      showToast('已复制到剪贴板');
-    }
-  }, "\u590D\u5236"), /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-danger btn-sm",
-    onClick: e => handleDeleteHistory(record.id, e)
-  }, "\u5220\u9664")))))))), toast && /*#__PURE__*/React.createElement("div", {
+  }, "\u7ACB\u5373\u751F\u6210"))))), toast && /*#__PURE__*/React.createElement("div", {
     className: "toast"
   }, toast));
 }
-const timeInputStyle = {
-  width: '100%',
-  padding: '8px 12px',
-  border: '1px solid #d1d5db',
-  borderRadius: '6px',
-  fontSize: '14px',
-  outline: 'none',
-  background: '#fff'
-};
 Object.assign(window, {
   GatePage
 });
@@ -3223,6 +3510,7 @@ function DutyMainPage({
     }
   });
   const [customAssignments, setCustomAssignments] = React.useState({});
+  const [externalSchedule, setExternalSchedule] = React.useState(null);
   const [toast, setToast] = React.useState(null);
   const setMode = m => {
     setModeState(m);
@@ -3313,6 +3601,85 @@ function DutyMainPage({
     const arr = customAssignments[postKey];
     return arr && arr[index] ? arr[index] : null;
   };
+
+  // 使用自定义排班（从底部按钮触发）
+  const handleUseCustom = () => {
+    const hasContent = Object.values(customAssignments).some(arr => arr && arr.some(p => p && p.id));
+    if (!hasContent) {
+      showToast('请先填写岗位人员');
+      return;
+    }
+    const mainPosts = [{
+      key: 'gate',
+      label: '大门口',
+      gender: 'male',
+      type: 'main'
+    }, {
+      key: 'dorm_m',
+      label: '男寝',
+      gender: 'any',
+      type: 'main'
+    }, {
+      key: 'playground',
+      label: '操场',
+      gender: 'male',
+      type: 'main'
+    }, {
+      key: 'dorm_f',
+      label: '女寝',
+      gender: 'female',
+      type: 'main'
+    }, {
+      key: 'office',
+      label: '办公室',
+      gender: 'female',
+      type: 'main'
+    }, {
+      key: 'tech',
+      label: '科技楼',
+      gender: 'male',
+      type: 'main'
+    }];
+    const mainDuty = mainPosts.map(post => ({
+      ...post,
+      person: customAssignments[post.key]?.[0] || {
+        name: '待分配'
+      }
+    }));
+    const subDuty = {
+      garden: customAssignments.garden?.[0] || {
+        name: '待分配'
+      },
+      canteenGate: customAssignments.canteenGate?.[0] || {
+        name: '待分配'
+      },
+      canteen: customAssignments.canteen || [],
+      toilet: customAssignments.canteen?.[0] || {
+        name: '待分配'
+      }
+    };
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const schedule = {
+      dateStr: `${d.getMonth() + 1}月${d.getDate()}日`,
+      fullDateStr: `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`,
+      weekStr: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()],
+      mode,
+      mainGroup: mode === 'group' ? mainGroup : undefined,
+      subGroup: mode === 'group' ? subGroup : undefined,
+      mainDuty,
+      subDuty
+    };
+    setExternalSchedule({
+      ...schedule,
+      trigger: Date.now()
+    });
+    showToast('已应用自定义排班');
+  };
+  const handleClearCustom = () => {
+    setCustomAssignments({});
+    showToast('已清空自定义框');
+  };
   const tabs = [{
     key: 'all',
     label: '全员值班'
@@ -3334,7 +3701,7 @@ function DutyMainPage({
     color: '#2a3a55'
   };
   return /*#__PURE__*/React.createElement("div", {
-    className: "page-enter duty-main"
+    className: "duty-main"
   }, /*#__PURE__*/React.createElement("div", {
     className: "duty-tabs"
   }, tabs.map(tab => /*#__PURE__*/React.createElement("button", {
@@ -3353,10 +3720,7 @@ function DutyMainPage({
     className: "duty-custom-desc"
   }, "\u586B\u5199\u540E\u4EE5\u6B64\u4E3A\u57FA\u51C6\u8F6E\u6362\uFF1B\u751F\u6210\u540E\u81EA\u52A8\u66F4\u65B0\u4E3A\u6700\u65B0\u7ED3\u679C"), /*#__PURE__*/React.createElement("button", {
     className: "btn btn-ghost btn-sm",
-    onClick: () => {
-      setCustomAssignments({});
-      showToast('已清空自定义框');
-    }
+    onClick: handleClearCustom
   }, "\u6E05\u7A7A")), mode === 'group' && /*#__PURE__*/React.createElement("div", {
     className: "duty-group-hint"
   }, /*#__PURE__*/React.createElement("span", {
@@ -3421,7 +3785,8 @@ function DutyMainPage({
     embedded: true,
     customAssignments: customAssignments,
     setCustomAssignments: setCustomAssignments,
-    showToast: showToast
+    showToast: showToast,
+    externalSchedule: externalSchedule
   }))), toast && /*#__PURE__*/React.createElement("div", {
     className: "toast"
   }, toast));

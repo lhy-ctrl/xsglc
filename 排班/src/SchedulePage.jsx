@@ -1,9 +1,18 @@
-function SchedulePage({ mode, onNavigate, embedded, customAssignments, setCustomAssignments, showToast: propShowToast }) {
+function SchedulePage({ mode, onNavigate, embedded, customAssignments, setCustomAssignments, showToast: propShowToast, externalSchedule }) {
   const { generateSchedule, getAfterSchoolGate, advanceAfterSchoolPointer,
           scheduleHistory, saveScheduleHistory, deleteScheduleHistory, staff, groupRotation } = useStore();
   const [schedule, setSchedule] = React.useState(null);
   const [afterSchoolPeople, setAfterSchoolPeople] = React.useState(null);
   const [localToast, setLocalToast] = React.useState(null);
+
+  // 监听外部 schedule 变化（从自定义岗位"使用该排班"按钮触发）
+  React.useEffect(() => {
+    if (externalSchedule && externalSchedule.trigger) {
+      const { trigger, ...rest } = externalSchedule;
+      setSchedule(rest);
+      setAfterSchoolPeople(null);
+    }
+  }, [externalSchedule]);
 
   const showToast = propShowToast || ((msg) => {
     setLocalToast(msg);

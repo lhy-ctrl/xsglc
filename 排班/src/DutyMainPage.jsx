@@ -4,6 +4,7 @@ function DutyMainPage({ onNavigate }) {
     try { return localStorage.getItem('duty_mode') || 'all'; } catch (e) { return 'all'; }
   });
   const [customAssignments, setCustomAssignments] = React.useState({});
+  const [externalSchedule, setExternalSchedule] = React.useState(null);
   const [toast, setToast] = React.useState(null);
 
   const setMode = (m) => {
@@ -52,6 +53,51 @@ function DutyMainPage({ onNavigate }) {
     return arr && arr[index] ? arr[index] : null;
   };
 
+  // 使用自定义排班（从底部按钮触发）
+  const handleUseCustom = () => {
+    const hasContent = Object.values(customAssignments).some(arr =>
+      arr && arr.some(p => p && p.id));
+    if (!hasContent) {
+      showToast('请先填写岗位人员');
+      return;
+    }
+    const mainPosts = [
+      { key: 'gate', label: '大门口', gender: 'male', type: 'main' },
+      { key: 'dorm_m', label: '男寝', gender: 'any', type: 'main' },
+      { key: 'playground', label: '操场', gender: 'male', type: 'main' },
+      { key: 'dorm_f', label: '女寝', gender: 'female', type: 'main' },
+      { key: 'office', label: '办公室', gender: 'female', type: 'main' },
+      { key: 'tech', label: '科技楼', gender: 'male', type: 'main' },
+    ];
+    const mainDuty = mainPosts.map(post => ({
+      ...post,
+      person: customAssignments[post.key]?.[0] || { name: '待分配' },
+    }));
+    const subDuty = {
+      garden: customAssignments.garden?.[0] || { name: '待分配' },
+      canteenGate: customAssignments.canteenGate?.[0] || { name: '待分配' },
+      canteen: customAssignments.canteen || [],
+      toilet: customAssignments.canteen?.[0] || { name: '待分配' },
+    };
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const schedule = {
+      dateStr: `${d.getMonth() + 1}月${d.getDate()}日`,
+      fullDateStr: `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`,
+      weekStr: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()],
+      mode, mainGroup: mode === 'group' ? mainGroup : undefined,
+      subGroup: mode === 'group' ? subGroup : undefined,
+      mainDuty, subDuty,
+    };
+    setExternalSchedule({ ...schedule, trigger: Date.now() });
+    showToast('已应用自定义排班');
+  };
+
+  const handleClearCustom = () => {
+    setCustomAssignments({});
+    showToast('已清空自定义框');
+  };
+
   const tabs = [
     { key: 'all', label: '全员值班' },
     { key: 'group', label: '分组值班' },
@@ -64,7 +110,7 @@ function DutyMainPage({ onNavigate }) {
   };
 
   return (
-    <div className="page-enter duty-main">
+    <div className="duty-main">
       {/* 顶部切换按钮 */}
       <div className="duty-tabs">
         {tabs.map(tab => (
@@ -83,74 +129,74 @@ function DutyMainPage({ onNavigate }) {
         {/* 左侧：自定义岗位人员 */}
         {(mode === 'all' || mode === 'group') && (
           <div className="duty-custom-panel">
-          <div className="duty-custom-header">
-            <span className="duty-custom-title">自定义岗位人员</span>
-            <span className="duty-custom-desc">填写后以此为基准轮换；生成后自动更新为最新结果</span>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => { setCustomAssignments({}); showToast('已清空自定义框'); }}
-            >清空</button>
-          </div>
-          {mode === 'group' && (
-            <div className="duty-group-hint">
-              <span className="tag tag-group-a">{mainGroup}组</span>主班 /
-              <span className="tag tag-group-b" style={{ marginLeft: '4px' }}>{subGroup}组</span>副班
+            <div className="duty-custom-header">
+              <span className="duty-custom-title">自定义岗位人员</span>
+              <span className="duty-custom-desc">填写后以此为基准轮换；生成后自动更新为最新结果</span>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={handleClearCustom}
+              >清空</button>
             </div>
-          )}
-          <div className="duty-custom-grid">
-            {CUSTOM_POSTS.map(post => (
-              <div key={post.key} className="duty-custom-item">
-                <div className="duty-custom-post-label">
-                  <span>{post.label}</span>
-                  <span className="duty-custom-post-meta">
-                    {post.type === 'main' ? '主班' : '副班'}
-                    {post.gender === 'male' ? ' · 男' : post.gender === 'female' ? ' · 女' : ''}
-                  </span>
-                </div>
-                {Array.from({ length: post.capacity }).map((_, idx) => {
-                  const person = getCustomPerson(post.key, idx);
-                  const options = getPeopleForPost(post);
-                  return (
-                    <select
-                      key={idx}
-                      style={{ ...selectStyle, marginBottom: idx < post.capacity - 1 ? '6px' : 0 }}
-                      value={person?.id || ''}
-                      onChange={(e) => updateCustomPost(post.key, e.target.value ? parseInt(e.target.value) : null, idx)}
-                    >
-                      <option value="">— 请选择 —</option>
-                      {options.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  );
-                })}
-              </div>
-            ))}
-            {/* 厕所口只读 */}
-            <div className="duty-custom-item duty-custom-readonly">
-              <div className="duty-custom-post-label">
-                <span>厕所口</span>
-                <span className="duty-custom-post-meta">餐厅第1人兼任</span>
-              </div>
-              <div className="duty-custom-readonly-value">
-                {getCustomPerson('canteen', 0)?.name || '—'}
-              </div>
-            </div>
-            {/* 中午收假条（仅全员模式） */}
-            {mode === 'all' && (
-              <div className="duty-custom-item duty-custom-readonly">
-                <div className="duty-custom-post-label">
-                  <span>中午收假条</span>
-                  <span className="duty-custom-post-meta">默认办公室人员</span>
-                </div>
-                <div className="duty-custom-readonly-value">
-                  {getCustomPerson('office', 0)?.name || '—'}
-                </div>
+            {mode === 'group' && (
+              <div className="duty-group-hint">
+                <span className="tag tag-group-a">{mainGroup}组</span>主班 /
+                <span className="tag tag-group-b" style={{ marginLeft: '4px' }}>{subGroup}组</span>副班
               </div>
             )}
+            <div className="duty-custom-grid">
+              {CUSTOM_POSTS.map(post => (
+                <div key={post.key} className="duty-custom-item">
+                  <div className="duty-custom-post-label">
+                    <span>{post.label}</span>
+                    <span className="duty-custom-post-meta">
+                      {post.type === 'main' ? '主班' : '副班'}
+                      {post.gender === 'male' ? ' · 男' : post.gender === 'female' ? ' · 女' : ''}
+                    </span>
+                  </div>
+                  {Array.from({ length: post.capacity }).map((_, idx) => {
+                    const person = getCustomPerson(post.key, idx);
+                    const options = getPeopleForPost(post);
+                    return (
+                      <select
+                        key={idx}
+                        style={{ ...selectStyle, marginBottom: idx < post.capacity - 1 ? '6px' : 0 }}
+                        value={person?.id || ''}
+                        onChange={(e) => updateCustomPost(post.key, e.target.value ? parseInt(e.target.value) : null, idx)}
+                      >
+                        <option value="">— 请选择 —</option>
+                        {options.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    );
+                  })}
+                </div>
+              ))}
+              {/* 厕所口只读 */}
+              <div className="duty-custom-item duty-custom-readonly">
+                <div className="duty-custom-post-label">
+                  <span>厕所口</span>
+                  <span className="duty-custom-post-meta">餐厅第1人兼任</span>
+                </div>
+                <div className="duty-custom-readonly-value">
+                  {getCustomPerson('canteen', 0)?.name || '—'}
+                </div>
+              </div>
+              {/* 中午收假条（仅全员模式） */}
+              {mode === 'all' && (
+                <div className="duty-custom-item duty-custom-readonly">
+                  <div className="duty-custom-post-label">
+                    <span>中午收假条</span>
+                    <span className="duty-custom-post-meta">默认办公室人员</span>
+                  </div>
+                  <div className="duty-custom-readonly-value">
+                    {getCustomPerson('office', 0)?.name || '—'}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
         {/* 右侧：排班数据 */}
         <div className="duty-content">
@@ -164,6 +210,7 @@ function DutyMainPage({ onNavigate }) {
               customAssignments={customAssignments}
               setCustomAssignments={setCustomAssignments}
               showToast={showToast}
+              externalSchedule={externalSchedule}
             />
           )}
         </div>
