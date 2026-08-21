@@ -2276,6 +2276,21 @@
     var ded = parseFloat(s.deduction) || 0;
     return Math.round(((base + att + perf) / 30 * days + allow + sen + bonus - ded) * 100) / 100;
   }
+  // 获取某月某员工的绩效扣除汇总（金额+原因）
+  function getEmployeeDeduction(employeeId, year, month) {
+    var st = store.getState();
+    var records = st.employeeRecords || [];
+    var monthStr = year + '-' + (month < 10 ? '0' + month : month);
+    var total = 0;
+    var reasons = [];
+    records.forEach(function (r) {
+      if (String(r.employeeId) === String(employeeId) && r.date && r.date.substring(0, 7) === monthStr) {
+        total += parseFloat(r.amount) || 0;
+        if (r.reason) reasons.push(r.reason);
+      }
+    });
+    return { amount: total, reason: reasons.join('；') };
+  }
   function renderSalary(root) {
     var now = new Date();
     var salaryYear = now.getFullYear();
@@ -2338,6 +2353,12 @@
           workDays: 30, baseSalary: 3500, attendance: 300, performance: 1200,
           allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: ''
         };
+        // 从教官绩效记录自动获取当月扣除和原因
+        var empDed = getEmployeeDeduction(sid, salaryYear, salaryMonth);
+        if (empDed.amount > 0) {
+          s.deduction = empDed.amount;
+          s.reason = empDed.reason;
+        }
         var actual = calcActual(s);
         totalActual += actual;
 
