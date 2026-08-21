@@ -21,6 +21,8 @@
     { key: 'report', label: '每日通报' },
     { key: 'dorm', label: '寝室数据' },
     { key: 'employee', label: '教官绩效' },
+    { key: 'duty', label: '值班排班' },
+    { key: 'dutyStaff', label: '排班人员' },
     { key: 'settings', label: '数据与设置' }
   ];
 

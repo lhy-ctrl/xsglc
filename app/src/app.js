@@ -348,6 +348,8 @@
     leave: { title: '请假名单', render: renderLeave },
     report: { title: '每日通报', render: renderReport },
     employee: { title: '教官绩效', render: renderEmployee },
+    duty: { title: '值班排班', render: renderDutySchedule },
+    dutyStaff: { title: '排班人员', render: renderDutyStaff },
     settings: { title: '数据与设置', render: renderSettings },
     dorm: { title: '寝室数据', render: renderDormRoom }
   };
@@ -549,6 +551,8 @@
     var lres = $('#leave-result'); if (lres) leaveResultCache = lres.textContent;
     var rr = $('#report-raw'); if (rr) reportRawCache = rr.value;
     var rres = $('#report-result'); if (rres) reportResultCache = rres.textContent;
+    // 切换页面前卸载排班模块的 React 组件，避免内存泄漏
+    if (dutyReactRoot) { try { dutyReactRoot.unmount(); } catch (e) {} dutyReactRoot = null; }
     clear(content);
     MODULES[key].render(content);
   }
@@ -2246,6 +2250,49 @@
         el('div', { class: 'card' }, [el('div', { class: 'num num-val', text: String(empCount) + '人' }), el('div', { class: 'lbl', text: '涉及员工人数' })])
       ]));
     }
+  }
+
+  // ---------- 值班排班 / 排班人员（React 组件集成） ----------
+  var dutyReactRoot = null;
+
+  // 排班系统内部路由包装组件：直接进入指定页面，保留排班系统自身的页面跳转能力
+  function DutyApp(props) {
+    var pageState = React.useState(props.initialPage || 'dutySelect');
+    var page = pageState[0], setPage = pageState[1];
+    var paramsState = React.useState({});
+    var pageParams = paramsState[0], setPageParams = paramsState[1];
+    var keyState = React.useState(0);
+    var pageKey = keyState[0], setPageKey = keyState[1];
+
+    function navigate(target, params) {
+      setPage(target);
+      setPageParams(params || {});
+      setPageKey(function (k) { return k + 1; });
+    }
+
+    var content = null;
+    if (page === 'home') content = React.createElement(HomePage, { key: pageKey, onNavigate: navigate });
+    else if (page === 'staff') content = React.createElement(StaffPage, { key: pageKey, onNavigate: navigate });
+    else if (page === 'schedule') content = React.createElement(SchedulePage, { key: pageKey, mode: pageParams.mode || 'all', onNavigate: navigate });
+    else if (page === 'dutySelect') content = React.createElement(DutySelectPage, { key: pageKey, onNavigate: navigate });
+    else if (page === 'gate') content = React.createElement(GatePage, { key: pageKey, onNavigate: navigate });
+
+    return React.createElement(StoreProvider, null, content);
+  }
+
+  function mountDutyApp(root, initialPage) {
+    var container = el('div', { class: 'duty-app' });
+    root.appendChild(container);
+    dutyReactRoot = ReactDOM.createRoot(container);
+    dutyReactRoot.render(React.createElement(DutyApp, { initialPage: initialPage }));
+  }
+
+  function renderDutySchedule(root) {
+    mountDutyApp(root, 'dutySelect');
+  }
+
+  function renderDutyStaff(root) {
+    mountDutyApp(root, 'staff');
   }
 
   // ---------- 数据与设置 ----------

@@ -14,8 +14,11 @@ function read(p) { return fs.readFileSync(p, 'utf8'); }
 
 const css = read(path.join(ROOT, 'src', 'style.css'));
 const xlsx = read(path.join(ROOT, 'node_modules', 'xlsx', 'dist', 'xlsx.full.min.js'));
+const react = read(path.join(ROOT, 'src', 'react.min.js'));
+const reactDom = read(path.join(ROOT, 'src', 'react-dom.min.js'));
 const store = read(path.join(ROOT, 'src', 'store.js'));
 const core = read(path.join(ROOT, 'src', 'core.js'));
+const duty = read(path.join(ROOT, 'src', 'duty.js'));
 const app = read(path.join(ROOT, 'src', 'app.js'));
 
 // 云端模块注入策略：
@@ -54,6 +57,7 @@ async function build(cloudModuleFile, title, out, readonlyFlag) {
   const cssMin = minifyCss(css);
   const storeMin = await minifyJs(store, 'store.js');
   const coreMin = await minifyJs(core, 'core.js');
+  const dutyMin = await minifyJs(duty, 'duty.js');
   const cloudMin = await minifyJs(cloud, cloudModuleFile);
   const appMin = await minifyJs(app, 'app.js');
   const html = `<!DOCTYPE html>
@@ -69,11 +73,20 @@ ${cssMin}
 <body>
 <div id="app-root"></div>
 ${xlsxBlock}
+<script>/* React */
+${react}
+</script>
+<script>/* ReactDOM */
+${reactDom}
+</script>
 <script>/* store.js */
 ${storeMin}
 </script>
 <script>/* core.js */
 ${coreMin}
+</script>
+<script>/* duty.js —— 排班系统 */
+${dutyMin}
 </script>
 <script>/* cloud.js —— ${cloudModuleFile} */
 ${cloudMin}
