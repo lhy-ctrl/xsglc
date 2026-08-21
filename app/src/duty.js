@@ -59,6 +59,18 @@ const defaultStaff = [{
   group: 'A',
   role: 'member'
 }, {
+  id: 13,
+  name: '黄磊',
+  gender: 'male',
+  group: 'A',
+  role: 'member'
+}, {
+  id: 14,
+  name: '周敏',
+  gender: 'female',
+  group: 'A',
+  role: 'member'
+}, {
   id: 7,
   name: '赵磊',
   gender: 'male',
