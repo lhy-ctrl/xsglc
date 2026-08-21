@@ -1451,11 +1451,11 @@
       [el('option', { value: '' }, ['全部年级'])].concat(C.GRADES.map(function (g) { return el('option', { value: g }, [g]); })));
     gradeSel.value = scoreFilter.grade || '';
     var search = el('input', { type: 'text', id: 'score-kw', placeholder: '搜索姓名/班级', oninput: function (e) { scoreFilter.keyword = e.target.value; scorePage = 1; renderScoreTable(); } });
-    root.appendChild(el('div', { class: 'toolbar' }, [
-      search, gradeSel
-    ]));
-    // 筛选栏 + 月份栏（一排排列：筛选在前，月份在后）
+    // 所有筛选和月份放在一排
     var monthRow = el('div', { class: 'month-row' });
+    // 搜索框 + 年级
+    monthRow.appendChild(search);
+    monthRow.appendChild(gradeSel);
     // ① 班级筛选下拉（跟随年级：只列出当前年级的班级）
     var classSel = el('select', { id: 'score-flt-class', onchange: function (e) { scoreFilter.classLabel = e.target.value; scorePage = 1; renderScoreTable(); } });
     function renderClassOptions() {
