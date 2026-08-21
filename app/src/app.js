@@ -2338,7 +2338,7 @@
       var table = el('table', { class: 'salary-table' });
       var thead = el('thead');
       var headerRow = el('tr');
-      var headers = ['姓名', '性别', '工作时间', '底薪', '全勤', '绩效', '补助', '工龄', '奖金', '扣除', '实发', '奖、罚原因', '', '签名'];
+      var headers = ['姓名', '性别', '工作时间', '底薪', '全勤', '绩效', '补助', '工龄', '奖金', '扣除', '实发', '奖、罚原因', '签名'];
       headers.forEach(function (h) {
         headerRow.appendChild(el('th', { text: h }));
       });
@@ -2398,14 +2398,12 @@
         dedInput.oninput = function () { s.deduction = parseFloat(this.value) || 0; updateRow(); };
         tr.appendChild(el('td', { class: 'salary-input' }, [dedInput]));
         // 实发
-        var actualTd = el('td', { class: 'salary-actual', text: actual.toFixed(2) });
+        var actualTd = el('td', { class: 'salary-actual', text: actual.toFixed(2) + '元' });
         tr.appendChild(actualTd);
         // 奖、罚原因
         var reasonInput = el('input', { type: 'text', value: s.reason || '' });
         reasonInput.oninput = function () { s.reason = this.value; salaryData[sid] = s; saveSalaryData(salaryYear, salaryMonth, salaryData); };
         tr.appendChild(el('td', { class: 'salary-reason' }, [reasonInput]));
-        // 空列
-        tr.appendChild(el('td', { class: 'salary-empty' }));
         // 签名
         tr.appendChild(el('td', { class: 'salary-sign' }));
 
@@ -2413,7 +2411,7 @@
 
         function updateRow() {
           var a = calcActual(s);
-          actualTd.textContent = a.toFixed(2);
+          actualTd.textContent = a.toFixed(2) + '元';
           salaryData[sid] = s;
           saveSalaryData(salaryYear, salaryMonth, salaryData);
           // 更新总发工资
@@ -2423,7 +2421,7 @@
             total += calcActual(sd);
           });
           var totalEl = document.getElementById('salary-total');
-          if (totalEl) totalEl.textContent = total.toFixed(2);
+          if (totalEl) totalEl.textContent = total.toFixed(2) + '元';
         }
       });
       table.appendChild(tbody);
@@ -2431,11 +2429,12 @@
 
       // 底部备注 + 总发工资
       var footer = el('div', { class: 'salary-footer' });
-      var remark = el('div', { class: 'salary-remark', text: '备注：各教官按考勤制度工作突出者奖励200元，工作落后者扣除100元。每月请假超过两天（包括两天）扣除全勤奖300元(请假一天扣当天全勤金额10元）旷工者扣除100元，给公司带来负面影响者扣除100元。满勤每月30天' });
+      var remark = el('div', { class: 'salary-remark' });
+      remark.appendChild(el('div', { text: '备注：各教官按考勤制度工作突出者奖励200元，工作落后者扣除100元。每月请假超过两天（包括两天）扣除全勤奖300元(请假一天扣当天全勤金额10元）旷工者扣除100元，给公司带来负面影响者扣除100元。满勤每月30天' }));
+      remark.appendChild(el('div', { class: 'salary-remark-sign', text: '皓天拓展有限公司' }));
       var totalRow = el('div', { class: 'salary-total-row' });
-      totalRow.appendChild(el('span', { class: 'salary-total-label', text: '皓天拓展有限公司' }));
-      totalRow.appendChild(el('span', { class: 'salary-total-value', text: '总发工资：' }));
-      totalRow.appendChild(el('span', { id: 'salary-total', class: 'salary-total-num', text: totalActual.toFixed(2) }));
+      totalRow.appendChild(el('span', { class: 'salary-total-label', text: '总发工资：' }));
+      totalRow.appendChild(el('span', { id: 'salary-total', class: 'salary-total-num', text: totalActual.toFixed(2) + '元' }));
       footer.appendChild(remark);
       footer.appendChild(totalRow);
       salaryWrap.appendChild(footer);

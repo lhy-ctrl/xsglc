@@ -856,16 +856,16 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   box-shadow: 0 2px 16px rgba(60,80,120,.06);
   padding: 32px 40px; box-sizing: border-box;
 }
-.salary-title { text-align: center; margin-bottom: 20px; }
-.salary-company { font-size: 18px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
-.salary-subtitle { font-size: 15px; font-weight: 600; color: #333; }
+.salary-title { text-align: center; margin-bottom: 16px; }
+.salary-company { font-size: 26px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; letter-spacing: 2px; }
+.salary-subtitle { font-size: 16px; font-weight: 600; color: #333; }
 .salary-table {
   width: 100%; border-collapse: collapse; font-size: 12.5px;
-  border: 1px solid #333;
+  border: 1px solid #333; table-layout: fixed;
 }
 .salary-table th, .salary-table td {
-  border: 1px solid #333; padding: 6px 8px; text-align: center;
-  vertical-align: middle;
+  border: 1px solid #333; padding: 5px 4px; text-align: center;
+  vertical-align: middle; overflow: hidden;
 }
 .salary-table th {
   background: #f0f2f5; font-weight: 600; color: #1a1a2e;
@@ -873,31 +873,33 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 }
 .salary-table input {
   width: 100%; border: none; outline: none; text-align: center;
-  font-size: 12.5px; background: transparent; font-family: inherit;
-  padding: 2px 0;
+  font-size: 12px; background: transparent; font-family: inherit;
+  padding: 1px 0;
 }
 .salary-table input:focus { background: #fffbeb; }
-.salary-name { font-weight: 600; color: #1a1a2e; white-space: nowrap; }
-.salary-center { text-align: center; }
-.salary-input { min-width: 60px; }
-.salary-actual { font-weight: 700; color: #c2410c; min-width: 70px; }
-.salary-reason { min-width: 120px; }
-.salary-reason input { text-align: left; }
-.salary-empty { min-width: 20px; background: #fafafa; }
-.salary-sign { min-width: 80px; }
-.salary-footer { margin-top: 16px; }
+.salary-name { font-weight: 600; color: #1a1a2e; white-space: nowrap; width: 8%; }
+.salary-center { text-align: center; width: 5%; }
+.salary-input { width: 7%; }
+.salary-actual { font-weight: 700; color: #c2410c; width: 9%; }
+.salary-reason { width: 14%; }
+.salary-reason input { text-align: left; font-size: 11px; }
+.salary-sign { width: 10%; }
+.salary-footer { margin-top: 14px; }
 .salary-remark {
   font-size: 11.5px; color: #444; line-height: 1.7;
   padding: 10px 12px; background: #fafafa; border-radius: 6px;
-  border: 1px solid #e5e7eb; margin-bottom: 12px;
+  border: 1px solid #e5e7eb; margin-bottom: 10px;
+}
+.salary-remark-sign {
+  text-align: right; margin-top: 8px; font-weight: 600; color: #333;
+  font-size: 13px;
 }
 .salary-total-row {
-  display: flex; justify-content: space-between; align-items: center;
-  font-size: 14px; font-weight: 600;
+  display: flex; justify-content: flex-end; align-items: center;
+  font-size: 15px; font-weight: 600; gap: 6px;
 }
 .salary-total-label { color: #333; }
-.salary-total-value { color: #666; }
-.salary-total-num { color: #c2410c; font-size: 16px; font-weight: 700; }
+.salary-total-num { color: #c2410c; font-size: 18px; font-weight: 700; }
 
 /* 打印样式：A4横版 */
 @media print {
