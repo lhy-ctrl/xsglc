@@ -1,20 +1,9 @@
-function StaffPage({ onNavigate, canEdit, autoBounce }) {
+function StaffPage({ onNavigate, canEdit }) {
   const { staff, addStaff, updateStaff, deleteStaff, resetStaff, ROLE_LABELS } = useStore();
   const [showGroup, setShowGroup] = React.useState(true);
   const [filter, setFilter] = React.useState(null); // null=全部, male/female/A/B
   const [toast, setToast] = React.useState(null);
-  const [bouncing, setBouncing] = React.useState(false);
   const editable = canEdit !== false; // 默认可编辑，仅显式传 false 时只读
-
-  // 页面打开后一段时间自动跳动
-  React.useEffect(() => {
-    if (!autoBounce) return;
-    const timer = setTimeout(() => {
-      setBouncing(true);
-      setTimeout(() => setBouncing(false), 650);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -115,7 +104,7 @@ function StaffPage({ onNavigate, canEdit, autoBounce }) {
   };
 
   return (
-    <div className={'page-enter' + (bouncing ? ' staff-bounce' : '')} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="page-enter" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header style={{ padding: '20px 32px', background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('home')} style={{ marginLeft: '-8px' }}>

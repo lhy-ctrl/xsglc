@@ -2216,7 +2216,7 @@
 
     var content = null;
     if (page === 'home') content = React.createElement(DutyMainPage, { key: pageKey, onNavigate: navigate });
-    else if (page === 'staff') content = React.createElement(StaffPage, { key: pageKey, onNavigate: navigate, canEdit: isAdmin, autoBounce: true });
+    else if (page === 'staff') content = React.createElement(StaffPage, { key: pageKey, onNavigate: navigate, canEdit: isAdmin });
     else if (page === 'schedule') content = React.createElement(SchedulePage, { key: pageKey, mode: pageParams.mode || 'all', onNavigate: navigate });
     else if (page === 'dutySelect') content = React.createElement(DutyMainPage, { key: pageKey, onNavigate: navigate });
     else if (page === 'gate') content = React.createElement(GatePage, { key: pageKey, onNavigate: navigate });

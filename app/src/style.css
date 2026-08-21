@@ -659,31 +659,37 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   from { opacity: 0; transform: translate(-50%, -10px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
-/* ===== 排班主页面：顶部切换 + 内容 + 底部自定义岗位 ===== */
+/* ===== 排班主页面：顶部切换 + 内容+自定义岗位并列 ===== */
 .duty-app .duty-main { display: flex; flex-direction: column; gap: 16px; }
 .duty-app .duty-tabs {
-  display: flex; gap: 8px; padding: 12px 16px;
+  display: flex; gap: 8px; padding: 10px 14px;
   background: rgba(255,255,255,.7); backdrop-filter: blur(10px);
   border-radius: 12px; border: 1px solid rgba(60,80,120,.1);
   box-shadow: 0 2px 12px rgba(60,80,120,.06);
+  width: fit-content;
 }
 .duty-app .duty-tab {
-  flex: 1; padding: 10px 16px; border: 1px solid rgba(60,80,120,.15);
+  padding: 8px 20px; border: 1px solid rgba(60,80,120,.15);
   border-radius: 10px; background: rgba(255,255,255,.8);
   color: #5a6a8a; font-size: 14px; font-weight: 500; cursor: pointer;
-  transition: all .18s ease; font-family: inherit;
+  transition: all .18s ease; font-family: inherit; white-space: nowrap;
 }
 .duty-app .duty-tab:hover { background: #fff; border-color: rgba(76,141,255,.35); color: #2878ef; }
 .duty-app .duty-tab.active {
   background: linear-gradient(180deg, #4d93ff, #2878ef); color: #fff;
   border-color: transparent; box-shadow: 0 2px 10px rgba(40,120,239,.3);
 }
-.duty-app .duty-content { min-height: 200px; }
-/* 底部自定义岗位面板 */
+/* 内容+自定义岗位 并列一排 */
+.duty-app .duty-row {
+  display: flex; gap: 16px; align-items: flex-start;
+}
+.duty-app .duty-content { flex: 1; min-width: 0; }
 .duty-app .duty-custom-panel {
+  width: 340px; flex-shrink: 0;
   background: rgba(255,255,255,.85); backdrop-filter: blur(10px);
   border-radius: 14px; border: 1px solid rgba(60,80,120,.12);
   box-shadow: 0 4px 20px rgba(60,80,120,.08); overflow: hidden;
+  align-self: stretch;
 }
 .duty-app .duty-custom-header {
   display: flex; align-items: center; gap: 12px; padding: 14px 18px;
@@ -792,11 +798,3 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .duty-app .duty-history-ops { display: flex; gap: 6px; flex-shrink: 0; }
 /* embedded 大门口页 */
 .duty-app .duty-gate-embedded > main { padding: 0 !important; }
-/* 员工管理页面跳动动画 */
-@keyframes staffBounce {
-  0%, 100% { transform: translateY(0); }
-  25% { transform: translateY(-4px); }
-  50% { transform: translateY(0); }
-  75% { transform: translateY(-2px); }
-}
-.duty-app .staff-bounce { animation: staffBounce .6s ease-in-out; }

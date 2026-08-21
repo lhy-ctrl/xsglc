@@ -844,8 +844,7 @@ Object.assign(window, {
 // --- StaffPage.jsx ---
 function StaffPage({
   onNavigate,
-  canEdit,
-  autoBounce
+  canEdit
 }) {
   const {
     staff,
@@ -858,18 +857,8 @@ function StaffPage({
   const [showGroup, setShowGroup] = React.useState(true);
   const [filter, setFilter] = React.useState(null); // null=全部, male/female/A/B
   const [toast, setToast] = React.useState(null);
-  const [bouncing, setBouncing] = React.useState(false);
   const editable = canEdit !== false; // 默认可编辑，仅显式传 false 时只读
 
-  // 页面打开后一段时间自动跳动
-  React.useEffect(() => {
-    if (!autoBounce) return;
-    const timer = setTimeout(() => {
-      setBouncing(true);
-      setTimeout(() => setBouncing(false), 650);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
   const showToast = msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 2000);
@@ -1021,7 +1010,7 @@ function StaffPage({
     cursor: 'default'
   };
   return /*#__PURE__*/React.createElement("div", {
-    className: 'page-enter' + (bouncing ? ' staff-bounce' : ''),
+    className: "page-enter",
     style: {
       minHeight: '100vh',
       display: 'flex',
@@ -3341,6 +3330,8 @@ function DutyMainPage({
     className: 'duty-tab' + (mode === tab.key ? ' active' : ''),
     onClick: () => setMode(tab.key)
   }, tab.label))), /*#__PURE__*/React.createElement("div", {
+    className: "duty-row"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "duty-content"
   }, mode === 'gate' ? /*#__PURE__*/React.createElement(GatePage, {
     onNavigate: onNavigate,
@@ -3419,7 +3410,7 @@ function DutyMainPage({
     className: "duty-custom-post-meta"
   }, "\u9ED8\u8BA4\u529E\u516C\u5BA4\u4EBA\u5458")), /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-readonly-value"
-  }, getCustomPerson('office', 0)?.name || '—')))), toast && /*#__PURE__*/React.createElement("div", {
+  }, getCustomPerson('office', 0)?.name || '—'))))), toast && /*#__PURE__*/React.createElement("div", {
     className: "toast"
   }, toast));
 }

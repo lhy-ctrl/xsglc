@@ -71,25 +71,26 @@ function DutyMainPage({ onNavigate }) {
         ))}
       </div>
 
-      {/* 内容区 */}
-      <div className="duty-content">
-        {mode === 'gate' ? (
-          <GatePage onNavigate={onNavigate} embedded />
-        ) : (
-          <SchedulePage
-            mode={mode}
-            onNavigate={onNavigate}
-            embedded
-            customAssignments={customAssignments}
-            setCustomAssignments={setCustomAssignments}
-            showToast={showToast}
-          />
-        )}
-      </div>
+      {/* 内容区：排班数据 + 自定义岗位 并列一排 */}
+      <div className="duty-row">
+        <div className="duty-content">
+          {mode === 'gate' ? (
+            <GatePage onNavigate={onNavigate} embedded />
+          ) : (
+            <SchedulePage
+              mode={mode}
+              onNavigate={onNavigate}
+              embedded
+              customAssignments={customAssignments}
+              setCustomAssignments={setCustomAssignments}
+              showToast={showToast}
+            />
+          )}
+        </div>
 
-      {/* 底部：自定义岗位人员（放大区域） */}
-      {(mode === 'all' || mode === 'group') && (
-        <div className="duty-custom-panel">
+        {/* 右侧：自定义岗位人员 */}
+        {(mode === 'all' || mode === 'group') && (
+          <div className="duty-custom-panel">
           <div className="duty-custom-header">
             <span className="duty-custom-title">自定义岗位人员</span>
             <span className="duty-custom-desc">填写后以此为基准轮换；生成后自动更新为最新结果</span>
@@ -158,6 +159,7 @@ function DutyMainPage({ onNavigate }) {
           </div>
         </div>
       )}
+      </div>
 
       {toast && <div className="toast">{toast}</div>}
     </div>
