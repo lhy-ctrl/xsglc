@@ -352,6 +352,7 @@
     employee: { title: '教官绩效', render: renderEmployee },
     duty: { title: '值班排班', render: renderDutySchedule },
     dutyStaff: { title: '员工管理', render: renderDutyStaff },
+    salary: { title: '员工工资', render: renderSalary },
     settings: { title: '数据与设置', render: renderSettings },
     dorm: { title: '寝室数据', render: renderDormRoom }
   };
@@ -2236,6 +2237,190 @@
 
   function renderDutyStaff(root) {
     mountDutyApp(root, 'staff');
+  }
+
+  // ---------- 员工工资 ----------
+  function getDutyStaffList() {
+    try {
+      var raw = localStorage.getItem('duty_staff');
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+  function sortStaffByRole(list) {
+    var order = { captain: 0, vice_captain: 1, leader_a: 2, member: 3, leader_b: 4 };
+    return list.slice().sort(function (a, b) {
+      var oa = order[a.role] != null ? order[a.role] : 5;
+      var ob = order[b.role] != null ? order[b.role] : 5;
+      if (oa !== ob) return oa - ob;
+      if (a.group !== b.group) return a.group === 'A' ? -1 : 1;
+      return a.id - b.id;
+    });
+  }
+  function loadSalaryData(year, month) {
+    try {
+      var raw = localStorage.getItem('duty_salary_' + year + '_' + month);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function saveSalaryData(year, month, data) {
+    try { localStorage.setItem('duty_salary_' + year + '_' + month, JSON.stringify(data)); } catch (e) {}
+  }
+  function calcActual(s) {
+    var base = parseFloat(s.baseSalary) || 0;
+    var att = parseFloat(s.attendance) || 0;
+    var perf = parseFloat(s.performance) || 0;
+    var days = parseFloat(s.workDays) || 0;
+    var allow = parseFloat(s.allowance) || 0;
+    var sen = parseFloat(s.seniority) || 0;
+    var bonus = parseFloat(s.bonus) || 0;
+    var ded = parseFloat(s.deduction) || 0;
+    return Math.round(((base + att + perf) / 30 * days + allow + sen + bonus - ded) * 100) / 100;
+  }
+  function renderSalary(root) {
+    var now = new Date();
+    var salaryYear = now.getFullYear();
+    var salaryMonth = now.getMonth() + 1;
+    var staffList = sortStaffByRole(getDutyStaffList());
+    var salaryData = loadSalaryData(salaryYear, salaryMonth);
+
+    // 工具栏
+    var toolbar = el('div', { class: 'toolbar salary-toolbar' });
+    var yearSel = el('select', { id: 'salary-year' });
+    for (var y = 2024; y <= 2030; y++) {
+      yearSel.appendChild(el('option', { value: y }, [y + '年']));
+    }
+    yearSel.value = salaryYear;
+    yearSel.onchange = function () { salaryYear = parseInt(this.value); salaryData = loadSalaryData(salaryYear, salaryMonth); renderSalaryTable(); };
+    var monthSel = el('select', { id: 'salary-month' });
+    for (var m = 1; m <= 12; m++) {
+      monthSel.appendChild(el('option', { value: m }, [m + '月']));
+    }
+    monthSel.value = salaryMonth;
+    monthSel.onchange = function () { salaryMonth = parseInt(this.value); salaryData = loadSalaryData(salaryYear, salaryMonth); renderSalaryTable(); };
+    var printBtn = el('button', { class: 'btn primary', onclick: function () { window.print(); } }, ['打印']);
+    toolbar.appendChild(el('span', { text: '年份：' }));
+    toolbar.appendChild(yearSel);
+    toolbar.appendChild(el('span', { text: '月份：' }));
+    toolbar.appendChild(monthSel);
+    toolbar.appendChild(printBtn);
+    root.appendChild(toolbar);
+
+    // 工资表容器（A4横版）
+    var salaryWrap = el('div', { class: 'salary-a4' });
+    root.appendChild(salaryWrap);
+
+    function renderSalaryTable() {
+      clear(salaryWrap);
+      staffList = sortStaffByRole(getDutyStaffList());
+      // 标题
+      var title = el('div', { class: 'salary-title' }, [
+        el('div', { class: 'salary-company', text: '禹州市皓天拓展策划有限公司' }),
+        el('div', { class: 'salary-subtitle', text: salaryYear + '年' + salaryMonth + '月份员工工资（禹州四高）' })
+      ]);
+      salaryWrap.appendChild(title);
+
+      // 表格
+      var table = el('table', { class: 'salary-table' });
+      var thead = el('thead');
+      var headerRow = el('tr');
+      var headers = ['姓名', '性别', '工作时间', '底薪', '全勤', '绩效', '补助', '工龄', '奖金', '扣除', '实发', '奖、罚原因', '', '签名'];
+      headers.forEach(function (h) {
+        headerRow.appendChild(el('th', { text: h }));
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      var tbody = el('tbody');
+      var totalActual = 0;
+      staffList.forEach(function (person) {
+        var sid = person.id;
+        var s = salaryData[sid] || {
+          workDays: 30, baseSalary: 3500, attendance: 300, performance: 1200,
+          allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: ''
+        };
+        var actual = calcActual(s);
+        totalActual += actual;
+
+        var tr = el('tr');
+        tr.appendChild(el('td', { class: 'salary-name', text: person.name || '（未命名）' }));
+        tr.appendChild(el('td', { class: 'salary-center', text: person.gender === 'male' ? '男' : '女' }));
+        // 工作时间
+        var daysInput = el('input', { type: 'number', value: s.workDays, min: '0', max: '31', step: '0.5' });
+        daysInput.oninput = function () { s.workDays = parseFloat(this.value) || 0; updateRow(); };
+        tr.appendChild(el('td', { class: 'salary-input' }, [daysInput]));
+        // 底薪
+        var baseInput = el('input', { type: 'number', value: s.baseSalary, min: '0' });
+        baseInput.oninput = function () { s.baseSalary = parseFloat(this.value) || 0; updateRow(); };
+        tr.appendChild(el('td', { class: 'salary-input' }, [baseInput]));
+        // 全勤
+        var attInput = el('input', { type: 'number', value: s.attendance, min: '0' });
+        attInput.oninput = function () { s.attendance = parseFloat(this.value) || 0; updateRow(); };
+        tr.appendChild(el('td', { class: 'salary-input' }, [attInput]));
+        // 绩效
+        var perfInput = el('input', { type: 'number', value: s.performance, min: '0' });
+        perfInput.oninput = function () { s.performance = parseFloat(this.value) || 0; updateRow(); };
+        tr.appendChild(el('td', { class: 'salary-input' }, [perfInput]));
+        // 补助
+        var allowInput = el('input', { type: 'number', value: s.allowance, min: '0' });
+        allowInput.oninput = function () { s.allowance = parseFloat(this.value) || 0; updateRow(); };
+        tr.appendChild(el('td', { class: 'salary-input' }, [allowInput]));
+        // 工龄
+        var senInput = el('input', { type: 'number', value: s.seniority, min: '0' });
+        senInput.oninput = function () { s.seniority = parseFloat(this.value) || 0; updateRow(); };
+        tr.appendChild(el('td', { class: 'salary-input' }, [senInput]));
+        // 奖金
+        var bonusInput = el('input', { type: 'number', value: s.bonus, min: '0' });
+        bonusInput.oninput = function () { s.bonus = parseFloat(this.value) || 0; updateRow(); };
+        tr.appendChild(el('td', { class: 'salary-input' }, [bonusInput]));
+        // 扣除
+        var dedInput = el('input', { type: 'number', value: s.deduction, min: '0' });
+        dedInput.oninput = function () { s.deduction = parseFloat(this.value) || 0; updateRow(); };
+        tr.appendChild(el('td', { class: 'salary-input' }, [dedInput]));
+        // 实发
+        var actualTd = el('td', { class: 'salary-actual', text: actual.toFixed(2) });
+        tr.appendChild(actualTd);
+        // 奖、罚原因
+        var reasonInput = el('input', { type: 'text', value: s.reason || '' });
+        reasonInput.oninput = function () { s.reason = this.value; salaryData[sid] = s; saveSalaryData(salaryYear, salaryMonth, salaryData); };
+        tr.appendChild(el('td', { class: 'salary-reason' }, [reasonInput]));
+        // 空列
+        tr.appendChild(el('td', { class: 'salary-empty' }));
+        // 签名
+        tr.appendChild(el('td', { class: 'salary-sign' }));
+
+        tbody.appendChild(tr);
+
+        function updateRow() {
+          var a = calcActual(s);
+          actualTd.textContent = a.toFixed(2);
+          salaryData[sid] = s;
+          saveSalaryData(salaryYear, salaryMonth, salaryData);
+          // 更新总发工资
+          var total = 0;
+          staffList.forEach(function (p) {
+            var sd = salaryData[p.id] || {};
+            total += calcActual(sd);
+          });
+          var totalEl = document.getElementById('salary-total');
+          if (totalEl) totalEl.textContent = total.toFixed(2);
+        }
+      });
+      table.appendChild(tbody);
+      salaryWrap.appendChild(table);
+
+      // 底部备注 + 总发工资
+      var footer = el('div', { class: 'salary-footer' });
+      var remark = el('div', { class: 'salary-remark', text: '备注：各教官按考勤制度工作突出者奖励200元，工作落后者扣除100元。每月请假超过两天（包括两天）扣除全勤奖300元(请假一天扣当天全勤金额10元）旷工者扣除100元，给公司带来负面影响者扣除100元。满勤每月30天' });
+      var totalRow = el('div', { class: 'salary-total-row' });
+      totalRow.appendChild(el('span', { class: 'salary-total-label', text: '皓天拓展有限公司' }));
+      totalRow.appendChild(el('span', { class: 'salary-total-value', text: '总发工资：' }));
+      totalRow.appendChild(el('span', { id: 'salary-total', class: 'salary-total-num', text: totalActual.toFixed(2) }));
+      footer.appendChild(remark);
+      footer.appendChild(totalRow);
+      salaryWrap.appendChild(footer);
+    }
+
+    renderSalaryTable();
   }
 
   // ---------- 数据与设置 ----------

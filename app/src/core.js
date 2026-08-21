@@ -23,6 +23,7 @@
     { key: 'employee', label: '教官绩效' },
     { key: 'duty', label: '值班排班' },
     { key: 'dutyStaff', label: '员工管理' },
+    { key: 'salary', label: '员工工资' },
     { key: 'settings', label: '数据与设置' }
   ];
 

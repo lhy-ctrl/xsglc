@@ -846,3 +846,69 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .duty-app .duty-gate-result {
   flex: 1; min-width: 0;
 }
+
+/* ================= 员工工资表 ================= */
+.salary-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.salary-toolbar select { padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(30,38,54,.16); background: #fff; font-size: 13px; }
+.salary-a4 {
+  width: 100%; max-width: 1120px; margin: 0 auto;
+  background: #fff; border-radius: 12px; border: 1px solid rgba(30,38,54,.1);
+  box-shadow: 0 2px 16px rgba(60,80,120,.06);
+  padding: 32px 40px; box-sizing: border-box;
+}
+.salary-title { text-align: center; margin-bottom: 20px; }
+.salary-company { font-size: 18px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
+.salary-subtitle { font-size: 15px; font-weight: 600; color: #333; }
+.salary-table {
+  width: 100%; border-collapse: collapse; font-size: 12.5px;
+  border: 1px solid #333;
+}
+.salary-table th, .salary-table td {
+  border: 1px solid #333; padding: 6px 8px; text-align: center;
+  vertical-align: middle;
+}
+.salary-table th {
+  background: #f0f2f5; font-weight: 600; color: #1a1a2e;
+  font-size: 12px; white-space: nowrap;
+}
+.salary-table input {
+  width: 100%; border: none; outline: none; text-align: center;
+  font-size: 12.5px; background: transparent; font-family: inherit;
+  padding: 2px 0;
+}
+.salary-table input:focus { background: #fffbeb; }
+.salary-name { font-weight: 600; color: #1a1a2e; white-space: nowrap; }
+.salary-center { text-align: center; }
+.salary-input { min-width: 60px; }
+.salary-actual { font-weight: 700; color: #c2410c; min-width: 70px; }
+.salary-reason { min-width: 120px; }
+.salary-reason input { text-align: left; }
+.salary-empty { min-width: 20px; background: #fafafa; }
+.salary-sign { min-width: 80px; }
+.salary-footer { margin-top: 16px; }
+.salary-remark {
+  font-size: 11.5px; color: #444; line-height: 1.7;
+  padding: 10px 12px; background: #fafafa; border-radius: 6px;
+  border: 1px solid #e5e7eb; margin-bottom: 12px;
+}
+.salary-total-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 14px; font-weight: 600;
+}
+.salary-total-label { color: #333; }
+.salary-total-value { color: #666; }
+.salary-total-num { color: #c2410c; font-size: 16px; font-weight: 700; }
+
+/* 打印样式：A4横版 */
+@media print {
+  body * { visibility: hidden; }
+  .salary-a4, .salary-a4 * { visibility: visible; }
+  .salary-a4 {
+    position: absolute; left: 0; top: 0; width: 100%;
+    box-shadow: none; border: none; border-radius: 0; padding: 20px 24px;
+    max-width: none;
+  }
+  .salary-toolbar { display: none !important; }
+  .salary-table input { background: transparent !important; }
+  @page { size: A4 landscape; margin: 10mm; }
+}
