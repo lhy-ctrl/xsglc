@@ -2781,6 +2781,11 @@
   function clearAllData() {
     if (!guardFull('清空数据')) return;
     store.clear();
+    // 清空量化管理分的预设月份（设为空数组，避免activeScoreMonths自动生成最近5个月）
+    var st = store.getState();
+    st.settings = st.settings || {};
+    st.settings.scoreMonths = [];
+    store.setState(st);
     // 已登录云端管理员时，同步清空云端数据，避免30秒后云端拉取覆盖恢复
     if (cloudAdminPassword && AppCloudLib) {
       cloudStatus.busy = true;

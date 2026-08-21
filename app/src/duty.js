@@ -67,7 +67,7 @@ const defaultStaff = [{
 }, {
   id: 14,
   name: '周敏',
-  gender: 'female',
+  gender: 'male',
   group: 'A',
   role: 'member'
 }, {

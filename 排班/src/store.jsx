@@ -19,7 +19,7 @@ const defaultStaff = [
   { id: 5,  name: '陈静',   gender: 'female', group: 'A', role: 'member'      },
   { id: 6,  name: '杨帆',   gender: 'male',   group: 'A', role: 'member'      },
   { id: 13, name: '黄磊',   gender: 'male',   group: 'A', role: 'member'      },
-  { id: 14, name: '周敏',   gender: 'female', group: 'A', role: 'member'      },
+  { id: 14, name: '周敏',   gender: 'male',   group: 'A', role: 'member'      },
   { id: 7,  name: '赵磊',   gender: 'male',   group: 'B', role: 'leader_b'    },
   { id: 8,  name: '孙丽',   gender: 'female', group: 'B', role: 'member'      },
   { id: 9,  name: '周杰',   gender: 'male',   group: 'B', role: 'member'      },
