@@ -115,8 +115,8 @@ function SchedulePage({ mode, onNavigate, embedded, customAssignments, setCustom
     lines.push(`餐厅口：${subDuty.canteenGate.name || '待分配'}`);
     lines.push(`厕所口：${subDuty.toilet?.name || '待分配'}`);
     if (record.mode === 'all') {
-      const officePerson = record.mainDuty.find(p => (p.key || p.label) === 'office' || (p.label || p.name) === '办公室')?.person;
-      lines.push(`中午收假条：${officePerson?.name || '待分配'}`);
+      const lunchPerson = subDuty.lunch || record.mainDuty.find(p => (p.key || p.label) === 'office' || (p.label || p.name) === '办公室')?.person;
+      lines.push(`中午收假条：${lunchPerson?.name || '待分配'}`);
     }
     if (record.mode === 'group' && record.afterSchool) {
       lines.push('');
@@ -183,7 +183,8 @@ function SchedulePage({ mode, onNavigate, embedded, customAssignments, setCustom
       garden: customAssignments?.garden?.[0] || { name: '待分配' },
       canteenGate: customAssignments?.canteenGate?.[0] || { name: '待分配' },
       canteen: customAssignments?.canteen || [],
-      toilet: customAssignments?.canteen?.[0] || { name: '待分配' },
+      toilet: customAssignments?.toilet?.[0] || customAssignments?.canteen?.[0] || { name: '待分配' },
+      lunch: customAssignments?.lunch?.[0] || customAssignments?.office?.[0] || { name: '待分配' },
     };
     const d = new Date();
     d.setDate(d.getDate() + 1);

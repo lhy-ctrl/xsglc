@@ -1454,10 +1454,8 @@
     root.appendChild(el('div', { class: 'toolbar' }, [
       search, gradeSel
     ]));
-    // 月份栏 + 右侧两个选项：①选单独班级查看 ②手动点击按量化分由高到低排序
+    // 筛选栏 + 月份栏（一排排列：筛选在前，月份在后）
     var monthRow = el('div', { class: 'month-row' });
-    var monthBar = el('div', { class: 'month-bar', id: 'score-month-bar' });
-    monthRow.appendChild(monthBar);
     // ① 班级筛选下拉（跟随年级：只列出当前年级的班级）
     var classSel = el('select', { id: 'score-flt-class', onchange: function (e) { scoreFilter.classLabel = e.target.value; scorePage = 1; renderScoreTable(); } });
     function renderClassOptions() {
@@ -1487,6 +1485,9 @@
       el('label', { text: '排序' }), sortSel
     ]);
     monthRow.appendChild(monthTools);
+    // 月份栏（含添加/删除按钮）
+    var monthBar = el('div', { class: 'month-bar', id: 'score-month-bar' });
+    monthRow.appendChild(monthBar);
     root.appendChild(monthRow);
     root.appendChild(el('p', { class: 'muted', id: 'score-formula-hint' }));
     root.appendChild(el('div', { class: 'panel', id: 'score-panel' }));

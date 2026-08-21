@@ -154,24 +154,38 @@ function DutyMainPage({ onNavigate }) {
                   })}
                 </div>
               ))}
-              {/* 厕所口只读 */}
-              <div className="duty-custom-item duty-custom-readonly">
+              {/* 厕所口（可自定义，未填则默认餐厅第1人） */}
+              <div className="duty-custom-item">
                 <div className="duty-custom-post-label">
                   <span>厕所口</span>
                 </div>
-                <div className="duty-custom-readonly-value">
-                  {getCustomPerson('canteen', 0)?.name || '—'}
-                </div>
+                <select
+                  style={selectStyle}
+                  value={getCustomPerson('toilet', 0)?.id || ''}
+                  onChange={(e) => updateCustomPost('toilet', e.target.value ? parseInt(e.target.value) : null, 0)}
+                >
+                  <option value="">— 默认餐厅第1人 —</option>
+                  {staff.filter(p => p.name && p.name.trim()).map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
               </div>
-              {/* 中午收假条（仅全员模式） */}
+              {/* 中午收假条（可自定义，未填则默认办公室人员） */}
               {mode === 'all' && (
-                <div className="duty-custom-item duty-custom-readonly">
+                <div className="duty-custom-item">
                   <div className="duty-custom-post-label">
                     <span>中午收假条</span>
                   </div>
-                  <div className="duty-custom-readonly-value">
-                    {getCustomPerson('office', 0)?.name || '—'}
-                  </div>
+                  <select
+                    style={selectStyle}
+                    value={getCustomPerson('lunch', 0)?.id || ''}
+                    onChange={(e) => updateCustomPost('lunch', e.target.value ? parseInt(e.target.value) : null, 0)}
+                  >
+                    <option value="">— 默认办公室人员 —</option>
+                    {staff.filter(p => p.name && p.name.trim()).map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
               )}
             </div>

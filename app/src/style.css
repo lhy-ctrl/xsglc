@@ -308,7 +308,7 @@ td[data-cat] input { width: 100%; min-width: 48px; box-sizing: border-box; paddi
 /* 量化管理分：月份 tab */
 .month-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 2px 0 12px; }
 .month-bar { display: flex; gap: 8px; flex-wrap: wrap; }
-.month-tools { display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+.month-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .month-tools label { font-size: 12.5px; color: rgba(70,76,88,.75); font-weight: 600; }
 .month-tools select { font-size: 12.5px; padding: 5px 8px; border-radius: 8px; border: 1px solid rgba(30,38,54,.16); background: #fff; color: #333; }
 /* 大数据量分页栏 */
@@ -531,13 +531,13 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .dorm-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .dorm-tab { padding: 7px 16px; font-size: 14px; font-weight: 600; border-radius: 8px; border: 1px solid rgba(30,38,54,.15); background: rgba(240,243,248,.6); color: rgba(70,76,88,.9); cursor: pointer; }
 .dorm-tab:hover { background: rgba(230,235,244,.8); }
-.dorm-tab.active { background: linear-gradient(135deg, #2b6ff2, #1f8a4c); color: #fff; border-color: transparent; }
+.dorm-tab.active { background: linear-gradient(180deg, #4d93ff, #2878ef); color: #fff; border-color: transparent; }
 
 /* ================= 通用Tab切换 ================= */
 .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; border-bottom: 1px solid rgba(30,38,54,.1); padding-bottom: 10px; }
 .tab-btn { padding: 8px 20px; font-size: 14px; font-weight: 600; border-radius: 8px; border: 1px solid rgba(30,38,54,.15); background: rgba(240,243,248,.6); color: rgba(70,76,88,.9); cursor: pointer; }
 .tab-btn:hover { background: rgba(230,235,244,.8); }
-.tab-btn.active { background: linear-gradient(135deg, #2b6ff2, #1f8a4c); color: #fff; border-color: transparent; }
+.tab-btn.active { background: linear-gradient(180deg, #4d93ff, #2878ef); color: #fff; border-color: transparent; }
 .dorm-room-table { min-width: 520px; }
 .dorm-room-table td, .dorm-room-table th { padding: 6px 10px; }
 .dorm-room-no { font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }

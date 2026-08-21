@@ -1641,8 +1641,8 @@ function SchedulePage({
     lines.push(`餐厅口：${subDuty.canteenGate.name || '待分配'}`);
     lines.push(`厕所口：${subDuty.toilet?.name || '待分配'}`);
     if (record.mode === 'all') {
-      const officePerson = record.mainDuty.find(p => (p.key || p.label) === 'office' || (p.label || p.name) === '办公室')?.person;
-      lines.push(`中午收假条：${officePerson?.name || '待分配'}`);
+      const lunchPerson = subDuty.lunch || record.mainDuty.find(p => (p.key || p.label) === 'office' || (p.label || p.name) === '办公室')?.person;
+      lines.push(`中午收假条：${lunchPerson?.name || '待分配'}`);
     }
     if (record.mode === 'group' && record.afterSchool) {
       lines.push('');
@@ -1742,7 +1742,10 @@ function SchedulePage({
         name: '待分配'
       },
       canteen: customAssignments?.canteen || [],
-      toilet: customAssignments?.canteen?.[0] || {
+      toilet: customAssignments?.toilet?.[0] || customAssignments?.canteen?.[0] || {
+        name: '待分配'
+      },
+      lunch: customAssignments?.lunch?.[0] || customAssignments?.office?.[0] || {
         name: '待分配'
       }
     };
@@ -3729,18 +3732,32 @@ function DutyMainPage({
       value: p.id
     }, p.name)));
   }))), /*#__PURE__*/React.createElement("div", {
-    className: "duty-custom-item duty-custom-readonly"
+    className: "duty-custom-item"
   }, /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-post-label"
-  }, /*#__PURE__*/React.createElement("span", null, "\u5395\u6240\u53E3")), /*#__PURE__*/React.createElement("div", {
-    className: "duty-custom-readonly-value"
-  }, getCustomPerson('canteen', 0)?.name || '—')), mode === 'all' && /*#__PURE__*/React.createElement("div", {
-    className: "duty-custom-item duty-custom-readonly"
+  }, /*#__PURE__*/React.createElement("span", null, "\u5395\u6240\u53E3")), /*#__PURE__*/React.createElement("select", {
+    style: selectStyle,
+    value: getCustomPerson('toilet', 0)?.id || '',
+    onChange: e => updateCustomPost('toilet', e.target.value ? parseInt(e.target.value) : null, 0)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "\u2014 \u9ED8\u8BA4\u9910\u5385\u7B2C1\u4EBA \u2014"), staff.filter(p => p.name && p.name.trim()).map(p => /*#__PURE__*/React.createElement("option", {
+    key: p.id,
+    value: p.id
+  }, p.name)))), mode === 'all' && /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-item"
   }, /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-post-label"
-  }, /*#__PURE__*/React.createElement("span", null, "\u4E2D\u5348\u6536\u5047\u6761")), /*#__PURE__*/React.createElement("div", {
-    className: "duty-custom-readonly-value"
-  }, getCustomPerson('office', 0)?.name || '—'))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, "\u4E2D\u5348\u6536\u5047\u6761")), /*#__PURE__*/React.createElement("select", {
+    style: selectStyle,
+    value: getCustomPerson('lunch', 0)?.id || '',
+    onChange: e => updateCustomPost('lunch', e.target.value ? parseInt(e.target.value) : null, 0)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "\u2014 \u9ED8\u8BA4\u529E\u516C\u5BA4\u4EBA\u5458 \u2014"), staff.filter(p => p.name && p.name.trim()).map(p => /*#__PURE__*/React.createElement("option", {
+    key: p.id,
+    value: p.id
+  }, p.name))))), /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-footer"
   }, /*#__PURE__*/React.createElement("button", {
     className: "btn btn-primary btn-sm",
