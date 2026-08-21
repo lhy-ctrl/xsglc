@@ -2291,6 +2291,13 @@
     });
     return { amount: total, reason: reasons.join('；') };
   }
+  // 姓名对齐：两个字中间加全角空格
+  function formatName(name) {
+    if (!name) return '（未命名）';
+    var n = name.trim();
+    if (n.length === 2) return n.charAt(0) + '　' + n.charAt(1);
+    return n;
+  }
   function renderSalary(root) {
     var now = new Date();
     var salaryYear = now.getFullYear();
@@ -2363,7 +2370,7 @@
         totalActual += actual;
 
         var tr = el('tr');
-        tr.appendChild(el('td', { class: 'salary-name', text: person.name || '（未命名）' }));
+        tr.appendChild(el('td', { class: 'salary-name', text: formatName(person.name) }));
         tr.appendChild(el('td', { class: 'salary-center', text: person.gender === 'male' ? '男' : '女' }));
         // 工作时间
         var daysInput = el('input', { type: 'number', value: s.workDays, min: '0', max: '31', step: '0.5' });
