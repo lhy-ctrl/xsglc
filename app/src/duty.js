@@ -1216,15 +1216,7 @@ function StaffPage({
     style: {
       color: '#6b7280'
     }
-  }, "\u6E05\u9664\u7B5B\u9009"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginLeft: 'auto',
-      fontSize: '13px',
-      color: '#9ca3af',
-      display: 'flex',
-      alignItems: 'center'
-    }
-  }, "\u5EFA\u8BAE\u914D\u6BD4\uFF1A\u7537 7 \u4EBA / \u5973 5 \u4EBA")), filter && /*#__PURE__*/React.createElement("div", {
+  }, "\u6E05\u9664\u7B5B\u9009")), filter && /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: '12px',
       fontSize: '13px',

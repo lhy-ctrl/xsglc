@@ -180,9 +180,6 @@ function StaffPage({ onNavigate, canEdit }) {
               清除筛选
             </button>
           )}
-          <div style={{ marginLeft: 'auto', fontSize: '13px', color: '#9ca3af', display: 'flex', alignItems: 'center' }}>
-            建议配比：男 7 人 / 女 5 人
-          </div>
         </div>
 
         {filter && (
