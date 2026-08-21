@@ -839,7 +839,7 @@
   // ================= 模块渲染 =================
 
   // ---------- 首页 ----------
-  var HOME_CARD_ORDER = ['home-today-score', 'home-today-discipline', 'home-warn-count', 'home-student-count'];
+  var HOME_CARD_ORDER = ['home-today-score', 'home-today-discipline', 'home-student-count'];
   function homeOrder() {
     var st = store.getState();
     var o = st.settings && st.settings.homeOrder;
@@ -2072,7 +2072,7 @@
     return Object.keys(months).sort().reverse();
   }
 
-  // 员工管理（独立放在数据与设置页面）
+  // 员工管理（独立放在数据与设置页面）—— 一排两列卡片展示
   function renderEmployeeManage(root) {
     employeeManageContainer = root;
     if (!isAdmin) return;
@@ -2088,25 +2088,22 @@
     if (list.length === 0) {
       root.appendChild(el('div', { class: 'muted', style: 'padding:20px;text-align:center', text: kw ? '未找到匹配的员工' : '暂无员工，点击「添加员工」开始录入' }));
     } else {
-      var tbody = el('tbody', {});
-      list.forEach(function (e, idx) {
-        tbody.appendChild(el('tr', {}, [
-          el('td', { text: String(idx + 1) }),
-          el('td', { text: e.name }),
-          el('td', { text: e.gender || '' }),
-          el('td', {}, [
-            el('a', { href: 'javascript:;', onclick: function () { openEmployeeModal(e); }, text: '编辑' }),
+      var grid = el('div', { class: 'emp-grid' });
+      list.forEach(function (e) {
+        var card = el('div', { class: 'emp-card' }, [
+          el('div', { class: 'emp-card-main' }, [
+            el('span', { class: 'emp-name', text: e.name }),
+            el('span', { class: 'emp-gender', text: e.gender || '' })
+          ]),
+          el('div', { class: 'emp-card-ops' }, [
+            el('a', { href: 'javascript:;', class: 'link', onclick: function () { openEmployeeModal(e); }, text: '编辑' }),
             el('span', { text: ' / ' }),
-            el('a', { href: 'javascript:;', style: 'color:#e04545', onclick: function () { deleteEmployee(e); }, text: '删除' })
+            el('a', { href: 'javascript:;', class: 'link del', onclick: function () { deleteEmployee(e); }, text: '删除' })
           ])
-        ]));
+        ]);
+        grid.appendChild(card);
       });
-      root.appendChild(el('table', { class: 'data-table' }, [
-        el('thead', {}, [el('tr', {}, [
-          el('th', { text: '序号' }), el('th', { text: '姓名' }), el('th', { text: '性别' }), el('th', { text: '操作' })
-        ])]),
-        tbody
-      ]));
+      root.appendChild(grid);
     }
   }
 
@@ -2472,8 +2469,6 @@
 
   // ---------- 寝室数据（独立模块：男寝/女寝/科技楼 三选项，寝室号一个班级栏【高（一/二/三）（1~15）班】+ 人数，按楼层分组） ----------
   var dormArea = '男寝';
-  var DORM_GRADES = ['一', '二', '三'];
-  var DORM_MAX_NO = 15;
 
   function renderDormRoom(root) {
     clear(root);
@@ -2502,10 +2497,25 @@
       .map(function (f) { return { floor: Number(f), rooms: floors[f] }; });
   }
 
+  // 阿拉伯数字转中文数字（支持 0-99）
+  function numToCn(n) {
+    n = parseInt(n, 10);
+    if (isNaN(n) || n < 0) return '';
+    var digits = ['零','一','二','三','四','五','六','七','八','九'];
+    if (n < 10) return digits[n];
+    if (n === 10) return '十';
+    if (n < 20) return '十' + digits[n - 10];
+    if (n < 100) {
+      var t = Math.floor(n / 10), o = n % 10;
+      return digits[t] + '十' + (o > 0 ? digits[o] : '');
+    }
+    return String(n);
+  }
+
   // 解析班级 '高一4班' -> {grade:'一', no:'4'}；非法返回 null
   function parseDormClass(cls) {
     if (!cls) return null;
-    var m = String(cls).match(/^高([一二三])(\d{1,2})班$/);
+    var m = String(cls).match(/^高([一二三四五六七八九十]{1,3})(\d{1,2})班$/);
     if (!m) return null;
     return { grade: m[1], no: m[2] };
   }
@@ -2540,7 +2550,7 @@
       var floorSep = el('tr', { class: 'dorm-floor-sep' }, [
         el('td', { colspan: '3' }, [
           el('span', { text: g.floor + '楼' }),
-          canEdit ? el('button', { class: 'btn primary dorm-floor-save', style: 'float:right;padding:4px 12px;font-size:12px', 'data-floor': String(g.floor), onclick: function () { saveDormRoomByFloor(g.floor); } }, ['保存本层']) : null
+          canEdit ? el('button', { class: 'btn primary dorm-floor-save', style: 'float:right;padding:4px 12px;font-size:12px', 'data-floor': String(g.floor), onclick: function () { saveDormRoom(g.floor); } }, ['保存本层']) : null
         ])
       ]);
       tbody.appendChild(floorSep);
@@ -2571,37 +2581,29 @@
     listNode.appendChild(table);
     if (canEdit) {
       listNode.appendChild(el('div', { class: 'dorm-save-row' }, [
-        el('button', { class: 'btn primary', id: 'btn-dorm-save', onclick: saveDormRoom }, ['保存修改']),
+        el('button', { class: 'btn primary', id: 'btn-dorm-save', onclick: function () { saveDormRoom(); } }, ['保存修改']),
         el('span', { class: 'muted', id: 'dorm-save-hint' })
       ]));
     }
   }
 
-  // 生成一个班级选择组：高 [一/二/三] [1~15] 班
+  // 生成一个班级输入组：高 [年级(中文数字，可自定义)] [班号(最多两位)] 班
   function makeDormClassGrp(room, grpIdx, parsed, disabled) {
     var grp = el('span', { class: 'dorm-cls-grp' });
     grp.appendChild(el('span', { text: '高' }));
-    var gradeSel = el('select', { class: 'dorm-cell dorm-grade', 'data-room': room, 'data-field': 'grade', 'data-grp': String(grpIdx) });
-    gradeSel.appendChild(el('option', { value: '', text: '*' }));
-    DORM_GRADES.forEach(function (gd) {
-      var opt = el('option', { value: gd, text: gd });
-      if (parsed && parsed.grade === gd) opt.selected = true;
-      gradeSel.appendChild(opt);
+    var gradeInp = el('input', { class: 'dorm-cell dorm-grade', type: 'text', 'data-room': room, 'data-field': 'grade', 'data-grp': String(grpIdx), value: parsed ? parsed.grade : '', placeholder: '年级' });
+    // 失焦时阿拉伯数字自动转换为中文数字（1→一，12→十二）
+    gradeInp.addEventListener('blur', function () {
+      var v = this.value.trim();
+      if (/^\d+$/.test(v)) this.value = numToCn(v);
     });
-    var noSel = el('select', { class: 'dorm-cell dorm-no', 'data-room': room, 'data-field': 'no', 'data-grp': String(grpIdx) });
-    noSel.appendChild(el('option', { value: '', text: '*' }));
-    for (var i = 1; i <= DORM_MAX_NO; i++) {
-      var sv = String(i);
-      var opt2 = el('option', { value: sv, text: sv });
-      if (parsed && parsed.no === sv) opt2.selected = true;
-      noSel.appendChild(opt2);
-    }
-    grp.appendChild(gradeSel);
-    grp.appendChild(noSel);
+    var noInp = el('input', { class: 'dorm-cell dorm-no', type: 'text', maxlength: '2', 'data-room': room, 'data-field': 'no', 'data-grp': String(grpIdx), value: parsed ? parsed.no : '', placeholder: '班号', oninput: function () { this.value = this.value.replace(/\D/g, '').slice(0, 2); } });
+    grp.appendChild(gradeInp);
+    grp.appendChild(noInp);
     grp.appendChild(el('span', { text: '班' }));
     if (disabled) {
-      gradeSel.setAttribute('disabled', 'disabled');
-      noSel.setAttribute('disabled', 'disabled');
+      gradeInp.setAttribute('disabled', 'disabled');
+      noInp.setAttribute('disabled', 'disabled');
     }
     return grp;
   }
@@ -2616,7 +2618,7 @@
     if (hint) hint.textContent = '';
   }
 
-  function saveDormRoom() {
+  function saveDormRoom(floor) {
     if (!guardAdmin('保存寝室数据')) return;
     var area = dormArea;
     var dm = store.getState().dormMap;
@@ -2624,12 +2626,12 @@
     var byRoom = {};
     Array.prototype.forEach.call(cells, function (inp) {
       var room = inp.getAttribute('data-room');
+      if (floor != null && Math.floor(Number(room) / 100) !== Number(floor)) return;
       var field = inp.getAttribute('data-field');
       var grp = inp.getAttribute('data-grp');
       if (!byRoom[room]) byRoom[room] = { grps: {}, count: null };
-      if (field === 'count') {
-        byRoom[room].count = inp.value;
-      } else {
+      if (field === 'count') byRoom[room].count = inp.value;
+      else {
         if (!byRoom[room].grps[grp]) byRoom[room].grps[grp] = {};
         byRoom[room].grps[grp][field] = inp.value;
       }
@@ -2646,12 +2648,10 @@
       var countRaw = String(v.count == null ? '' : v.count).trim();
       var count = countRaw === '' ? null : Number(countRaw);
       if (count != null && (!isFinite(count) || count < 0)) count = null;
-      // 删除该寝（当前区域）旧记录
       var recs = dm.filter(function (d) { return String(d.area).trim() === area && String(d.room).trim() === room; });
       recs.forEach(function (r) { var i = dm.indexOf(r); if (i !== -1) dm.splice(i, 1); });
       if (classes.length || count != null) {
         if (classes.length) {
-          // 混寝：每个班级一条记录，人数只记在第一条，避免重复统计
           classes.forEach(function (cls, ci) {
             dm.push({ room: room, class: cls, area: area, count: ci === 0 ? count : null });
           });
@@ -2663,62 +2663,7 @@
     });
     store.save();
     var hint = $('#dorm-save-hint');
-    if (hint) hint.textContent = changed ? '已保存 ' + changed + ' 处修改。' : '没有需要保存的修改。';
-    renderDormRoomList();
-  }
-
-  // 按楼层保存寝室数据
-  function saveDormRoomByFloor(floor) {
-    if (!guardAdmin('保存寝室数据')) return;
-    var area = dormArea;
-    var dm = store.getState().dormMap;
-    var cells = doc.querySelectorAll('#dorm-room-table .dorm-cell');
-    var byRoom = {};
-    Array.prototype.forEach.call(cells, function (inp) {
-      var room = inp.getAttribute('data-room');
-      // 只处理当前楼层的寝室（寝室号百位即楼层）
-      var roomFloor = Math.floor(Number(room) / 100);
-      if (roomFloor !== Number(floor)) return;
-      var field = inp.getAttribute('data-field');
-      var grp = inp.getAttribute('data-grp');
-      if (!byRoom[room]) byRoom[room] = { grps: {}, count: null };
-      if (field === 'count') {
-        byRoom[room].count = inp.value;
-      } else {
-        if (!byRoom[room].grps[grp]) byRoom[room].grps[grp] = {};
-        byRoom[room].grps[grp][field] = inp.value;
-      }
-    });
-    var changed = 0;
-    Object.keys(byRoom).forEach(function (room) {
-      var v = byRoom[room];
-      var classes = [];
-      Object.keys(v.grps || {}).forEach(function (gk) {
-        var grade = String(v.grps[gk].grade || '').trim();
-        var no = String(v.grps[gk].no || '').trim();
-        if (grade && no) classes.push('高' + grade + no + '班');
-      });
-      var countRaw = String(v.count == null ? '' : v.count).trim();
-      var count = countRaw === '' ? null : Number(countRaw);
-      if (count != null && (!isFinite(count) || count < 0)) count = null;
-      // 删除该寝（当前区域）旧记录
-      var recs = dm.filter(function (d) { return String(d.area).trim() === area && String(d.room).trim() === room; });
-      recs.forEach(function (r) { var i = dm.indexOf(r); if (i !== -1) dm.splice(i, 1); });
-      if (classes.length || count != null) {
-        if (classes.length) {
-          // 混寝：每个班级一条记录，人数只记在第一条，避免重复统计
-          classes.forEach(function (cls, ci) {
-            dm.push({ room: room, class: cls, area: area, count: ci === 0 ? count : null });
-          });
-        } else {
-          dm.push({ room: room, class: '', area: area, count: count });
-        }
-        changed++;
-      }
-    });
-    store.save();
-    var hint = $('#dorm-save-hint');
-    if (hint) hint.textContent = floor + '楼已保存 ' + changed + ' 处修改。';
+    if (hint) hint.textContent = floor != null ? (floor + '楼已保存 ' + changed + ' 处修改。') : (changed ? '已保存 ' + changed + ' 处修改。' : '没有需要保存的修改。');
     renderDormRoomList();
   }
 

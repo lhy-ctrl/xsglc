@@ -33,12 +33,6 @@
     return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   }
 
-  // 今天是否需要提醒备份：从未备份或最后备份不是今天 → 提醒
-  function shouldRemindBackup(lastBackupAt, today) {
-    if (!lastBackupAt) return true;
-    return lastBackupAt !== today;
-  }
-
   // ---- 唯一 id ----
   var _seq = 0;
   function uid(prefix) {
@@ -355,15 +349,6 @@
     if (classes.length === 1) return classes[0];
     return classes.join('和') + '混寝';
   }
-  // 以寝室号查区域（取第一条匹配；无匹配返回 ''）
-  function findDormArea(dormMap, room) {
-    if (room == null) return '';
-    var r = String(room).trim();
-    for (var i = 0; i < (dormMap || []).length; i++) {
-      if (String(dormMap[i].room).trim() === r && dormMap[i].area) return dormMap[i].area;
-    }
-    return '';
-  }
 
   // ---- 量化分排序 ----
   // by: 'score' | 'class'；dir: 'asc' | 'desc'
@@ -394,9 +379,6 @@
     var m = {};
     (logs || []).forEach(function (l) { m[l.studentId] = (m[l.studentId] || 0) + 1; });
     return m;
-  }
-  function studentDisciplineCount(logs, studentId) {
-    return (logs || []).filter(function (l) { return l.studentId === studentId; }).length;
   }
   // 某学生所有违纪原因（去重，按记录顺序）
   function studentDisciplineReasons(logs, studentId) {
@@ -810,8 +792,6 @@
   }
 
   // ================= 量化管理分（五个月八列） =================
-  var SCORE_CATS = ['banKou', 'banJiang', 'zhengKou', 'zhengJiang'];
-  var SCORE_CAT_LABELS = { banKou: '班扣', banJiang: '班奖', zhengKou: '政扣', zhengJiang: '政奖' };
 
   // 取最近 N 个月（含当月），返回 ['YYYY-MM', ...] 升序
   function recentMonths(n, from) {
@@ -895,15 +875,10 @@
     NAV_ITEMS: NAV_ITEMS,
     GRADES: GRADES,
     todayStr: todayStr,
-    monthDayLabel: monthDayLabel,
-    shouldRemindBackup: shouldRemindBackup,
     uid: uid,
-    cnToNum: cnToNum,
     parseClass: parseClass,
     gradeIndex: gradeIndex,
-    parseCSVRows: parseCSVRows,
     parseCSV: parseCSV,
-    normalizeStudentRow: normalizeStudentRow,
     buildStudents: buildStudents,
     scoreClass: scoreClass,
     studentGrade: studentGrade,
@@ -912,35 +887,18 @@
     filterStudents: filterStudents,
     sortStudentsByClass: sortStudentsByClass,
     buildDormMapFromRows: buildDormMapFromRows,
-    findDormClass: findDormClass,
-    findDormClasses: findDormClasses,
-    findDormClassesInArea: findDormClassesInArea,
-    findDormArea: findDormArea,
-    dormClassDisplay: dormClassDisplay,
-    normalizeArea: normalizeArea,
     DORM_AREAS: DORM_AREAS,
     DORM_ROOMS: DORM_ROOMS,
-    DORM_CAPACITY: DORM_CAPACITY,
-    DORM_BIG_CAPACITY: DORM_BIG_CAPACITY,
-    DORM_BIG_ROOMS: DORM_BIG_ROOMS,
     dormCapacity: dormCapacity,
     sortByScore: sortByScore,
     computeAfter: computeAfter,
     disciplineCountByStudent: disciplineCountByStudent,
-    studentDisciplineCount: studentDisciplineCount,
     studentDisciplineReasons: studentDisciplineReasons,
     disciplineClassReasons: disciplineClassReasons,
     disciplineClassSummary: disciplineClassSummary,
-    parseLeaveText: parseLeaveText,
     formatLeave: formatLeave,
-    classifyReportDesc: classifyReportDesc,
-    parseReportText: parseReportText,
     formatReport: formatReport,
     computeHomeSummary: computeHomeSummary,
-    normalizeBoarding: normalizeBoarding,
-    SCORE_CATS: SCORE_CATS,
-    SCORE_CAT_LABELS: SCORE_CAT_LABELS,
-    recentMonths: recentMonths,
     activeScoreMonths: activeScoreMonths,
     monthScore: monthScore,
     computeQuantized: computeQuantized,
