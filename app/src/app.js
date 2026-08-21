@@ -338,7 +338,8 @@
     settings: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3 17 7M7 17l-1.7 1.7"/></svg>',
     dorm: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/></svg>',
     duty: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="15" r="2.2"/><path d="M12 13v2l1.4 1"/></svg>',
-    dutyStaff: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.6"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+    dutyStaff: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.6"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    salary: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>'
   };
 
   // ---------- 模块注册 ----------
@@ -2274,7 +2275,7 @@
     var sen = parseFloat(s.seniority) || 0;
     var bonus = parseFloat(s.bonus) || 0;
     var ded = parseFloat(s.deduction) || 0;
-    return Math.round(((base + att + perf) / 30 * days + allow + sen + bonus - ded) * 100) / 100;
+    return Math.round((base + att + perf) / 30 * days + allow + sen + bonus - ded);
   }
   // 获取某月某员工的绩效扣除汇总（金额+原因）
   function getEmployeeDeduction(employeeId, year, month) {
@@ -2319,7 +2320,15 @@
     }
     monthSel.value = salaryMonth;
     monthSel.onchange = function () { salaryMonth = parseInt(this.value); salaryData = loadSalaryData(salaryYear, salaryMonth); renderSalaryTable(); };
-    var printBtn = el('button', { class: 'btn primary', onclick: function () { window.print(); } }, ['打印']);
+    var printBtn = el('button', { class: 'btn primary', onclick: function () {
+      var isPortrait = salaryWrap.classList.contains('salary-portrait');
+      var style = document.createElement('style');
+      style.id = 'salary-print-style';
+      style.textContent = '@page { size: A4 ' + (isPortrait ? 'portrait' : 'landscape') + '; margin: 0; }';
+      document.head.appendChild(style);
+      window.print();
+      setTimeout(function () { var s = document.getElementById('salary-print-style'); if (s) s.parentNode.removeChild(s); }, 500);
+    } }, ['打印']);
     toolbar.appendChild(el('span', { text: '年份：' }));
     toolbar.appendChild(yearSel);
     toolbar.appendChild(el('span', { text: '月份：' }));
@@ -2331,9 +2340,28 @@
     var salaryWrap = el('div', { class: 'salary-a4' });
     root.appendChild(salaryWrap);
 
+    // 创建工资表数字输入框：0值显示为空、点击全选
+    function mkNumInput(value, oninput) {
+      var input = el('input', { type: 'number', value: value ? value : '', min: '0', step: '0.01' });
+      input.onfocus = function () { this.select(); };
+      input.oninput = function () {
+        var v = parseFloat(this.value);
+        oninput(isNaN(v) ? 0 : v);
+      };
+      return input;
+    }
+
     function renderSalaryTable() {
       clear(salaryWrap);
       staffList = sortStaffByRole(getDutyStaffList());
+      // 计算所有行数（员工 + 额外行）
+      var rowCount = staffList.length;
+      Object.keys(salaryData).forEach(function (key) {
+        if (key.indexOf('extra_') === 0 && salaryData[key].isExtra) rowCount++;
+      });
+      // 超过14行用竖版，否则横版
+      var isPortrait = rowCount > 14;
+      salaryWrap.className = 'salary-a4' + (isPortrait ? ' salary-portrait' : ' salary-landscape');
       // 标题
       var title = el('div', { class: 'salary-title' }, [
         el('div', { class: 'salary-company', text: '禹州市皓天拓展策划有限公司' }),
@@ -2396,42 +2424,35 @@
           tr.appendChild(el('td', { class: 'salary-center', text: person.gender === 'male' ? '男' : '女' }));
         }
         // 工作时间
-        var daysInput = el('input', { type: 'number', value: s.workDays, min: '0', max: '31', step: '0.5' });
-        daysInput.oninput = function () { s.workDays = parseFloat(this.value) || 0; updateRow(); };
+        var daysInput = mkNumInput(s.workDays, function (v) { s.workDays = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [daysInput]));
         // 底薪
-        var baseInput = el('input', { type: 'number', value: s.baseSalary, min: '0' });
-        baseInput.oninput = function () { s.baseSalary = parseFloat(this.value) || 0; updateRow(); };
+        var baseInput = mkNumInput(s.baseSalary, function (v) { s.baseSalary = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [baseInput]));
         // 全勤
-        var attInput = el('input', { type: 'number', value: s.attendance, min: '0' });
-        attInput.oninput = function () { s.attendance = parseFloat(this.value) || 0; updateRow(); };
+        var attInput = mkNumInput(s.attendance, function (v) { s.attendance = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [attInput]));
         // 绩效
-        var perfInput = el('input', { type: 'number', value: s.performance, min: '0' });
-        perfInput.oninput = function () { s.performance = parseFloat(this.value) || 0; updateRow(); };
+        var perfInput = mkNumInput(s.performance, function (v) { s.performance = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [perfInput]));
         // 补助
-        var allowInput = el('input', { type: 'number', value: s.allowance, min: '0' });
-        allowInput.oninput = function () { s.allowance = parseFloat(this.value) || 0; updateRow(); };
+        var allowInput = mkNumInput(s.allowance, function (v) { s.allowance = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [allowInput]));
         // 工龄
-        var senInput = el('input', { type: 'number', value: s.seniority, min: '0' });
-        senInput.oninput = function () { s.seniority = parseFloat(this.value) || 0; updateRow(); };
+        var senInput = mkNumInput(s.seniority, function (v) { s.seniority = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [senInput]));
         // 奖金
-        var bonusInput = el('input', { type: 'number', value: s.bonus, min: '0' });
-        bonusInput.oninput = function () { s.bonus = parseFloat(this.value) || 0; updateRow(); };
+        var bonusInput = mkNumInput(s.bonus, function (v) { s.bonus = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [bonusInput]));
         // 扣除
-        var dedInput = el('input', { type: 'number', value: s.deduction, min: '0' });
-        dedInput.oninput = function () { s.deduction = parseFloat(this.value) || 0; updateRow(); };
+        var dedInput = mkNumInput(s.deduction, function (v) { s.deduction = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [dedInput]));
         // 实发
-        var actualTd = el('td', { class: 'salary-actual', text: actual.toFixed(2) + '元' });
+        var actualTd = el('td', { class: 'salary-actual', text: actual + '元' });
         tr.appendChild(actualTd);
         // 奖、罚原因
         var reasonInput = el('input', { type: 'text', value: s.reason || '' });
+        reasonInput.onfocus = function () { this.select(); };
         reasonInput.oninput = function () { s.reason = this.value; salaryData[sid] = s; saveSalaryData(salaryYear, salaryMonth, salaryData); };
         tr.appendChild(el('td', { class: 'salary-reason' }, [reasonInput]));
         // 签名
@@ -2441,17 +2462,16 @@
 
         function updateRow() {
           var a = calcActual(s);
-          actualTd.textContent = a.toFixed(2) + '元';
+          actualTd.textContent = a + '元';
           salaryData[sid] = s;
           saveSalaryData(salaryYear, salaryMonth, salaryData);
           // 更新总发工资
           var total = 0;
-          staffList.forEach(function (p) {
-            var sd = salaryData[p.id] || {};
-            total += calcActual(sd);
+          Object.keys(salaryData).forEach(function (k) {
+            total += calcActual(salaryData[k]);
           });
           var totalEl = document.getElementById('salary-total');
-          if (totalEl) totalEl.textContent = total.toFixed(2) + '元';
+          if (totalEl) totalEl.textContent = total + '元';
         }
       });
       table.appendChild(tbody);
@@ -2479,7 +2499,7 @@
       remark.appendChild(el('div', { class: 'salary-remark-sign', text: '皓天拓展有限公司' }));
       var totalRow = el('div', { class: 'salary-total-row' });
       totalRow.appendChild(el('span', { class: 'salary-total-label', text: '总发工资：' }));
-      totalRow.appendChild(el('span', { id: 'salary-total', class: 'salary-total-num', text: totalActual.toFixed(2) + '元' }));
+      totalRow.appendChild(el('span', { id: 'salary-total', class: 'salary-total-num', text: totalActual + '元' }));
       footer.appendChild(remark);
       footer.appendChild(totalRow);
       salaryWrap.appendChild(footer);

@@ -851,11 +851,13 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .salary-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
 .salary-toolbar select { padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(30,38,54,.16); background: #fff; font-size: 13px; }
 .salary-a4 {
-  width: 100%; max-width: 1120px; margin: 0 auto;
+  width: 100%; margin: 0 auto;
   background: #fff; border-radius: 12px; border: 1px solid rgba(30,38,54,.1);
   box-shadow: 0 2px 16px rgba(60,80,120,.06);
-  padding: 32px 40px; box-sizing: border-box;
+  padding: 28px 32px; box-sizing: border-box;
 }
+.salary-landscape { max-width: 1100px; aspect-ratio: 297 / 210; }
+.salary-portrait { max-width: 780px; aspect-ratio: 210 / 297; }
 .salary-title { text-align: center; margin-bottom: 16px; }
 .salary-company { font-size: 26px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; letter-spacing: 2px; }
 .salary-subtitle { font-size: 16px; font-weight: 600; color: #333; }
@@ -909,7 +911,7 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .salary-add-row { margin-top: 10px; text-align: center; }
 .salary-add-row .btn { padding: 6px 20px; }
 
-/* 打印样式：A4横版 */
+/* 打印样式：A4横版/竖版（方向由JS动态设置） */
 @media print {
   html, body { margin: 0 !important; padding: 0 !important; width: 100%; }
   body * { visibility: hidden; }
@@ -919,7 +921,7 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
     width: 100%; height: 100%;
     box-shadow: none; border: none; border-radius: 0;
     padding: 12mm 10mm; box-sizing: border-box;
-    max-width: none; margin: 0;
+    max-width: none; margin: 0; aspect-ratio: auto;
   }
   .salary-toolbar { display: none !important; }
   .salary-table input { background: transparent !important; }
@@ -929,5 +931,4 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   .salary-subtitle { font-size: 17px; }
   .salary-remark { font-size: 12px; }
   .salary-add-row { display: none !important; }
-  @page { size: A4 landscape; margin: 0; }
 }
