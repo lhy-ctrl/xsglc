@@ -128,23 +128,12 @@ function DutyMainPage({ onNavigate }) {
           <div className="duty-custom-panel">
             <div className="duty-custom-header">
               <span className="duty-custom-title">自定义岗位人员</span>
-              <span className="duty-custom-desc">填写后以此为基准轮换；生成后自动更新为最新结果</span>
             </div>
-            {mode === 'group' && (
-              <div className="duty-group-hint">
-                <span className="tag tag-group-a">{mainGroup}组</span>主班 /
-                <span className="tag tag-group-b" style={{ marginLeft: '4px' }}>{subGroup}组</span>副班
-              </div>
-            )}
             <div className="duty-custom-grid">
               {CUSTOM_POSTS.map(post => (
                 <div key={post.key} className="duty-custom-item">
                   <div className="duty-custom-post-label">
                     <span>{post.label}</span>
-                    <span className="duty-custom-post-meta">
-                      {post.type === 'main' ? '主班' : '副班'}
-                      {post.gender === 'male' ? ' · 男' : post.gender === 'female' ? ' · 女' : ''}
-                    </span>
                   </div>
                   {Array.from({ length: post.capacity }).map((_, idx) => {
                     const person = getCustomPerson(post.key, idx);
@@ -169,7 +158,6 @@ function DutyMainPage({ onNavigate }) {
               <div className="duty-custom-item duty-custom-readonly">
                 <div className="duty-custom-post-label">
                   <span>厕所口</span>
-                  <span className="duty-custom-post-meta">餐厅第1人兼任</span>
                 </div>
                 <div className="duty-custom-readonly-value">
                   {getCustomPerson('canteen', 0)?.name || '—'}
@@ -180,7 +168,6 @@ function DutyMainPage({ onNavigate }) {
                 <div className="duty-custom-item duty-custom-readonly">
                   <div className="duty-custom-post-label">
                     <span>中午收假条</span>
-                    <span className="duty-custom-post-meta">默认办公室人员</span>
                   </div>
                   <div className="duty-custom-readonly-value">
                     {getCustomPerson('office', 0)?.name || '—'}

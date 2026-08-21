@@ -3702,27 +3702,14 @@ function DutyMainPage({
     className: "duty-custom-header"
   }, /*#__PURE__*/React.createElement("span", {
     className: "duty-custom-title"
-  }, "\u81EA\u5B9A\u4E49\u5C97\u4F4D\u4EBA\u5458"), /*#__PURE__*/React.createElement("span", {
-    className: "duty-custom-desc"
-  }, "\u586B\u5199\u540E\u4EE5\u6B64\u4E3A\u57FA\u51C6\u8F6E\u6362\uFF1B\u751F\u6210\u540E\u81EA\u52A8\u66F4\u65B0\u4E3A\u6700\u65B0\u7ED3\u679C")), mode === 'group' && /*#__PURE__*/React.createElement("div", {
-    className: "duty-group-hint"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "tag tag-group-a"
-  }, mainGroup, "\u7EC4"), "\u4E3B\u73ED /", /*#__PURE__*/React.createElement("span", {
-    className: "tag tag-group-b",
-    style: {
-      marginLeft: '4px'
-    }
-  }, subGroup, "\u7EC4"), "\u526F\u73ED"), /*#__PURE__*/React.createElement("div", {
+  }, "\u81EA\u5B9A\u4E49\u5C97\u4F4D\u4EBA\u5458")), /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-grid"
   }, CUSTOM_POSTS.map(post => /*#__PURE__*/React.createElement("div", {
     key: post.key,
     className: "duty-custom-item"
   }, /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-post-label"
-  }, /*#__PURE__*/React.createElement("span", null, post.label), /*#__PURE__*/React.createElement("span", {
-    className: "duty-custom-post-meta"
-  }, post.type === 'main' ? '主班' : '副班', post.gender === 'male' ? ' · 男' : post.gender === 'female' ? ' · 女' : '')), Array.from({
+  }, /*#__PURE__*/React.createElement("span", null, post.label)), Array.from({
     length: post.capacity
   }).map((_, idx) => {
     const person = getCustomPerson(post.key, idx);
@@ -3745,17 +3732,13 @@ function DutyMainPage({
     className: "duty-custom-item duty-custom-readonly"
   }, /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-post-label"
-  }, /*#__PURE__*/React.createElement("span", null, "\u5395\u6240\u53E3"), /*#__PURE__*/React.createElement("span", {
-    className: "duty-custom-post-meta"
-  }, "\u9910\u5385\u7B2C1\u4EBA\u517C\u4EFB")), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, "\u5395\u6240\u53E3")), /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-readonly-value"
   }, getCustomPerson('canteen', 0)?.name || '—')), mode === 'all' && /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-item duty-custom-readonly"
   }, /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-post-label"
-  }, /*#__PURE__*/React.createElement("span", null, "\u4E2D\u5348\u6536\u5047\u6761"), /*#__PURE__*/React.createElement("span", {
-    className: "duty-custom-post-meta"
-  }, "\u9ED8\u8BA4\u529E\u516C\u5BA4\u4EBA\u5458")), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, "\u4E2D\u5348\u6536\u5047\u6761")), /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-readonly-value"
   }, getCustomPerson('office', 0)?.name || '—'))), /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-footer"
