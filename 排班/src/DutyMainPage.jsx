@@ -132,10 +132,6 @@ function DutyMainPage({ onNavigate }) {
             <div className="duty-custom-header">
               <span className="duty-custom-title">自定义岗位人员</span>
               <span className="duty-custom-desc">填写后以此为基准轮换；生成后自动更新为最新结果</span>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={handleClearCustom}
-              >清空</button>
             </div>
             {mode === 'group' && (
               <div className="duty-group-hint">
@@ -194,6 +190,11 @@ function DutyMainPage({ onNavigate }) {
                   </div>
                 </div>
               )}
+            </div>
+            {/* 底部按钮 */}
+            <div className="duty-custom-footer">
+              <button className="btn btn-primary btn-sm" onClick={handleUseCustom}>使用该排班</button>
+              <button className="btn btn-ghost btn-sm" onClick={handleClearCustom}>清空</button>
             </div>
           </div>
         )}

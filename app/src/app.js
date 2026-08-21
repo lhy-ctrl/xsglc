@@ -2203,23 +2203,20 @@
     var page = pageState[0], setPage = pageState[1];
     var paramsState = React.useState({});
     var pageParams = paramsState[0], setPageParams = paramsState[1];
-    var keyState = React.useState(0);
-    var pageKey = keyState[0], setPageKey = keyState[1];
 
     function navigate(target, params) {
       // 集成环境下：排班系统的"首页"重定向到值班排班选择页
       var realTarget = (target === 'home') ? 'dutySelect' : target;
       setPage(realTarget);
       setPageParams(params || {});
-      setPageKey(function (k) { return k + 1; });
     }
 
     var content = null;
-    if (page === 'home') content = React.createElement(DutyMainPage, { key: pageKey, onNavigate: navigate });
-    else if (page === 'staff') content = React.createElement(StaffPage, { key: pageKey, onNavigate: navigate, canEdit: isAdmin });
-    else if (page === 'schedule') content = React.createElement(SchedulePage, { key: pageKey, mode: pageParams.mode || 'all', onNavigate: navigate });
-    else if (page === 'dutySelect') content = React.createElement(DutyMainPage, { key: pageKey, onNavigate: navigate });
-    else if (page === 'gate') content = React.createElement(GatePage, { key: pageKey, onNavigate: navigate });
+    if (page === 'home') content = React.createElement(DutyMainPage, { onNavigate: navigate });
+    else if (page === 'staff') content = React.createElement(StaffPage, { onNavigate: navigate, canEdit: isAdmin });
+    else if (page === 'schedule') content = React.createElement(SchedulePage, { mode: pageParams.mode || 'all', onNavigate: navigate });
+    else if (page === 'dutySelect') content = React.createElement(DutyMainPage, { onNavigate: navigate });
+    else if (page === 'gate') content = React.createElement(GatePage, { onNavigate: navigate });
 
     return React.createElement(StoreProvider, null, content);
   }

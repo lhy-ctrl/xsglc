@@ -1010,7 +1010,6 @@ function StaffPage({
     cursor: 'default'
   };
   return /*#__PURE__*/React.createElement("div", {
-    className: "page-enter",
     style: {
       minHeight: '100vh',
       display: 'flex',
@@ -3718,10 +3717,7 @@ function DutyMainPage({
     className: "duty-custom-title"
   }, "\u81EA\u5B9A\u4E49\u5C97\u4F4D\u4EBA\u5458"), /*#__PURE__*/React.createElement("span", {
     className: "duty-custom-desc"
-  }, "\u586B\u5199\u540E\u4EE5\u6B64\u4E3A\u57FA\u51C6\u8F6E\u6362\uFF1B\u751F\u6210\u540E\u81EA\u52A8\u66F4\u65B0\u4E3A\u6700\u65B0\u7ED3\u679C"), /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: handleClearCustom
-  }, "\u6E05\u7A7A")), mode === 'group' && /*#__PURE__*/React.createElement("div", {
+  }, "\u586B\u5199\u540E\u4EE5\u6B64\u4E3A\u57FA\u51C6\u8F6E\u6362\uFF1B\u751F\u6210\u540E\u81EA\u52A8\u66F4\u65B0\u4E3A\u6700\u65B0\u7ED3\u679C")), mode === 'group' && /*#__PURE__*/React.createElement("div", {
     className: "duty-group-hint"
   }, /*#__PURE__*/React.createElement("span", {
     className: "tag tag-group-a"
@@ -3774,7 +3770,15 @@ function DutyMainPage({
     className: "duty-custom-post-meta"
   }, "\u9ED8\u8BA4\u529E\u516C\u5BA4\u4EBA\u5458")), /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-readonly-value"
-  }, getCustomPerson('office', 0)?.name || '—')))), /*#__PURE__*/React.createElement("div", {
+  }, getCustomPerson('office', 0)?.name || '—'))), /*#__PURE__*/React.createElement("div", {
+    className: "duty-custom-footer"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-primary btn-sm",
+    onClick: handleUseCustom
+  }, "\u4F7F\u7528\u8BE5\u6392\u73ED"), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: handleClearCustom
+  }, "\u6E05\u7A7A"))), /*#__PURE__*/React.createElement("div", {
     className: "duty-content"
   }, mode === 'gate' ? /*#__PURE__*/React.createElement(GatePage, {
     onNavigate: onNavigate,

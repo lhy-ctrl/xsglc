@@ -592,12 +592,11 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .duty-app .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 8px 16px; border-radius: 10px; border: 1px solid transparent;
-  font-size: 13.5px; font-weight: 500; transition: all .15s ease; white-space: nowrap;
+  font-size: 13.5px; font-weight: 500; white-space: nowrap;
   cursor: pointer; font-family: inherit;
 }
 .duty-app .btn-primary { background: linear-gradient(180deg, #4d93ff, #2878ef); color: #fff; box-shadow: 0 2px 8px rgba(40,120,239,.25); }
 .duty-app .btn-primary:hover { background: linear-gradient(180deg, #5d9dff, #2f7df2); }
-.duty-app .btn-primary:active { transform: translateY(.5px) scale(.99); }
 .duty-app .btn-secondary { background: rgba(255,255,255,.9); color: #3a4a6a; border-color: rgba(60,80,120,.2); }
 .duty-app .btn-secondary:hover { background: #fff; border-color: rgba(60,80,120,.35); }
 .duty-app .btn-ghost { background: transparent; color: #5a6a8a; }
@@ -621,7 +620,7 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   border: 1px solid rgba(60,80,120,.2); background: #fff;
 }
 .duty-app .radio-group label {
-  padding: 6px 12px; font-size: 13px; cursor: pointer; transition: all .15s; color: #5a6a8a;
+  padding: 6px 12px; font-size: 13px; cursor: pointer; color: #5a6a8a;
 }
 .duty-app .radio-group label:hover { background: rgba(60,80,120,.05); }
 .duty-app .radio-group input { display: none; }
@@ -648,17 +647,12 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
   padding: 10px 20px; background: #2a3a55; color: #fff; border-radius: 10px;
   font-size: 13.5px; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,.18);
-  animation: dutyToastIn .25s ease-out;
-}
-@keyframes dutyToastIn {
-  from { opacity: 0; transform: translate(-50%, -10px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
 }
 /* ===== 排班主页面：顶部切换 + 内容+自定义岗位并列 ===== */
 .duty-app .duty-main { display: flex; flex-direction: column; gap: 16px; }
 .duty-app .duty-tabs {
   display: flex; gap: 8px; padding: 10px 14px;
-  background: rgba(255,255,255,.7); backdrop-filter: blur(10px);
+  background: rgba(255,255,255,.7);
   border-radius: 12px; border: 1px solid rgba(60,80,120,.1);
   box-shadow: 0 2px 12px rgba(60,80,120,.06);
   width: fit-content;
@@ -667,7 +661,7 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   padding: 8px 20px; border: 1px solid rgba(60,80,120,.15);
   border-radius: 10px; background: rgba(255,255,255,.8);
   color: #5a6a8a; font-size: 14px; font-weight: 500; cursor: pointer;
-  transition: all .18s ease; font-family: inherit; white-space: nowrap;
+  font-family: inherit; white-space: nowrap;
 }
 .duty-app .duty-tab:hover { background: #fff; border-color: rgba(76,141,255,.35); color: #2878ef; }
 .duty-app .duty-tab.active {
@@ -680,8 +674,8 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 }
 .duty-app .duty-content { flex: 1; min-width: 0; }
 .duty-app .duty-custom-panel {
-  width: 340px; flex-shrink: 0;
-  background: rgba(255,255,255,.85); backdrop-filter: blur(10px);
+  width: 420px; flex-shrink: 0;
+  background: rgba(255,255,255,.85);
   border-radius: 14px; border: 1px solid rgba(60,80,120,.12);
   box-shadow: 0 4px 20px rgba(60,80,120,.08); overflow: hidden;
   align-self: stretch;
@@ -801,14 +795,13 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .duty-app .duty-gate-embedded > main { padding: 0 !important; }
 /* 大门口值班：左右并列布局 */
 .duty-app .duty-gate-row {
-  display: flex; gap: 16px; align-items: flex-start;
+  display: flex; gap: 16px; align-items: stretch;
 }
 .duty-app .duty-gate-params {
-  width: 320px; flex-shrink: 0;
-  background: rgba(255,255,255,.85); backdrop-filter: blur(10px);
+  flex: 1; min-width: 0;
+  background: rgba(255,255,255,.85);
   border-radius: 14px; border: 1px solid rgba(60,80,120,.12);
   box-shadow: 0 2px 16px rgba(60,80,120,.06); overflow: hidden;
-  align-self: stretch;
 }
 .duty-app .duty-gate-params-header {
   padding: 14px 18px; background: rgba(60,80,120,.04);

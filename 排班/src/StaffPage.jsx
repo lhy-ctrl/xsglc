@@ -104,7 +104,7 @@ function StaffPage({ onNavigate, canEdit }) {
   };
 
   return (
-    <div className="page-enter" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header style={{ padding: '20px 32px', background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('home')} style={{ marginLeft: '-8px' }}>
