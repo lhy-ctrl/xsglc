@@ -224,12 +224,8 @@ function SchedulePage({ mode, onNavigate, embedded, customAssignments, setCustom
                 <span className="duty-group-badge-text">副班</span>
               </div>
             )}
-            {!schedule && (
-              <div className="duty-empty-hint">点击"生成排班"查看值班安排</div>
-            )}
           </div>
           <div className="duty-schedule-toolbar-right">
-            <button className="btn btn-secondary btn-sm" onClick={handleUseCustom}>使用该排班</button>
             <button className="btn btn-primary" onClick={handleGenerate}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -357,11 +353,6 @@ function SchedulePage({ mode, onNavigate, embedded, customAssignments, setCustom
                 <span style={{ color: '#9ca3af', margin: '0 4px' }}>/</span>
                 <span className="tag tag-group-b">{schedule.subGroup}组</span>
                 <span style={{ color: '#374151', fontWeight: 500 }}>副班</span>
-              </div>
-            )}
-            {!schedule && (
-              <div style={{ fontSize: '13px', color: '#6b7280', background: '#fff', padding: '8px 14px', borderRadius: '6px', border: '1px dashed #d1d5db' }}>
-                点击"生成排班"查看值班安排
               </div>
             )}
           </div>

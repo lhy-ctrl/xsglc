@@ -1,15 +1,12 @@
 function DutyMainPage({ onNavigate }) {
   const { staff, groupRotation } = useStore();
-  const [mode, setModeState] = React.useState(() => {
-    try { return localStorage.getItem('duty_mode') || 'all'; } catch (e) { return 'all'; }
-  });
+  const [mode, setModeState] = React.useState('all');
   const [customAssignments, setCustomAssignments] = React.useState({});
   const [externalSchedule, setExternalSchedule] = React.useState(null);
   const [toast, setToast] = React.useState(null);
 
   const setMode = (m) => {
     setModeState(m);
-    try { localStorage.setItem('duty_mode', m); } catch (e) {}
   };
 
   const showToast = (msg) => {

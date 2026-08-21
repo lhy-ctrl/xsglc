@@ -1793,14 +1793,9 @@ function SchedulePage({
       className: "tag tag-group-b"
     }, schedule.subGroup, "\u7EC4"), /*#__PURE__*/React.createElement("span", {
       className: "duty-group-badge-text"
-    }, "\u526F\u73ED")), !schedule && /*#__PURE__*/React.createElement("div", {
-      className: "duty-empty-hint"
-    }, "\u70B9\u51FB\"\u751F\u6210\u6392\u73ED\"\u67E5\u770B\u503C\u73ED\u5B89\u6392")), /*#__PURE__*/React.createElement("div", {
+    }, "\u526F\u73ED"))), /*#__PURE__*/React.createElement("div", {
       className: "duty-schedule-toolbar-right"
     }, /*#__PURE__*/React.createElement("button", {
-      className: "btn btn-secondary btn-sm",
-      onClick: handleUseCustom
-    }, "\u4F7F\u7528\u8BE5\u6392\u73ED"), /*#__PURE__*/React.createElement("button", {
       className: "btn btn-primary",
       onClick: handleGenerate
     }, /*#__PURE__*/React.createElement("svg", {
@@ -2076,16 +2071,7 @@ function SchedulePage({
       color: '#374151',
       fontWeight: 500
     }
-  }, "\u526F\u73ED")), !schedule && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: '13px',
-      color: '#6b7280',
-      background: '#fff',
-      padding: '8px 14px',
-      borderRadius: '6px',
-      border: '1px dashed #d1d5db'
-    }
-  }, "\u70B9\u51FB\"\u751F\u6210\u6392\u73ED\"\u67E5\u770B\u503C\u73ED\u5B89\u6392")), /*#__PURE__*/React.createElement("div", {
+  }, "\u526F\u73ED"))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: '10px'
@@ -2399,14 +2385,14 @@ function GatePage({
     staff,
     ROLE_LABELS
   } = useStore();
-  // 时间段1
+  // 下午时间段（默认显示）
   const [startTime, setStartTime] = React.useState('14:00');
   const [endTime, setEndTime] = React.useState('18:00');
   const [shifts, setShifts] = React.useState(4);
-  // 时间段2
-  const [startTime2, setStartTime2] = React.useState('18:00');
-  const [endTime2, setEndTime2] = React.useState('21:00');
-  const [shifts2, setShifts2] = React.useState(3);
+  // 上午时间段（默认隐藏，点击添加后显示）
+  const [startTime2, setStartTime2] = React.useState('08:00');
+  const [endTime2, setEndTime2] = React.useState('12:00');
+  const [shifts2, setShifts2] = React.useState(4);
   const [enableSecond, setEnableSecond] = React.useState(false);
   const [dayOffset, setDayOffset] = React.useState(1);
   const [result, setResult] = React.useState(null);
@@ -2461,19 +2447,19 @@ function GatePage({
       return;
     }
     if (!startTime || !endTime) {
-      showToast('请填写时间段1的起止时间');
+      showToast('请填写下午时间段的起止时间');
       return;
     }
     if (shifts < 1) {
-      showToast('时间段1班次数量至少为 1');
+      showToast('下午班次数量至少为 1');
       return;
     }
     if (enableSecond && (!startTime2 || !endTime2)) {
-      showToast('请填写时间段2的起止时间');
+      showToast('请填写上午时间段的起止时间');
       return;
     }
     if (enableSecond && shifts2 < 1) {
-      showToast('时间段2班次数量至少为 1');
+      showToast('上午班次数量至少为 1');
       return;
     }
 
@@ -2520,19 +2506,19 @@ function GatePage({
     const lines = [];
     lines.push(`${r.dateStr}大门口值班`);
     lines.push('');
-    lines.push('【时间段1】');
-    r.shiftList.forEach(s => {
-      const names = s.people.map(p => p?.name || '待分配').join('  ');
-      lines.push(`${s.start}——${s.end}  ${names}`);
-    });
     if (r.shiftList2 && r.shiftList2.length > 0) {
-      lines.push('');
-      lines.push('【时间段2】');
+      lines.push('【上午】');
       r.shiftList2.forEach(s => {
         const names = s.people.map(p => p?.name || '待分配').join('  ');
         lines.push(`${s.start}——${s.end}  ${names}`);
       });
+      lines.push('');
     }
+    lines.push('【下午】');
+    r.shiftList.forEach(s => {
+      const names = s.people.map(p => p?.name || '待分配').join('  ');
+      lines.push(`${s.start}——${s.end}  ${names}`);
+    });
     lines.push('');
     lines.push('所有教官按时到校打卡，路上注意安全！');
     return lines.join('\n');
@@ -2578,7 +2564,7 @@ function GatePage({
       className: "duty-gate-timeblock"
     }, /*#__PURE__*/React.createElement("div", {
       className: "duty-gate-timeblock-title"
-    }, "\u65F6\u95F4\u6BB51"), /*#__PURE__*/React.createElement("div", {
+    }, "\u4E0B\u5348"), /*#__PURE__*/React.createElement("div", {
       className: "duty-gate-timeblock-grid"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
       className: "duty-gate-label"
@@ -2628,30 +2614,35 @@ function GatePage({
         fontSize: '13px',
         color: '#7a8aa5'
       }
-    }, "\u73ED"))))), /*#__PURE__*/React.createElement("div", {
-      className: "duty-gate-second-toggle"
-    }, /*#__PURE__*/React.createElement("label", {
+    }, "\u73ED"))))), !enableSecond && /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-secondary btn-sm",
       style: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        cursor: 'pointer',
-        fontSize: '13px',
-        color: '#3a4a6a',
-        fontWeight: 500
-      }
-    }, /*#__PURE__*/React.createElement("input", {
-      type: "checkbox",
-      checked: enableSecond,
-      onChange: e => {
-        setEnableSecond(e.target.checked);
+        width: '100%'
+      },
+      onClick: () => {
+        setEnableSecond(true);
         setResult(null);
       }
-    }), "\u542F\u7528\u65F6\u95F4\u6BB52")), enableSecond && /*#__PURE__*/React.createElement("div", {
+    }, "+ \u6DFB\u52A0\u4E0A\u5348\u503C\u73ED"), enableSecond && /*#__PURE__*/React.createElement("div", {
       className: "duty-gate-timeblock"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "duty-gate-timeblock-title"
-    }, "\u65F6\u95F4\u6BB52"), /*#__PURE__*/React.createElement("div", {
+      className: "duty-gate-timeblock-title",
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("span", null, "\u4E0A\u5348"), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-ghost btn-sm",
+      style: {
+        padding: '2px 8px',
+        fontSize: '12px'
+      },
+      onClick: () => {
+        setEnableSecond(false);
+        setResult(null);
+      }
+    }, "\u79FB\u9664")), /*#__PURE__*/React.createElement("div", {
       className: "duty-gate-timeblock-grid"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
       className: "duty-gate-label"
@@ -2971,7 +2962,7 @@ function GatePage({
       color: '#374151',
       marginBottom: '10px'
     }
-  }, "\u65F6\u95F4\u6BB51"), /*#__PURE__*/React.createElement("div", {
+  }, "\u4E0B\u5348"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
@@ -3065,7 +3056,7 @@ function GatePage({
       setEnableSecond(e.target.checked);
       setResult(null);
     }
-  }), "\u542F\u7528\u65F6\u95F4\u6BB52")), enableSecond && /*#__PURE__*/React.createElement("div", {
+  }), "\u542F\u7528\u4E0A\u5348\u503C\u73ED")), enableSecond && /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: '16px'
     }
@@ -3076,7 +3067,7 @@ function GatePage({
       color: '#374151',
       marginBottom: '10px'
     }
-  }, "\u65F6\u95F4\u6BB52"), /*#__PURE__*/React.createElement("div", {
+  }, "\u4E0A\u5348"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
@@ -3502,21 +3493,12 @@ function DutyMainPage({
     staff,
     groupRotation
   } = useStore();
-  const [mode, setModeState] = React.useState(() => {
-    try {
-      return localStorage.getItem('duty_mode') || 'all';
-    } catch (e) {
-      return 'all';
-    }
-  });
+  const [mode, setModeState] = React.useState('all');
   const [customAssignments, setCustomAssignments] = React.useState({});
   const [externalSchedule, setExternalSchedule] = React.useState(null);
   const [toast, setToast] = React.useState(null);
   const setMode = m => {
     setModeState(m);
-    try {
-      localStorage.setItem('duty_mode', m);
-    } catch (e) {}
   };
   const showToast = msg => {
     setToast(msg);

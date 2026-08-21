@@ -1,13 +1,13 @@
 function GatePage({ onNavigate, embedded }) {
   const { generateGateDuty, advanceGatePointer, staff, ROLE_LABELS } = useStore();
-  // 时间段1
+  // 下午时间段（默认显示）
   const [startTime, setStartTime] = React.useState('14:00');
   const [endTime, setEndTime] = React.useState('18:00');
   const [shifts, setShifts] = React.useState(4);
-  // 时间段2
-  const [startTime2, setStartTime2] = React.useState('18:00');
-  const [endTime2, setEndTime2] = React.useState('21:00');
-  const [shifts2, setShifts2] = React.useState(3);
+  // 上午时间段（默认隐藏，点击添加后显示）
+  const [startTime2, setStartTime2] = React.useState('08:00');
+  const [endTime2, setEndTime2] = React.useState('12:00');
+  const [shifts2, setShifts2] = React.useState(4);
   const [enableSecond, setEnableSecond] = React.useState(false);
   const [dayOffset, setDayOffset] = React.useState(1);
   const [result, setResult] = React.useState(null);
@@ -51,10 +51,10 @@ function GatePage({ onNavigate, embedded }) {
   const handleGenerate = () => {
     const maleCount = staff.filter(p => p.gender === 'male').length;
     if (maleCount === 0) { showToast('暂无男生人员，请先在人员管理中添加'); return; }
-    if (!startTime || !endTime) { showToast('请填写时间段1的起止时间'); return; }
-    if (shifts < 1) { showToast('时间段1班次数量至少为 1'); return; }
-    if (enableSecond && (!startTime2 || !endTime2)) { showToast('请填写时间段2的起止时间'); return; }
-    if (enableSecond && shifts2 < 1) { showToast('时间段2班次数量至少为 1'); return; }
+    if (!startTime || !endTime) { showToast('请填写下午时间段的起止时间'); return; }
+    if (shifts < 1) { showToast('下午班次数量至少为 1'); return; }
+    if (enableSecond && (!startTime2 || !endTime2)) { showToast('请填写上午时间段的起止时间'); return; }
+    if (enableSecond && shifts2 < 1) { showToast('上午班次数量至少为 1'); return; }
 
     // 生成时间段1
     const r1 = generateGateDuty(startTime, endTime, shifts, dayOffset);
@@ -101,19 +101,19 @@ function GatePage({ onNavigate, embedded }) {
     const lines = [];
     lines.push(`${r.dateStr}大门口值班`);
     lines.push('');
-    lines.push('【时间段1】');
-    r.shiftList.forEach(s => {
-      const names = s.people.map(p => p?.name || '待分配').join('  ');
-      lines.push(`${s.start}——${s.end}  ${names}`);
-    });
     if (r.shiftList2 && r.shiftList2.length > 0) {
-      lines.push('');
-      lines.push('【时间段2】');
+      lines.push('【上午】');
       r.shiftList2.forEach(s => {
         const names = s.people.map(p => p?.name || '待分配').join('  ');
         lines.push(`${s.start}——${s.end}  ${names}`);
       });
+      lines.push('');
     }
+    lines.push('【下午】');
+    r.shiftList.forEach(s => {
+      const names = s.people.map(p => p?.name || '待分配').join('  ');
+      lines.push(`${s.start}——${s.end}  ${names}`);
+    });
     lines.push('');
     lines.push('所有教官按时到校打卡，路上注意安全！');
     return lines.join('\n');
@@ -146,9 +146,9 @@ function GatePage({ onNavigate, embedded }) {
               <span className="duty-gate-params-title">排班参数</span>
             </div>
             <div className="duty-gate-params-body">
-              {/* 时间段1 */}
+              {/* 下午时间段（默认） */}
               <div className="duty-gate-timeblock">
-                <div className="duty-gate-timeblock-title">时间段1</div>
+                <div className="duty-gate-timeblock-title">下午</div>
                 <div className="duty-gate-timeblock-grid">
                   <div>
                     <label className="duty-gate-label">开始时间</label>
@@ -175,18 +175,26 @@ function GatePage({ onNavigate, embedded }) {
                 </div>
               </div>
 
-              {/* 时间段2开关 */}
-              <div className="duty-gate-second-toggle">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#3a4a6a', fontWeight: 500 }}>
-                  <input type="checkbox" checked={enableSecond} onChange={(e) => { setEnableSecond(e.target.checked); setResult(null); }} />
-                  启用时间段2
-                </label>
-              </div>
+              {/* 添加上午值班按钮 */}
+              {!enableSecond && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%' }}
+                  onClick={() => { setEnableSecond(true); setResult(null); }}
+                >+ 添加上午值班</button>
+              )}
 
-              {/* 时间段2 */}
+              {/* 上午时间段 */}
               {enableSecond && (
                 <div className="duty-gate-timeblock">
-                  <div className="duty-gate-timeblock-title">时间段2</div>
+                  <div className="duty-gate-timeblock-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>上午</span>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ padding: '2px 8px', fontSize: '12px' }}
+                      onClick={() => { setEnableSecond(false); setResult(null); }}
+                    >移除</button>
+                  </div>
                   <div className="duty-gate-timeblock-grid">
                     <div>
                       <label className="duty-gate-label">开始时间</label>
@@ -342,7 +350,7 @@ function GatePage({ onNavigate, embedded }) {
           <div style={{ width: '360px', flexShrink: 0, background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '20px' }}>
             <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111827', marginBottom: '16px' }}>排班参数</h3>
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '10px' }}>时间段1</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '10px' }}>下午</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
                 <div>
                   <label style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', display: 'block' }}>开始时间</label>
@@ -365,13 +373,13 @@ function GatePage({ onNavigate, embedded }) {
             <div style={{ marginBottom: '16px', padding: '10px', background: '#f9fafb', borderRadius: '8px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#374151', fontWeight: 500 }}>
                 <input type="checkbox" checked={enableSecond} onChange={(e) => { setEnableSecond(e.target.checked); setResult(null); }} />
-                启用时间段2
+                启用上午值班
               </label>
             </div>
 
             {enableSecond && (
               <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '10px' }}>时间段2</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '10px' }}>上午</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
                   <div>
                     <label style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', display: 'block' }}>开始时间</label>

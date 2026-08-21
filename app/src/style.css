@@ -517,6 +517,13 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   .month-tab, .month-add { padding: 5px 11px; }
   .pager { gap: 10px; }
   .pager-btn { padding: 5px 12px; font-size: 12.5px; }
+
+  /* 排班模块响应式：左右布局改为上下堆叠 */
+  .duty-app .duty-row { flex-direction: column; }
+  .duty-app .duty-custom-panel { width: 100%; }
+  .duty-app .duty-gate-row { flex-direction: column; }
+  .duty-app .duty-gate-params, .duty-app .duty-gate-result { width: 100%; }
+  .duty-app .duty-gate-timeblock-grid { flex-wrap: wrap; }
 }
 
 
