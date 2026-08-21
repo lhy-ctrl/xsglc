@@ -2326,13 +2326,23 @@
       style.id = 'salary-print-size';
       style.textContent = '@page { size: A4 ' + (isPortrait ? 'portrait' : 'landscape') + '; margin: 0; }';
       document.head.appendChild(style);
+      // 把工资表移到body直接子元素，确保打印时可见
+      var parent = salaryWrap.parentNode;
+      var nextSibling = salaryWrap.nextSibling;
+      document.body.appendChild(salaryWrap);
+      salaryWrap.classList.add('printing');
       var cleanup = function () {
+        salaryWrap.classList.remove('printing');
+        if (parent) {
+          if (nextSibling) parent.insertBefore(salaryWrap, nextSibling);
+          else parent.appendChild(salaryWrap);
+        }
         var s = document.getElementById('salary-print-size');
         if (s && s.parentNode) s.parentNode.removeChild(s);
         window.removeEventListener('afterprint', cleanup);
       };
       window.addEventListener('afterprint', cleanup);
-      setTimeout(function () { window.print(); }, 50);
+      setTimeout(function () { window.print(); }, 100);
     } }, ['打印']);
     toolbar.appendChild(el('span', { text: '年份：' }));
     toolbar.appendChild(yearSel);
@@ -2360,6 +2370,19 @@
     function renderSalaryTable() {
       clear(salaryWrap);
       staffList = sortStaffByRole(getDutyStaffList());
+      // 自动清理无实际内容的额外行（姓名为空且所有薪资为0）
+      var hasEmpty = false;
+      Object.keys(salaryData).forEach(function (key) {
+        if (key.indexOf('extra_') === 0 && salaryData[key].isExtra) {
+          var s = salaryData[key];
+          var hasContent = (s.name && s.name.trim()) ||
+            (s.baseSalary || 0) || (s.attendance || 0) || (s.performance || 0) ||
+            (s.allowance || 0) || (s.seniority || 0) || (s.bonus || 0) ||
+            (s.deduction || 0) || (s.reason && s.reason.trim());
+          if (!hasContent) { delete salaryData[key]; hasEmpty = true; }
+        }
+      });
+      if (hasEmpty) saveSalaryData(salaryYear, salaryMonth, salaryData);
       // 计算所有行数（员工 + 额外行）
       var rowCount = staffList.length;
       Object.keys(salaryData).forEach(function (key) {
@@ -2461,19 +2484,8 @@
         reasonInput.onfocus = function () { this.select(); };
         reasonInput.oninput = function () { s.reason = this.value; salaryData[sid] = s; saveSalaryData(salaryYear, salaryMonth, salaryData); };
         tr.appendChild(el('td', { class: 'salary-reason' }, [reasonInput]));
-        // 签名/删除
-        if (person.isExtra) {
-          var delBtn = el('button', { class: 'btn danger salary-del-btn', onclick: function () {
-            if (confirm('确定删除该行？')) {
-              delete salaryData[sid];
-              saveSalaryData(salaryYear, salaryMonth, salaryData);
-              renderSalaryTable();
-            }
-          } }, ['删除']);
-          tr.appendChild(el('td', { class: 'salary-sign' }, [delBtn]));
-        } else {
-          tr.appendChild(el('td', { class: 'salary-sign' }));
-        }
+        // 签名
+        tr.appendChild(el('td', { class: 'salary-sign' }));
 
         tbody.appendChild(tr);
 

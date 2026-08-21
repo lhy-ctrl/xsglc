@@ -910,7 +910,6 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .salary-total-num { color: #c2410c; font-size: 18px; font-weight: 700; }
 .salary-add-row { margin-top: 10px; text-align: center; }
 .salary-add-row .btn { padding: 6px 20px; }
-.salary-del-btn { padding: 2px 10px; font-size: 11px; }
 
 /* 打印样式：A4横版/竖版（方向由JS动态设置） */
 @page { margin: 0; }
@@ -920,8 +919,8 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
     width: 100% !important; height: 100% !important;
     background: #fff !important;
   }
-  body > *:not(.salary-a4) { display: none !important; }
-  .salary-a4 {
+  body > *:not(.salary-a4.printing) { display: none !important; }
+  .salary-a4.printing {
     position: fixed !important;
     top: 0 !important; left: 0 !important;
     width: 100% !important; height: 100% !important;
@@ -931,16 +930,12 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
     display: flex !important; flex-direction: column !important;
     justify-content: center !important; align-items: stretch !important;
     box-sizing: border-box !important;
-    visibility: visible !important;
   }
-  .salary-a4 * { visibility: visible !important; }
-  .salary-toolbar { display: none !important; }
-  .salary-table input { background: transparent !important; }
-  .salary-table { font-size: 13px; width: 100%; }
-  .salary-table th, .salary-table td { padding: 8px 4px; font-size: 13px; }
-  .salary-company { font-size: 28px; }
-  .salary-subtitle { font-size: 17px; }
-  .salary-remark { font-size: 12px; }
-  .salary-add-row { display: none !important; }
-  .salary-del-btn { display: none !important; }
+  .salary-a4.printing .salary-table input { background: transparent !important; }
+  .salary-a4.printing .salary-table { font-size: 13px; width: 100%; }
+  .salary-a4.printing .salary-table th, .salary-a4.printing .salary-table td { padding: 8px 4px; font-size: 13px; }
+  .salary-a4.printing .salary-company { font-size: 28px; }
+  .salary-a4.printing .salary-subtitle { font-size: 17px; }
+  .salary-a4.printing .salary-remark { font-size: 12px; }
+  .salary-a4.printing .salary-add-row { display: none !important; }
 }
