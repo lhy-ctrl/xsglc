@@ -858,6 +858,11 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 }
 .salary-landscape { max-width: 1100px; aspect-ratio: 297 / 210; }
 .salary-portrait { max-width: 780px; aspect-ratio: 210 / 297; }
+.salary-module {
+  display: flex !important; flex-direction: column !important;
+  align-items: center !important; justify-content: center !important;
+  min-height: calc(100vh - 120px) !important;
+}
 .salary-title { text-align: center; margin-bottom: 16px; }
 .salary-company { font-size: 26px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; letter-spacing: 2px; }
 .salary-subtitle { font-size: 16px; font-weight: 600; color: #333; }
@@ -884,24 +889,25 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 }
 .salary-table input[type=number] { -moz-appearance: textfield; }
 .salary-table input:focus { background: #fffbeb; }
-.salary-name { font-weight: 600; color: #1a1a2e; width: 7%; }
+.salary-name { font-weight: 600; color: #1a1a2e; width: 6%; }
 .salary-name input { text-align: center; font-weight: 600; }
-.salary-center { text-align: center; width: 4%; }
-.salary-input { width: 6.5%; }
-.salary-input-narrow { width: 5%; }
-.salary-actual { font-weight: 700; color: #c2410c; width: 7%; white-space: nowrap; font-size: 12px; }
-.salary-reason { width: 24%; }
+.salary-center { text-align: center; width: 3%; }
+.salary-input { width: 5%; }
+.salary-input-narrow { width: 2.5%; }
+.salary-actual { font-weight: 700; color: #c2410c; width: 6%; white-space: nowrap; font-size: 12px; }
+.salary-reason { width: 34%; }
 .salary-reason input { text-align: left; font-size: 11px; }
-.salary-sign { width: 15%; }
+.salary-sign { width: 27%; }
 .salary-footer { margin-top: 14px; }
 .salary-footer-row {
   display: flex; justify-content: space-between; align-items: center; gap: 20px;
 }
 .salary-remark {
   font-size: 11.5px; color: #444; line-height: 1.7;
-  padding: 10px 12px; background: #fafafa; border-radius: 6px;
-  border: 1px solid #e5e7eb; flex: 1; min-width: 0;
+  padding: 10px 12px; background: #fff; border-radius: 0;
+  border: 1px solid #333; flex: 1; min-width: 0;
 }
+.salary-remark-edit textarea { min-height: 60px; }
 .salary-remark-small { font-size: 13px; line-height: 1.7; padding: 10px 14px; }
 .salary-remark-sign {
   text-align: right; margin-top: 6px; font-weight: 600; color: #333;

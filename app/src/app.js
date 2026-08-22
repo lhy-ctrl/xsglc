@@ -558,6 +558,7 @@
     var rres = $('#report-result'); if (rres) reportResultCache = rres.textContent;
     // 切换页面前卸载排班模块的 React 组件，避免内存泄漏
     if (dutyReactRoot) { try { dutyReactRoot.unmount(); } catch (e) {} dutyReactRoot = null; }
+    content.className = 'content';
     clear(content);
     MODULES[key].render(content);
   }
@@ -2300,6 +2301,7 @@
     return n;
   }
   function renderSalary(root) {
+    root.className = 'content salary-module';
     var now = new Date();
     var salaryYear = now.getFullYear();
     var salaryMonth = now.getMonth() + 1;
@@ -2515,16 +2517,16 @@
         tr.appendChild(el('td', { class: 'salary-center' }, [genderInput]));
         // 工作时间
         var daysInput = mkNumInput(s.workDays, function (v) { s.workDays = v; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input' }, [daysInput]));
+        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [daysInput]));
         // 底薪
         var baseInput = mkNumInput(s.baseSalary, function (v) { s.baseSalary = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [baseInput]));
         // 全勤
         var attInput = mkNumInput(s.attendance, function (v) { s.attendance = v; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input' }, [attInput]));
+        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [attInput]));
         // 绩效
         var perfInput = mkNumInput(s.performance, function (v) { s.performance = v; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input' }, [perfInput]));
+        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [perfInput]));
         // 补助
         var allowInput = mkNumInput(s.allowance, function (v) { s.allowance = v; s.actualManual = null; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [allowInput]));
@@ -2611,8 +2613,13 @@
 
       // 底部备注 + 总发工资（同一排）
       var footer = el('div', { class: 'salary-footer salary-footer-row' });
-      var remark = el('div', { class: 'salary-remark salary-remark-small' });
-      remark.appendChild(el('div', { text: '备注：各教官按考勤制度工作突出者奖励200元，工作落后者扣除100元。每月请假超过两天（包括两天）扣除全勤奖300元(请假一天扣当天全勤金额10元）旷工者扣除100元，给公司带来负面影响者扣除100元。满勤每月30天' }));
+      var remark = el('div', { class: 'salary-remark salary-remark-edit' });
+      var defaultRemark = '备注：各教官按考勤制度工作突出者奖励200元，工作落后者扣除100元。每月请假超过两天（包括两天）扣除全勤奖300元(请假一天扣当天全勤金额10元）旷工者扣除100元，给公司带来负面影响者扣除100元。满勤每月30天';
+      var remarkText = salaryData._remark || defaultRemark;
+      var remarkTextarea = el('textarea', { style: 'width:100%;border:none;outline:none;resize:none;background:transparent;font-size:13px;line-height:1.7;color:#444;font-family:inherit;rows:3' });
+      remarkTextarea.value = remarkText;
+      remarkTextarea.oninput = function () { salaryData._remark = this.value; saveSalaryData(salaryYear, salaryMonth, salaryData); };
+      remark.appendChild(remarkTextarea);
       remark.appendChild(el('div', { class: 'salary-remark-sign', text: '皓天拓展有限公司' }));
       var totalRow = el('div', { class: 'salary-total-row' });
       totalRow.appendChild(el('span', { class: 'salary-total-label', text: '总发工资：' }));
