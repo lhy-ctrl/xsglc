@@ -928,24 +928,32 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   .salary-a4.printing {
     position: fixed !important;
     top: 0 !important; left: 0 !important;
-    width: 100% !important; min-height: 100% !important;
-    margin: 0 !important; padding: 8mm 6mm !important;
+    width: 100% !important; height: 100% !important;
+    margin: 0 !important; padding: 8mm 8mm !important;
     box-shadow: none !important; border: none !important; border-radius: 0 !important;
     max-width: none !important; aspect-ratio: auto !important;
-    display: block !important;
+    display: flex !important; flex-direction: column !important;
     box-sizing: border-box !important;
-    overflow: visible !important;
+    overflow: hidden !important;
   }
-  .salary-a4.printing .salary-table input { background: transparent !important; }
-  .salary-a4.printing .salary-table { font-size: 11px; width: 100%; border-collapse: collapse; }
-  .salary-a4.printing .salary-table th, .salary-a4.printing .salary-table td { padding: 4px 3px; font-size: 11px; line-height: 1.3; }
-  .salary-a4.printing .salary-company { font-size: 22px; margin-bottom: 4px; }
-  .salary-a4.printing .salary-subtitle { font-size: 14px; }
-  .salary-a4.printing .salary-title { margin-bottom: 10px; }
-  .salary-a4.printing .salary-remark { font-size: 10px; line-height: 1.5; padding: 6px 8px; }
-  .salary-a4.printing .salary-remark-sign { font-size: 11px; margin-top: 4px; }
-  .salary-a4.printing .salary-total-row { font-size: 13px; padding-top: 4px; }
-  .salary-a4.printing .salary-total-num { font-size: 15px; }
-  .salary-a4.printing .salary-footer { margin-top: 8px; }
+  .salary-a4.printing .salary-title { margin-bottom: 8px; flex-shrink: 0; }
+  .salary-a4.printing .salary-table {
+    font-size: 12px; width: 100%; height: 100%; border-collapse: collapse;
+    flex: 1 1 auto !important; display: table !important;
+    table-layout: fixed;
+  }
+  .salary-a4.printing .salary-table thead { display: table-header-group; }
+  .salary-a4.printing .salary-table tbody { display: table-row-group; }
+  .salary-a4.printing .salary-table tr { height: auto; }
+  .salary-a4.printing .salary-table th, .salary-a4.printing .salary-table td {
+    padding: 7px 4px; font-size: 12px; line-height: 1.4;
+  }
+  .salary-a4.printing .salary-company { font-size: 24px; margin-bottom: 4px; }
+  .salary-a4.printing .salary-subtitle { font-size: 15px; }
+  .salary-a4.printing .salary-footer { margin-top: 8px; flex-shrink: 0; }
+  .salary-a4.printing .salary-remark { font-size: 11px; line-height: 1.6; padding: 6px 10px; }
+  .salary-a4.printing .salary-remark-sign { font-size: 12px; margin-top: 4px; }
+  .salary-a4.printing .salary-total-row { font-size: 14px; padding-top: 4px; }
+  .salary-a4.printing .salary-total-num { font-size: 16px; }
   .salary-a4.printing .salary-add-row { display: none !important; }
 }
