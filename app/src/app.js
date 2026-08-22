@@ -2376,9 +2376,11 @@
         if (key.indexOf('extra_') === 0 && salaryData[key].isExtra) {
           var s = salaryData[key];
           var hasContent = (s.name && s.name.trim()) ||
+            (s.workDays && s.workDays !== 30) ||
             (s.baseSalary || 0) || (s.attendance || 0) || (s.performance || 0) ||
             (s.allowance || 0) || (s.seniority || 0) || (s.bonus || 0) ||
-            (s.deduction || 0) || (s.reason && s.reason.trim());
+            (s.deduction || 0) || (s.reason && s.reason.trim()) ||
+            (s.actualManual != null);
           if (!hasContent) { delete salaryData[key]; hasEmpty = true; }
         }
       });
@@ -2388,8 +2390,8 @@
       Object.keys(salaryData).forEach(function (key) {
         if (key.indexOf('extra_') === 0 && salaryData[key].isExtra) rowCount++;
       });
-      // 超过14行用竖版，否则横版
-      var isPortrait = rowCount > 14;
+      // 超过16行用竖版，否则横版
+      var isPortrait = rowCount > 16;
       salaryWrap.className = 'salary-a4' + (isPortrait ? ' salary-portrait' : ' salary-landscape');
       // 标题
       var title = el('div', { class: 'salary-title' }, [
@@ -2411,6 +2413,17 @@
 
       var tbody = el('tbody');
       var totalActual = 0;
+      // 更新总发工资
+      function updateTotal() {
+        var total = 0;
+        Object.keys(salaryData).forEach(function (k) {
+          var sd = salaryData[k];
+          if (!sd) return;
+          total += (sd.actualManual != null) ? sd.actualManual : calcActual(sd);
+        });
+        var totalEl = document.getElementById('salary-total');
+        if (totalEl) totalEl.textContent = total + '元';
+      }
       // 收集所有行（员工 + 额外行）
       var allRows = staffList.slice();
       Object.keys(salaryData).forEach(function (key) {
@@ -2418,6 +2431,12 @@
           allRows.push({ id: key, name: salaryData[key].name || '', gender: salaryData[key].gender || 'male', isExtra: true });
         }
       });
+      // 不足16行补充空白行
+      var blankCount = Math.max(0, 16 - allRows.length);
+      for (var bi = 0; bi < blankCount; bi++) {
+        var blankId = 'blank_' + bi;
+        allRows.push({ id: blankId, name: '', gender: 'male', isBlank: true });
+      }
       allRows.forEach(function (person) {
         var sid = person.id;
         var s = salaryData[sid] || {
@@ -2432,26 +2451,68 @@
             s.reason = empDed.reason;
           }
         }
-        var actual = calcActual(s);
+        var actual = (s.actualManual != null) ? s.actualManual : calcActual(s);
         totalActual += actual;
 
         var tr = el('tr');
-        // 姓名列
-        if (person.isExtra) {
-          var nameInput = el('input', { type: 'text', value: person.name || '', placeholder: '姓名' });
-          nameInput.oninput = function () { s.name = this.value; s.isExtra = true; salaryData[sid] = s; saveSalaryData(salaryYear, salaryMonth, salaryData); };
-          tr.appendChild(el('td', { class: 'salary-name' }, [nameInput]));
-          // 性别列（可编辑）
-          var genderSel = el('select', { style: 'width:100%;border:none;background:transparent;font-size:12px;text-align:center' });
-          genderSel.appendChild(el('option', { value: 'male', text: '男' }));
-          genderSel.appendChild(el('option', { value: 'female', text: '女' }));
-          genderSel.value = person.gender || 'male';
-          genderSel.onchange = function () { s.gender = this.value; salaryData[sid] = s; saveSalaryData(salaryYear, salaryMonth, salaryData); };
-          tr.appendChild(el('td', { class: 'salary-center' }, [genderSel]));
-        } else {
-          tr.appendChild(el('td', { class: 'salary-name', text: formatName(person.name) }));
-          tr.appendChild(el('td', { class: 'salary-center', text: person.gender === 'male' ? '男' : '女' }));
-        }
+        // 姓名列（所有行可编辑）
+        var nameInput = el('input', { type: 'text', value: person.name || '', placeholder: '姓名' });
+        nameInput.onfocus = function () { this.select(); };
+        nameInput.oninput = function () {
+          s.name = this.value;
+          if (person.isBlank) {
+            // 空白行填写名字后转为额外行
+            var newId = 'extra_' + Date.now();
+            s.isExtra = true;
+            salaryData[newId] = s;
+            delete salaryData[sid];
+            saveSalaryData(salaryYear, salaryMonth, salaryData);
+            renderSalaryTable();
+            return;
+          }
+          if (person.isExtra) s.isExtra = true;
+          salaryData[sid] = s;
+          saveSalaryData(salaryYear, salaryMonth, salaryData);
+        };
+        nameInput.onblur = function () {
+          // 删除名字时清空当前行数据
+          if (!this.value.trim()) {
+            if (person.isExtra) {
+              delete salaryData[sid];
+              saveSalaryData(salaryYear, salaryMonth, salaryData);
+              renderSalaryTable();
+            } else {
+              // 正式员工清空薪资数据
+              s.baseSalary = 0; s.attendance = 0; s.performance = 0;
+              s.allowance = 0; s.seniority = 0; s.bonus = 0;
+              s.deduction = 0; s.reason = ''; s.actualManual = null;
+              salaryData[sid] = s;
+              saveSalaryData(salaryYear, salaryMonth, salaryData);
+              renderSalaryTable();
+            }
+          }
+        };
+        tr.appendChild(el('td', { class: 'salary-name' }, [nameInput]));
+        // 性别列（所有行可编辑）
+        var genderSel = el('select', { style: 'width:100%;border:none;background:transparent;font-size:12px;text-align:center' });
+        genderSel.appendChild(el('option', { value: 'male', text: '男' }));
+        genderSel.appendChild(el('option', { value: 'female', text: '女' }));
+        genderSel.value = person.gender || 'male';
+        genderSel.onchange = function () {
+          s.gender = this.value;
+          if (person.isBlank) {
+            var newId2 = 'extra_' + Date.now();
+            s.isExtra = true;
+            salaryData[newId2] = s;
+            delete salaryData[sid];
+            saveSalaryData(salaryYear, salaryMonth, salaryData);
+            renderSalaryTable();
+            return;
+          }
+          salaryData[sid] = s;
+          saveSalaryData(salaryYear, salaryMonth, salaryData);
+        };
+        tr.appendChild(el('td', { class: 'salary-center' }, [genderSel]));
         // 工作时间
         var daysInput = mkNumInput(s.workDays, function (v) { s.workDays = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [daysInput]));
@@ -2465,24 +2526,48 @@
         var perfInput = mkNumInput(s.performance, function (v) { s.performance = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [perfInput]));
         // 补助
-        var allowInput = mkNumInput(s.allowance, function (v) { s.allowance = v; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input' }, [allowInput]));
+        var allowInput = mkNumInput(s.allowance, function (v) { s.allowance = v; s.actualManual = null; updateRow(); });
+        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [allowInput]));
         // 工龄
-        var senInput = mkNumInput(s.seniority, function (v) { s.seniority = v; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input' }, [senInput]));
+        var senInput = mkNumInput(s.seniority, function (v) { s.seniority = v; s.actualManual = null; updateRow(); });
+        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [senInput]));
         // 奖金
-        var bonusInput = mkNumInput(s.bonus, function (v) { s.bonus = v; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input' }, [bonusInput]));
+        var bonusInput = mkNumInput(s.bonus, function (v) { s.bonus = v; s.actualManual = null; updateRow(); });
+        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [bonusInput]));
         // 扣除
-        var dedInput = mkNumInput(s.deduction, function (v) { s.deduction = v; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input' }, [dedInput]));
-        // 实发
-        var actualTd = el('td', { class: 'salary-actual', text: actual + '元' });
+        var dedInput = mkNumInput(s.deduction, function (v) { s.deduction = v; s.actualManual = null; updateRow(); });
+        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [dedInput]));
+        // 实发（可手动编辑，默认自动计算）
+        var autoActual = calcActual(s);
+        var showActual = (s.actualManual != null) ? s.actualManual : autoActual;
+        var actualInput = el('input', { type: 'number', value: showActual ? showActual : '', min: '0', step: '1', style: 'font-weight:700;color:#c2410c;width:100%;border:none;outline:none;text-align:center;background:transparent;font-size:12px' });
+        actualInput.onfocus = function () { this.select(); };
+        actualInput.oninput = function () {
+          var v = parseFloat(this.value);
+          s.actualManual = isNaN(v) ? null : v;
+          salaryData[sid] = s;
+          saveSalaryData(salaryYear, salaryMonth, salaryData);
+          updateTotal();
+        };
+        var actualTd = el('td', { class: 'salary-actual' }, [actualInput]);
         tr.appendChild(actualTd);
         // 奖、罚原因
         var reasonInput = el('input', { type: 'text', value: s.reason || '' });
         reasonInput.onfocus = function () { this.select(); };
-        reasonInput.oninput = function () { s.reason = this.value; salaryData[sid] = s; saveSalaryData(salaryYear, salaryMonth, salaryData); };
+        reasonInput.oninput = function () {
+          s.reason = this.value;
+          if (person.isBlank) {
+            var newId3 = 'extra_' + Date.now();
+            s.isExtra = true;
+            salaryData[newId3] = s;
+            delete salaryData[sid];
+            saveSalaryData(salaryYear, salaryMonth, salaryData);
+            renderSalaryTable();
+            return;
+          }
+          salaryData[sid] = s;
+          saveSalaryData(salaryYear, salaryMonth, salaryData);
+        };
         tr.appendChild(el('td', { class: 'salary-reason' }, [reasonInput]));
         // 签名
         tr.appendChild(el('td', { class: 'salary-sign' }));
@@ -2490,17 +2575,26 @@
         tbody.appendChild(tr);
 
         function updateRow() {
+          if (person.isBlank) {
+            // 空白行修改数据后转为额外行
+            var newId = 'extra_' + Date.now();
+            s.isExtra = true;
+            salaryData[newId] = s;
+            delete salaryData[sid];
+            saveSalaryData(salaryYear, salaryMonth, salaryData);
+            renderSalaryTable();
+            return;
+          }
           var a = calcActual(s);
-          actualTd.textContent = a + '元';
+          if (s.actualManual == null) {
+            actualInput.value = a ? a : '';
+          }
           salaryData[sid] = s;
           saveSalaryData(salaryYear, salaryMonth, salaryData);
-          // 更新总发工资
-          var total = 0;
-          Object.keys(salaryData).forEach(function (k) {
-            total += calcActual(salaryData[k]);
-          });
-          var totalEl = document.getElementById('salary-total');
-          if (totalEl) totalEl.textContent = total + '元';
+          updateTotal();
+        }
+        function getRowActual() {
+          return (s.actualManual != null) ? s.actualManual : calcActual(s);
         }
       });
       table.appendChild(tbody);
@@ -2521,9 +2615,9 @@
       ]);
       salaryWrap.appendChild(addRowBtn);
 
-      // 底部备注 + 总发工资
-      var footer = el('div', { class: 'salary-footer' });
-      var remark = el('div', { class: 'salary-remark' });
+      // 底部备注 + 总发工资（同一排）
+      var footer = el('div', { class: 'salary-footer salary-footer-row' });
+      var remark = el('div', { class: 'salary-remark salary-remark-small' });
       remark.appendChild(el('div', { text: '备注：各教官按考勤制度工作突出者奖励200元，工作落后者扣除100元。每月请假超过两天（包括两天）扣除全勤奖300元(请假一天扣当天全勤金额10元）旷工者扣除100元，给公司带来负面影响者扣除100元。满勤每月30天' }));
       remark.appendChild(el('div', { class: 'salary-remark-sign', text: '皓天拓展有限公司' }));
       var totalRow = el('div', { class: 'salary-total-row' });

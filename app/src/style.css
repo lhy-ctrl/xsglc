@@ -884,27 +884,32 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 }
 .salary-table input[type=number] { -moz-appearance: textfield; }
 .salary-table input:focus { background: #fffbeb; }
-.salary-name { font-weight: 600; color: #1a1a2e; width: 6%; text-align: justify; text-justify: inter-character; }
-.salary-name span { display: inline-block; width: 100%; text-align: justify; text-align-last: justify; }
+.salary-name { font-weight: 600; color: #1a1a2e; width: 7%; }
+.salary-name input { text-align: center; font-weight: 600; }
 .salary-center { text-align: center; width: 4%; }
-.salary-input { width: 6%; }
-.salary-actual { font-weight: 700; color: #c2410c; width: 8%; white-space: nowrap; font-size: 12px; }
-.salary-reason { width: 22%; }
+.salary-input { width: 6.5%; }
+.salary-input-narrow { width: 5%; }
+.salary-actual { font-weight: 700; color: #c2410c; width: 7%; white-space: nowrap; font-size: 12px; }
+.salary-reason { width: 24%; }
 .salary-reason input { text-align: left; font-size: 11px; }
-.salary-sign { width: 14%; }
+.salary-sign { width: 15%; }
 .salary-footer { margin-top: 14px; }
+.salary-footer-row {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;
+}
 .salary-remark {
   font-size: 11.5px; color: #444; line-height: 1.7;
   padding: 10px 12px; background: #fafafa; border-radius: 6px;
-  border: 1px solid #e5e7eb; margin-bottom: 10px;
+  border: 1px solid #e5e7eb; flex: 1; min-width: 0;
 }
+.salary-remark-small { font-size: 11px; line-height: 1.6; padding: 8px 10px; }
 .salary-remark-sign {
-  text-align: right; margin-top: 8px; font-weight: 600; color: #333;
-  font-size: 13px;
+  text-align: right; margin-top: 6px; font-weight: 600; color: #333;
+  font-size: 12px;
 }
 .salary-total-row {
-  display: flex; justify-content: flex-end; align-items: center;
-  font-size: 15px; font-weight: 600; gap: 6px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 15px; font-weight: 600; white-space: nowrap; padding-top: 8px;
 }
 .salary-total-label { color: #333; }
 .salary-total-num { color: #c2410c; font-size: 18px; font-weight: 700; }
