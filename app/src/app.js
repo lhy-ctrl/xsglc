@@ -527,8 +527,6 @@
     var old = sidebar.querySelectorAll('.nav-item');
     for (var i = 0; i < old.length; i++) old[i].parentNode.removeChild(old[i]);
     C.NAV_ITEMS.forEach(function (item) {
-      // 值班排班、员工管理、员工工资仅管理员可见
-      if ((item.key === 'duty' || item.key === 'dutyStaff' || item.key === 'salary') && !isAdmin) return;
       var iconNode = null;
       if (LG_ICONS[item.key]) {
         iconNode = doc.createElement('span');
@@ -544,8 +542,6 @@
   }
 
   function switchTo(key) {
-    // 值班排班、员工管理、员工工资仅管理员可访问
-    if ((key === 'duty' || key === 'dutyStaff' || key === 'salary') && !isAdmin) key = 'home';
     if (!MODULES[key]) key = 'home';
     state.current = key;
     // 高亮
