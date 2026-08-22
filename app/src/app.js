@@ -2301,7 +2301,6 @@
     return n;
   }
   function renderSalary(root) {
-    root.className = 'content salary-module';
     var now = new Date();
     var salaryYear = now.getFullYear();
     var salaryMonth = now.getMonth() + 1;
