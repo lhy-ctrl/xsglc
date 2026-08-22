@@ -751,8 +751,13 @@ textarea{width:100%;min-height:320px;resize:vertical;line-height:1.6;}select{cur
 .salary-portrait{max-width:780px;aspect-ratio:210 / 297;}
 .salary-module{
  display:flex !important;flex-direction:column !important;
- align-items:center !important;justify-content:center !important;
  min-height:calc(100vh - 120px) !important;
+}
+.salary-module .salary-toolbar{
+ flex-shrink:0;align-self:flex-start;margin-bottom:0;
+}
+.salary-module .salary-a4{
+ margin:auto !important;
 }
 .salary-title{text-align:center;margin-bottom:16px;}
 .salary-company{font-size:26px;font-weight:700;color:#1a1a2e;margin-bottom:8px;letter-spacing:2px;}
