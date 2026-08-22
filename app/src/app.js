@@ -463,8 +463,8 @@
             store.setState(payload);
             // 单设备登录检查：如果云端活跃设备不是本机，自动退出
             checkLoginSession(payload);
-            // 排班模块使用独立的React状态和localStorage，云端数据同步后不需要重新渲染，避免自动刷新
-            if (state.current && state.current !== 'duty' && state.current !== 'dutyStaff') {
+            // 排班/工资模块使用独立状态和输入框，云端数据同步后不需要重新渲染，避免输入丢失和页面闪烁
+            if (state.current && state.current !== 'duty' && state.current !== 'dutyStaff' && state.current !== 'salary') {
               try { switchTo(state.current); } catch (e) {}
             }
             updateCloudUI();
@@ -2435,12 +2435,12 @@
       var blankCount = Math.max(0, 16 - allRows.length);
       for (var bi = 0; bi < blankCount; bi++) {
         var blankId = 'blank_' + bi;
-        allRows.push({ id: blankId, name: '', gender: 'male', isBlank: true });
+        allRows.push({ id: blankId, name: '', gender: '', isBlank: true });
       }
       allRows.forEach(function (person) {
         var sid = person.id;
         var s = salaryData[sid] || {
-          workDays: 30, baseSalary: 0, attendance: 0, performance: 0,
+          workDays: person.isBlank ? 0 : 30, baseSalary: 0, attendance: 0, performance: 0,
           allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: ''
         };
         // 从教官绩效记录自动获取当月扣除和原因（仅正式员工）
@@ -2493,12 +2493,10 @@
           }
         };
         tr.appendChild(el('td', { class: 'salary-name' }, [nameInput]));
-        // 性别列（所有行可编辑）
-        var genderSel = el('select', { style: 'width:100%;border:none;background:transparent;font-size:12px;text-align:center' });
-        genderSel.appendChild(el('option', { value: 'male', text: '男' }));
-        genderSel.appendChild(el('option', { value: 'female', text: '女' }));
-        genderSel.value = person.gender || 'male';
-        genderSel.onchange = function () {
+        // 性别列（所有行可打字输入）
+        var genderInput = el('input', { type: 'text', value: person.gender || '', placeholder: '性别', maxlength: '1', style: 'width:100%;border:none;outline:none;text-align:center;background:transparent;font-size:12px' });
+        genderInput.onfocus = function () { this.select(); };
+        genderInput.oninput = function () {
           s.gender = this.value;
           if (person.isBlank) {
             var newId2 = 'extra_' + Date.now();
@@ -2512,7 +2510,7 @@
           salaryData[sid] = s;
           saveSalaryData(salaryYear, salaryMonth, salaryData);
         };
-        tr.appendChild(el('td', { class: 'salary-center' }, [genderSel]));
+        tr.appendChild(el('td', { class: 'salary-center' }, [genderInput]));
         // 工作时间
         var daysInput = mkNumInput(s.workDays, function (v) { s.workDays = v; updateRow(); });
         tr.appendChild(el('td', { class: 'salary-input' }, [daysInput]));
@@ -2545,6 +2543,15 @@
         actualInput.oninput = function () {
           var v = parseFloat(this.value);
           s.actualManual = isNaN(v) ? null : v;
+          if (person.isBlank) {
+            var newId4 = 'extra_' + Date.now();
+            s.isExtra = true;
+            salaryData[newId4] = s;
+            delete salaryData[sid];
+            saveSalaryData(salaryYear, salaryMonth, salaryData);
+            renderSalaryTable();
+            return;
+          }
           salaryData[sid] = s;
           saveSalaryData(salaryYear, salaryMonth, salaryData);
           updateTotal();
@@ -2599,21 +2606,6 @@
       });
       table.appendChild(tbody);
       salaryWrap.appendChild(table);
-
-      // 添加一行按钮
-      var addRowBtn = el('div', { class: 'salary-add-row' }, [
-        el('button', { class: 'btn', onclick: function () {
-          var extraId = 'extra_' + Date.now();
-          salaryData[extraId] = {
-            isExtra: true, name: '', gender: 'male',
-            workDays: 30, baseSalary: 0, attendance: 0, performance: 0,
-            allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: ''
-          };
-          saveSalaryData(salaryYear, salaryMonth, salaryData);
-          renderSalaryTable();
-        } }, ['+ 添加一行'])
-      ]);
-      salaryWrap.appendChild(addRowBtn);
 
       // 底部备注 + 总发工资（同一排）
       var footer = el('div', { class: 'salary-footer salary-footer-row' });
