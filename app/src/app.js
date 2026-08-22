@@ -2494,10 +2494,12 @@
         };
         tr.appendChild(el('td', { class: 'salary-name' }, [nameInput]));
         // 性别列（所有行可打字输入）
-        var genderInput = el('input', { type: 'text', value: person.gender || '', placeholder: '性别', maxlength: '1', style: 'width:100%;border:none;outline:none;text-align:center;background:transparent;font-size:12px' });
+        var genderShow = person.gender === 'male' ? '男' : (person.gender === 'female' ? '女' : (person.gender || ''));
+        var genderInput = el('input', { type: 'text', value: genderShow, placeholder: '性别', maxlength: '1', style: 'width:100%;border:none;outline:none;text-align:center;background:transparent;font-size:12px' });
         genderInput.onfocus = function () { this.select(); };
         genderInput.oninput = function () {
-          s.gender = this.value;
+          var v = this.value.trim();
+          s.gender = (v === '男') ? 'male' : (v === '女' ? 'female' : v);
           if (person.isBlank) {
             var newId2 = 'extra_' + Date.now();
             s.isExtra = true;
