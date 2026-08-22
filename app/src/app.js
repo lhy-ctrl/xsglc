@@ -2444,7 +2444,7 @@
       allRows.forEach(function (person) {
         var sid = person.id;
         var s = salaryData[sid] || {
-          workDays: person.isBlank ? 0 : 30, baseSalary: 0, attendance: 0, performance: 0,
+          workDays: 0, baseSalary: 0, attendance: 0, performance: 0,
           allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: ''
         };
         // 从教官绩效记录自动获取当月扣除和原因（仅正式员工）
