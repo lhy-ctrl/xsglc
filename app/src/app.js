@@ -462,11 +462,19 @@
             payload.settings.secondaryAdmins = finalSec;
             store.setState(payload);
             // 恢复排班/工资数据到localStorage
-            if (payload.dutyData) restoreDutyData(payload.dutyData);
+            var dutyUpdated = false;
+            if (payload.dutyData) {
+              restoreDutyData(payload.dutyData);
+              dutyUpdated = true;
+            }
             // 单设备登录检查：如果云端活跃设备不是本机，自动退出
             checkLoginSession(payload);
-            // 排班/工资模块使用独立状态和输入框，云端数据同步后不需要重新渲染，避免输入丢失和页面闪烁
-            if (state.current && state.current !== 'duty' && state.current !== 'dutyStaff' && state.current !== 'salary') {
+            // 排班/工资模块使用独立状态，云端数据同步后需要重新挂载才能显示最新数据
+            if (state.current && (state.current === 'duty' || state.current === 'dutyStaff' || state.current === 'salary')) {
+              if (dutyUpdated) {
+                try { switchTo(state.current); } catch (e) {}
+              }
+            } else if (state.current) {
               try { switchTo(state.current); } catch (e) {}
             }
             updateCloudUI();
