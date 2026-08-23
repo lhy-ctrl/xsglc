@@ -2530,22 +2530,25 @@
           }
         }
         var s = salaryData[sid] || defaultSalary;
-        // 与职位实时关联：如果薪资数据全为0（未手动修改过），按当前职位重新设置默认值
+        // 与职位实时关联：根据当前职位，补全为0的默认字段（不覆盖已手动修改的值）
         if (!person.isExtra && !person.isBlank && person.role) {
-          var allZero = !s.workDays && !s.baseSalary && !s.attendance && !s.performance &&
-            !s.allowance && !s.seniority && !s.bonus && !s.deduction && !s.reason;
-          if (allZero) {
-            s = { workDays: 0, baseSalary: 0, attendance: 0, performance: 0, allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: '' };
-            if (person.role === 'captain') {
-              s.baseSalary = 3500; s.attendance = 300; s.performance = 1200;
-            } else if (person.role === 'vice_captain') {
-              s.baseSalary = 2500; s.attendance = 300; s.performance = 100;
-            } else if (person.role === 'leader_a' || person.role === 'leader_b') {
-              s.allowance = 100;
-            } else if (person.role === 'member') {
-              s.baseSalary = (person.gender === 'female') ? 1800 : 2100;
-              s.attendance = 300; s.performance = 900;
-            }
+          var changed = false;
+          if (person.role === 'captain') {
+            if (!s.baseSalary) { s.baseSalary = 3500; changed = true; }
+            if (!s.attendance) { s.attendance = 300; changed = true; }
+            if (!s.performance) { s.performance = 1200; changed = true; }
+          } else if (person.role === 'vice_captain') {
+            if (!s.baseSalary) { s.baseSalary = 2500; changed = true; }
+            if (!s.attendance) { s.attendance = 300; changed = true; }
+            if (!s.performance) { s.performance = 100; changed = true; }
+          } else if (person.role === 'leader_a' || person.role === 'leader_b') {
+            if (!s.allowance) { s.allowance = 100; changed = true; }
+          } else if (person.role === 'member') {
+            if (!s.baseSalary) { s.baseSalary = (person.gender === 'female') ? 1800 : 2100; changed = true; }
+            if (!s.attendance) { s.attendance = 300; changed = true; }
+            if (!s.performance) { s.performance = 900; changed = true; }
+          }
+          if (changed) {
             salaryData[sid] = s;
             needSave = true;
           }
