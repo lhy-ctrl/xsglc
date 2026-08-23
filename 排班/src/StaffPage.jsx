@@ -224,11 +224,11 @@ function StaffPage({ onNavigate, canEdit }) {
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ width: '60px', whiteSpace: 'nowrap' }}>序号</th>
-                <th>姓名</th>
-                <th>性别</th>
-                {showGroup && <th>分组</th>}
-                <th>职位</th>
+                <th style={{ width: '60px', whiteSpace: 'nowrap', textAlign: 'center' }}>序号</th>
+                <th style={{ textAlign: 'left' }}>姓名</th>
+                <th style={{ textAlign: 'center' }}>性别</th>
+                {showGroup && <th style={{ textAlign: 'center' }}>分组</th>}
+                <th style={{ textAlign: 'center' }}>职位</th>
                 <th style={{ textAlign: 'right' }}>操作</th>
               </tr>
             </thead>
@@ -239,8 +239,8 @@ function StaffPage({ onNavigate, canEdit }) {
                 const isCapVice = isCaptainOrVice(person);
                 return (
                   <tr key={person.id}>
-                    <td style={{ color: '#9ca3af', fontSize: '13px' }}>{idx + 1}</td>
-                    <td>
+                    <td style={{ color: '#9ca3af', fontSize: '13px', textAlign: 'center' }}>{idx + 1}</td>
+                    <td style={{ textAlign: 'left' }}>
                       {editable ? (
                         <input
                           type="text" value={formatName(person.name)}
@@ -254,9 +254,9 @@ function StaffPage({ onNavigate, canEdit }) {
                         <span style={{ fontSize: '14px', color: '#374151', fontWeight: 500 }}>{formatName(person.name) || '（未命名）'}</span>
                       )}
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'center' }}>
                       {editable ? (
-                        <div className="radio-group">
+                        <div className="radio-group" style={{ justifyContent: 'center' }}>
                           <label>
                             <input type="radio" name={`gender-${person.id}`} checked={person.gender === 'male'}
                               onChange={() => handleUpdate(person.id, { gender: 'male' })} />
@@ -273,11 +273,11 @@ function StaffPage({ onNavigate, canEdit }) {
                       )}
                     </td>
                     {showGroup && (
-                      <td>
+                      <td style={{ textAlign: 'center' }}>
                         {isCapVice ? (
                           <span style={{ fontSize: '13px', color: '#9ca3af' }}>— 不参与分组 —</span>
                         ) : editable ? (
-                          <div className="radio-group">
+                          <div className="radio-group" style={{ justifyContent: 'center' }}>
                             <label>
                               <input type="radio" name={`group-${person.id}`} checked={person.group === 'A'}
                                 onChange={() => {
@@ -302,8 +302,8 @@ function StaffPage({ onNavigate, canEdit }) {
                         )}
                       </td>
                     )}
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
                         {editable ? (
                           <select
                             value={person.role}

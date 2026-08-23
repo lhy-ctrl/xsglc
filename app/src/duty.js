@@ -1306,9 +1306,26 @@ function StaffPage({
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     style: {
       width: '60px',
-      whiteSpace: 'nowrap'
+      whiteSpace: 'nowrap',
+      textAlign: 'center'
     }
-  }, "\u5E8F\u53F7"), /*#__PURE__*/React.createElement("th", null, "\u59D3\u540D"), /*#__PURE__*/React.createElement("th", null, "\u6027\u522B"), showGroup && /*#__PURE__*/React.createElement("th", null, "\u5206\u7EC4"), /*#__PURE__*/React.createElement("th", null, "\u804C\u4F4D"), /*#__PURE__*/React.createElement("th", {
+  }, "\u5E8F\u53F7"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      textAlign: 'left'
+    }
+  }, "\u59D3\u540D"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      textAlign: 'center'
+    }
+  }, "\u6027\u522B"), showGroup && /*#__PURE__*/React.createElement("th", {
+    style: {
+      textAlign: 'center'
+    }
+  }, "\u5206\u7EC4"), /*#__PURE__*/React.createElement("th", {
+    style: {
+      textAlign: 'center'
+    }
+  }, "\u804C\u4F4D"), /*#__PURE__*/React.createElement("th", {
     style: {
       textAlign: 'right'
     }
@@ -1321,9 +1338,14 @@ function StaffPage({
     }, /*#__PURE__*/React.createElement("td", {
       style: {
         color: '#9ca3af',
-        fontSize: '13px'
+        fontSize: '13px',
+        textAlign: 'center'
       }
-    }, idx + 1), /*#__PURE__*/React.createElement("td", null, editable ? /*#__PURE__*/React.createElement("input", {
+    }, idx + 1), /*#__PURE__*/React.createElement("td", {
+      style: {
+        textAlign: 'left'
+      }
+    }, editable ? /*#__PURE__*/React.createElement("input", {
       type: "text",
       value: formatName(person.name),
       onChange: e => handleUpdate(person.id, {
@@ -1342,8 +1364,15 @@ function StaffPage({
         color: '#374151',
         fontWeight: 500
       }
-    }, formatName(person.name) || '（未命名）')), /*#__PURE__*/React.createElement("td", null, editable ? /*#__PURE__*/React.createElement("div", {
-      className: "radio-group"
+    }, formatName(person.name) || '（未命名）')), /*#__PURE__*/React.createElement("td", {
+      style: {
+        textAlign: 'center'
+      }
+    }, editable ? /*#__PURE__*/React.createElement("div", {
+      className: "radio-group",
+      style: {
+        justifyContent: 'center'
+      }
     }, /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("input", {
       type: "radio",
       name: `gender-${person.id}`,
@@ -1360,13 +1389,20 @@ function StaffPage({
       })
     }), /*#__PURE__*/React.createElement("span", null, "\u5973"))) : /*#__PURE__*/React.createElement("span", {
       className: 'tag ' + (person.gender === 'male' ? 'tag-male' : 'tag-female')
-    }, person.gender === 'male' ? '男' : '女')), showGroup && /*#__PURE__*/React.createElement("td", null, isCapVice ? /*#__PURE__*/React.createElement("span", {
+    }, person.gender === 'male' ? '男' : '女')), showGroup && /*#__PURE__*/React.createElement("td", {
+      style: {
+        textAlign: 'center'
+      }
+    }, isCapVice ? /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: '13px',
         color: '#9ca3af'
       }
     }, "\u2014 \u4E0D\u53C2\u4E0E\u5206\u7EC4 \u2014") : editable ? /*#__PURE__*/React.createElement("div", {
-      className: "radio-group"
+      className: "radio-group",
+      style: {
+        justifyContent: 'center'
+      }
     }, /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("input", {
       type: "radio",
       name: `group-${person.id}`,
@@ -1393,11 +1429,16 @@ function StaffPage({
       }
     }), /*#__PURE__*/React.createElement("span", null, "B\u7EC4"))) : /*#__PURE__*/React.createElement("span", {
       className: 'tag tag-group-' + (person.group === 'A' ? 'a' : 'b')
-    }, person.group, "\u7EC4")), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("div", {
+    }, person.group, "\u7EC4")), /*#__PURE__*/React.createElement("td", {
+      style: {
+        textAlign: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
-        gap: '8px'
+        gap: '8px',
+        justifyContent: 'center'
       }
     }, editable ? /*#__PURE__*/React.createElement("select", {
       value: person.role,
