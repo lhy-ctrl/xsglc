@@ -226,10 +226,10 @@ function StaffPage({ onNavigate, canEdit }) {
               <tr>
                 <th style={{ width: '60px', whiteSpace: 'nowrap' }}>序号</th>
                 <th>姓名</th>
-                <th style={{ width: '120px' }}>性别</th>
-                {showGroup && <th style={{ width: '120px' }}>分组</th>}
-                <th style={{ width: '160px' }}>职位</th>
-                <th style={{ width: '90px', textAlign: 'right' }}>操作</th>
+                <th>性别</th>
+                {showGroup && <th>分组</th>}
+                <th>职位</th>
+                <th style={{ textAlign: 'right' }}>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -389,7 +389,7 @@ const inputStyle = {
 const nameInputStyle = {
   width: '100%', padding: '6px 10px', border: '1px solid transparent',
   borderRadius: '6px', fontSize: '14px', outline: 'none', transition: 'border-color .15s',
-  background: 'transparent', textAlign: 'center', fontWeight: 500,
+  background: 'transparent', textAlign: 'left', fontWeight: 500,
 };
 
 Object.assign(window, { StaffPage });

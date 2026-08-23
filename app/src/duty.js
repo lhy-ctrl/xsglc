@@ -1308,21 +1308,8 @@ function StaffPage({
       width: '60px',
       whiteSpace: 'nowrap'
     }
-  }, "\u5E8F\u53F7"), /*#__PURE__*/React.createElement("th", null, "\u59D3\u540D"), /*#__PURE__*/React.createElement("th", {
+  }, "\u5E8F\u53F7"), /*#__PURE__*/React.createElement("th", null, "\u59D3\u540D"), /*#__PURE__*/React.createElement("th", null, "\u6027\u522B"), showGroup && /*#__PURE__*/React.createElement("th", null, "\u5206\u7EC4"), /*#__PURE__*/React.createElement("th", null, "\u804C\u4F4D"), /*#__PURE__*/React.createElement("th", {
     style: {
-      width: '120px'
-    }
-  }, "\u6027\u522B"), showGroup && /*#__PURE__*/React.createElement("th", {
-    style: {
-      width: '120px'
-    }
-  }, "\u5206\u7EC4"), /*#__PURE__*/React.createElement("th", {
-    style: {
-      width: '160px'
-    }
-  }, "\u804C\u4F4D"), /*#__PURE__*/React.createElement("th", {
-    style: {
-      width: '90px',
       textAlign: 'right'
     }
   }, "\u64CD\u4F5C"))), /*#__PURE__*/React.createElement("tbody", null, filteredStaff.map((person, idx) => {
@@ -1582,7 +1569,7 @@ const nameInputStyle = {
   outline: 'none',
   transition: 'border-color .15s',
   background: 'transparent',
-  textAlign: 'center',
+  textAlign: 'left',
   fontWeight: 500
 };
 Object.assign(window, {
