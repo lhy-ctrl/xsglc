@@ -2033,6 +2033,9 @@
   // 从 localStorage 读取排班人员数据（与排班系统共享同一数据源）
   function getDutyStaff() {
     try {
+      var st = store.getState();
+      if (st.dutyStaff && st.dutyStaff.length) return st.dutyStaff;
+      // 后备：从localStorage读取（兼容旧数据）
       var raw = (typeof localStorage !== 'undefined') ? localStorage.getItem('duty_staff') : null;
       return raw ? JSON.parse(raw) : [];
     } catch (e) { return []; }
