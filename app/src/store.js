@@ -37,6 +37,7 @@
       dutyAfterSchoolPointer: 0, // 放学后岗位指针
       dutyScheduleHistory: [],   // 排班历史
       dutySalary: {},            // 工资数据 {'YYYY_M': [{name, gender, ...}]}
+      lastModified: 0,           // 最后修改时间戳（用于多设备同步）
       settings: { lastBackupAt: null, homeOrder: null, scoreMonths: null, adminPass: null, secondaryAdmins: [] }
     };
   }
@@ -60,6 +61,7 @@
     if (typeof raw.dutyGroupRotation === 'number') base.dutyGroupRotation = raw.dutyGroupRotation;
     if (typeof raw.dutyGatePointer === 'number') base.dutyGatePointer = raw.dutyGatePointer;
     if (typeof raw.dutyAfterSchoolPointer === 'number') base.dutyAfterSchoolPointer = raw.dutyAfterSchoolPointer;
+    if (typeof raw.lastModified === 'number') base.lastModified = raw.lastModified;
     // 兼容老数据：dormMap 元素缺 area / count 字段时补默认
     if (Array.isArray(base.dormMap)) {
       base.dormMap = base.dormMap.map(function (d) {
@@ -145,6 +147,7 @@
     function save() {
       ensureLoaded();
       try {
+        state.lastModified = Date.now();
         backend.set(storageKey, JSON.stringify(state));
       } catch (e) {
         // localStorage 配额不足或写入失败时，提示用户但不中断操作

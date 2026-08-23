@@ -478,8 +478,11 @@
     return AppCloudLib.pull().then(function (payload) {
       if (payload) {
         cloudStatus.lastPullAt = new Date();
-        // 云端只读版：自动覆盖；APK未登录时：自动拉取同步（只读展示）；本地版登录后：不自动覆盖，避免本地修改被冲掉
-        var shouldOverride = READONLY_MODE || (IS_APK && !isAdmin);
+        // 云端只读版/APK未登录：自动覆盖；本地版登录管理员：比较时间戳，云端更新才覆盖
+        var localState = store.getState();
+        var cloudTs = payload.lastModified || 0;
+        var localTs = localState.lastModified || 0;
+        var shouldOverride = READONLY_MODE || (IS_APK && !isAdmin) || (cloudTs > localTs);
         if (shouldOverride) {
           migrateClassFormatInPlace(payload);
           // 合并二级管理员：优先从云端 secondary_admins 表获取（listSecondary），其次用 payload 中的，最后保留本地
@@ -2527,6 +2530,26 @@
           }
         }
         var s = salaryData[sid] || defaultSalary;
+        // 与职位实时关联：如果薪资数据全为0（未手动修改过），按当前职位重新设置默认值
+        if (!person.isExtra && !person.isBlank && person.role) {
+          var allZero = !s.workDays && !s.baseSalary && !s.attendance && !s.performance &&
+            !s.allowance && !s.seniority && !s.bonus && !s.deduction && !s.reason;
+          if (allZero) {
+            s = { workDays: 0, baseSalary: 0, attendance: 0, performance: 0, allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: '' };
+            if (person.role === 'captain') {
+              s.baseSalary = 3500; s.attendance = 300; s.performance = 1200;
+            } else if (person.role === 'vice_captain') {
+              s.baseSalary = 2500; s.attendance = 300; s.performance = 100;
+            } else if (person.role === 'leader_a' || person.role === 'leader_b') {
+              s.allowance = 100;
+            } else if (person.role === 'member') {
+              s.baseSalary = (person.gender === 'female') ? 1800 : 2100;
+              s.attendance = 300; s.performance = 900;
+            }
+            salaryData[sid] = s;
+            needSave = true;
+          }
+        }
         // 使用默认值时保存到salaryData（仅正式员工）
         if (!salaryData[sid] && !person.isExtra && !person.isBlank && person.role) {
           salaryData[sid] = s;
