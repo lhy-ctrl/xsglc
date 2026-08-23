@@ -1440,14 +1440,30 @@ function StaffPage({
         gap: '8px',
         justifyContent: 'center'
       }
-    }, editable ? /*#__PURE__*/React.createElement("select", {
+    }, editable ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: '100px',
+        flexShrink: 0
+      }
+    }, /*#__PURE__*/React.createElement("select", {
       value: person.role,
       onChange: e => handleRoleChange(person.id, e.target.value),
-      className: "staff-role-select"
+      style: {
+        width: '100%',
+        padding: '6px 8px',
+        border: '1px solid #d1d5db',
+        borderRadius: '6px',
+        fontSize: '13px',
+        background: '#fff',
+        outline: 'none',
+        cursor: 'pointer',
+        textAlign: 'center',
+        boxSizing: 'border-box'
+      }
     }, roleOpts.map(opt => /*#__PURE__*/React.createElement("option", {
       key: opt.value,
       value: opt.value
-    }, opt.label))) : null, /*#__PURE__*/React.createElement("span", {
+    }, opt.label)))) : null, /*#__PURE__*/React.createElement("span", {
       style: {
         padding: '2px 8px',
         borderRadius: '4px',

@@ -643,21 +643,6 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   font-size: 13.5px; outline: none; transition: border-color .15s; background: #fff; color: #2a3a55;
 }
 .duty-app input[type="text"]:focus, .duty-app select:focus { border-color: #4c8dff; }
-/* 员工管理职位选择框固定宽度 */
-.duty-app .staff-role-select {
-  width: 100px !important;
-  min-width: 100px !important;
-  max-width: 100px !important;
-  flex-shrink: 0 !important;
-  padding: 6px 8px !important;
-  border: 1px solid #d1d5db !important;
-  border-radius: 6px !important;
-  font-size: 13px !important;
-  background: #fff !important;
-  outline: none !important;
-  cursor: pointer !important;
-  text-align: center !important;
-}
 /* 白色卡片容器统一为面板风格 */
 .duty-app div[style*="background: rgb(255, 255, 255)"][style*="border-radius"],
 .duty-app div[style*="background:#fff"][style*="border-radius"] {

@@ -305,15 +305,17 @@ function StaffPage({ onNavigate, canEdit }) {
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
                         {editable ? (
-                          <select
-                            value={person.role}
-                            onChange={(e) => handleRoleChange(person.id, e.target.value)}
-                            className="staff-role-select"
-                          >
+                          <div style={{ width: '100px', flexShrink: 0 }}>
+                            <select
+                              value={person.role}
+                              onChange={(e) => handleRoleChange(person.id, e.target.value)}
+                              style={{ width: '100%', padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', background: '#fff', outline: 'none', cursor: 'pointer', textAlign: 'center', boxSizing: 'border-box' }}
+                            >
                             {roleOpts.map(opt => (
                               <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                           </select>
+                          </div>
                         ) : null}
                         <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, background: rtStyle.bg, color: rtStyle.color, whiteSpace: 'nowrap' }}>
                           {ROLE_LABELS[person.role]}
