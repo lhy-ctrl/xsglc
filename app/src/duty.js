@@ -1327,7 +1327,7 @@ function StaffPage({
     }
   }, "\u804C\u4F4D"), /*#__PURE__*/React.createElement("th", {
     style: {
-      textAlign: 'right'
+      textAlign: 'center'
     }
   }, "\u64CD\u4F5C"))), /*#__PURE__*/React.createElement("tbody", null, filteredStaff.map((person, idx) => {
     const roleOpts = getRoleOptions(person);
@@ -1450,7 +1450,9 @@ function StaffPage({
         fontSize: '13px',
         background: '#fff',
         outline: 'none',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        width: '100px',
+        textAlign: 'center'
       }
     }, roleOpts.map(opt => /*#__PURE__*/React.createElement("option", {
       key: opt.value,
@@ -1514,7 +1516,7 @@ function StaffPage({
       color: '#b45309',
       marginRight: '8px'
     }
-  }, "\u961F\u957F\uFF1A"), /*#__PURE__*/React.createElement("span", null, captain?.name || '未设置'), /*#__PURE__*/React.createElement("span", {
+  }, "\u961F\u957F\uFF1A"), /*#__PURE__*/React.createElement("span", null, captain ? formatName(captain.name) : '未设置'), /*#__PURE__*/React.createElement("span", {
     style: {
       margin: '0 16px',
       color: '#d1d5db'
@@ -1525,13 +1527,7 @@ function StaffPage({
       color: '#4338ca',
       marginRight: '8px'
     }
-  }, "\u526F\u961F\u957F\uFF1A"), /*#__PURE__*/React.createElement("span", null, viceCaptain?.name || '未设置'), /*#__PURE__*/React.createElement("span", {
-    style: {
-      marginLeft: '12px',
-      fontSize: '12px',
-      color: '#9ca3af'
-    }
-  }, "\uFF08\u4E0D\u53C2\u4E0E\u5206\u7EC4\uFF09")), /*#__PURE__*/React.createElement("div", {
+  }, "\u526F\u961F\u957F\uFF1A"), /*#__PURE__*/React.createElement("span", null, viceCaptain ? formatName(viceCaptain.name) : '未设置')), /*#__PURE__*/React.createElement("div", {
     style: {
       paddingTop: '8px',
       borderTop: '1px dashed #e5e7eb'
@@ -1542,7 +1538,7 @@ function StaffPage({
       color: '#b45309',
       marginRight: '8px'
     }
-  }, "A\u7EC4\u7EC4\u957F\uFF1A"), /*#__PURE__*/React.createElement("span", null, staff.find(p => p.role === 'leader_a')?.name || '未设置'), /*#__PURE__*/React.createElement("span", {
+  }, "A\u7EC4\u7EC4\u957F\uFF1A"), /*#__PURE__*/React.createElement("span", null, staff.find(p => p.role === 'leader_a') ? formatName(staff.find(p => p.role === 'leader_a').name) : '未设置'), /*#__PURE__*/React.createElement("span", {
     style: {
       margin: '0 12px',
       color: '#d1d5db'
@@ -1553,13 +1549,13 @@ function StaffPage({
       color: '#374151',
       marginRight: '8px'
     }
-  }, "\u6210\u5458\uFF1A"), /*#__PURE__*/React.createElement("span", null, staff.filter(p => p.group === 'A' && p.role !== 'leader_a' && p.role !== 'captain' && p.role !== 'vice_captain').map(p => p.name || '(未命名)').join('、') || '暂无')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+  }, "\u6210\u5458\uFF1A"), /*#__PURE__*/React.createElement("span", null, staff.filter(p => p.group === 'A' && p.role !== 'leader_a' && p.role !== 'captain' && p.role !== 'vice_captain').map(p => formatName(p.name) || '(未命名)').join('、') || '暂无')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
     style: {
       fontWeight: 600,
       color: '#047857',
       marginRight: '8px'
     }
-  }, "B\u7EC4\u7EC4\u957F\uFF1A"), /*#__PURE__*/React.createElement("span", null, staff.find(p => p.role === 'leader_b')?.name || '未设置'), /*#__PURE__*/React.createElement("span", {
+  }, "B\u7EC4\u7EC4\u957F\uFF1A"), /*#__PURE__*/React.createElement("span", null, staff.find(p => p.role === 'leader_b') ? formatName(staff.find(p => p.role === 'leader_b').name) : '未设置'), /*#__PURE__*/React.createElement("span", {
     style: {
       margin: '0 12px',
       color: '#d1d5db'
@@ -1570,7 +1566,7 @@ function StaffPage({
       color: '#374151',
       marginRight: '8px'
     }
-  }, "\u6210\u5458\uFF1A"), /*#__PURE__*/React.createElement("span", null, staff.filter(p => p.group === 'B' && p.role !== 'leader_b' && p.role !== 'captain' && p.role !== 'vice_captain').map(p => p.name || '(未命名)').join('、') || '暂无')))), /*#__PURE__*/React.createElement("div", {
+  }, "\u6210\u5458\uFF1A"), /*#__PURE__*/React.createElement("span", null, staff.filter(p => p.group === 'B' && p.role !== 'leader_b' && p.role !== 'captain' && p.role !== 'vice_captain').map(p => formatName(p.name) || '(未命名)').join('、') || '暂无')))), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: '24px',
       display: 'flex',

@@ -229,7 +229,7 @@ function StaffPage({ onNavigate, canEdit }) {
                 <th style={{ textAlign: 'center' }}>性别</th>
                 {showGroup && <th style={{ textAlign: 'center' }}>分组</th>}
                 <th style={{ textAlign: 'center' }}>职位</th>
-                <th style={{ textAlign: 'right' }}>操作</th>
+                <th style={{ textAlign: 'center' }}>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -308,7 +308,7 @@ function StaffPage({ onNavigate, canEdit }) {
                           <select
                             value={person.role}
                             onChange={(e) => handleRoleChange(person.id, e.target.value)}
-                            style={{ padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', background: '#fff', outline: 'none', cursor: 'pointer' }}
+                            style={{ padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', background: '#fff', outline: 'none', cursor: 'pointer', width: '100px', textAlign: 'center' }}
                           >
                             {roleOpts.map(opt => (
                               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -347,25 +347,24 @@ function StaffPage({ onNavigate, canEdit }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px', color: '#374151', lineHeight: 1.8 }}>
             <div>
               <span style={{ fontWeight: 600, color: '#b45309', marginRight: '8px' }}>队长：</span>
-              <span>{captain?.name || '未设置'}</span>
+              <span>{captain ? formatName(captain.name) : '未设置'}</span>
               <span style={{ margin: '0 16px', color: '#d1d5db' }}>|</span>
               <span style={{ fontWeight: 600, color: '#4338ca', marginRight: '8px' }}>副队长：</span>
-              <span>{viceCaptain?.name || '未设置'}</span>
-              <span style={{ marginLeft: '12px', fontSize: '12px', color: '#9ca3af' }}>（不参与分组）</span>
+              <span>{viceCaptain ? formatName(viceCaptain.name) : '未设置'}</span>
             </div>
             <div style={{ paddingTop: '8px', borderTop: '1px dashed #e5e7eb' }}>
               <span style={{ fontWeight: 600, color: '#b45309', marginRight: '8px' }}>A组组长：</span>
-              <span>{staff.find(p => p.role === 'leader_a')?.name || '未设置'}</span>
+              <span>{staff.find(p => p.role === 'leader_a') ? formatName(staff.find(p => p.role === 'leader_a').name) : '未设置'}</span>
               <span style={{ margin: '0 12px', color: '#d1d5db' }}>|</span>
               <span style={{ fontWeight: 600, color: '#374151', marginRight: '8px' }}>成员：</span>
-              <span>{staff.filter(p => p.group === 'A' && p.role !== 'leader_a' && p.role !== 'captain' && p.role !== 'vice_captain').map(p => p.name || '(未命名)').join('、') || '暂无'}</span>
+              <span>{staff.filter(p => p.group === 'A' && p.role !== 'leader_a' && p.role !== 'captain' && p.role !== 'vice_captain').map(p => formatName(p.name) || '(未命名)').join('、') || '暂无'}</span>
             </div>
             <div>
               <span style={{ fontWeight: 600, color: '#047857', marginRight: '8px' }}>B组组长：</span>
-              <span>{staff.find(p => p.role === 'leader_b')?.name || '未设置'}</span>
+              <span>{staff.find(p => p.role === 'leader_b') ? formatName(staff.find(p => p.role === 'leader_b').name) : '未设置'}</span>
               <span style={{ margin: '0 12px', color: '#d1d5db' }}>|</span>
               <span style={{ fontWeight: 600, color: '#374151', marginRight: '8px' }}>成员：</span>
-              <span>{staff.filter(p => p.group === 'B' && p.role !== 'leader_b' && p.role !== 'captain' && p.role !== 'vice_captain').map(p => p.name || '(未命名)').join('、') || '暂无'}</span>
+              <span>{staff.filter(p => p.group === 'B' && p.role !== 'leader_b' && p.role !== 'captain' && p.role !== 'vice_captain').map(p => formatName(p.name) || '(未命名)').join('、') || '暂无'}</span>
             </div>
           </div>
         </div>
