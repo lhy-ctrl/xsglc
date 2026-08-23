@@ -461,6 +461,8 @@
             if (!payload.settings) payload.settings = {};
             payload.settings.secondaryAdmins = finalSec;
             store.setState(payload);
+            // 恢复排班/工资数据到localStorage
+            if (payload.dutyData) restoreDutyData(payload.dutyData);
             // 单设备登录检查：如果云端活跃设备不是本机，自动退出
             checkLoginSession(payload);
             // 排班/工资模块使用独立状态和输入框，云端数据同步后不需要重新渲染，避免输入丢失和页面闪烁
@@ -653,6 +655,36 @@
     cloudStatus.lastPushAt = t;
     try { if (typeof localStorage !== 'undefined') localStorage.setItem(CLOUD_STORAGE_KEY, t || ''); } catch (e) {}
   }
+  // 收集所有排班/工资相关的localStorage数据
+  function collectDutyData() {
+    var data = {};
+    var keys = ['duty_staff', 'duty_all_post_pointers', 'duty_group_post_pointers',
+                'duty_group_rotation', 'duty_gate_pointer', 'duty_afterschool_pointer',
+                'duty_schedule_history'];
+    keys.forEach(function(k) {
+      try {
+        var v = localStorage.getItem(k);
+        if (v !== null) data[k] = JSON.parse(v);
+      } catch (e) {}
+    });
+    // 收集所有工资数据（duty_salary_年_月）
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (key && key.indexOf('duty_salary_') === 0) {
+        try { data[key] = JSON.parse(localStorage.getItem(key)); } catch (e) {}
+      }
+    }
+    return data;
+  }
+  // 把云端的排班/工资数据恢复到localStorage
+  function restoreDutyData(data) {
+    if (!data || typeof data !== 'object') return;
+    Object.keys(data).forEach(function(k) {
+      if (k.indexOf('duty_') === 0) {
+        try { localStorage.setItem(k, JSON.stringify(data[k])); } catch (e) {}
+      }
+    });
+  }
   // 把当前本地数据推送到云端（管理员）
   // 本地版与云端网页版统一走 RPC（admin_write），不再使用 secret key：
   // 需要云端管理员密码，首次同步时会弹窗让用户输入并记住（会话内）。
@@ -665,6 +697,8 @@
       cloudStatus.busy = true;
       updateCloudUI();
       var payload = store.getState();
+      // 加入排班/工资数据
+      payload.dutyData = collectDutyData();
       var doPush = AppCloudLib.adminWrite
         ? AppCloudLib.adminWrite(payload, cloudAdminPassword)
         : AppCloudLib.push(payload, cloudAdminPassword);
@@ -753,6 +787,8 @@
           }).filter(function (a) { return a.pwd || a.name; });
         }
         store.setState(payload);
+        // 恢复排班/工资数据到localStorage
+        if (payload.dutyData) restoreDutyData(payload.dutyData);
         cloudStatus.busy = false;
         refresh();
         updateCloudUI();

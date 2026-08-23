@@ -524,6 +524,23 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   .duty-app .duty-gate-row { flex-direction: column; }
   .duty-app .duty-gate-params, .duty-app .duty-gate-result { width: 100%; }
   .duty-app .duty-gate-timeblock-grid { flex-wrap: wrap; }
+
+  /* 员工管理表格：横向滚动，紧凑布局 */
+  .duty-app table { min-width: 560px; }
+  .duty-app th, .duty-app td { padding: 6px 8px; font-size: 12px; }
+  .duty-app main { padding: 14px 12px !important; }
+  .duty-app header { padding: 12px 16px !important; }
+  .duty-app .radio-group label { font-size: 12px; }
+
+  /* 工资页面：A4容器适配小屏，表格横向滚动 */
+  .salary-a4 { max-width: 100% !important; width: 100% !important; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .salary-landscape { max-width: 100% !important; width: 100% !important; }
+  .salary-portrait { max-width: 100% !important; width: 100% !important; }
+  .salary-table { min-width: 800px; }
+  .salary-table th, .salary-table td { padding: 4px 6px; font-size: 11px; }
+  .salary-table input { font-size: 11px; padding: 3px 4px; }
+  .salary-footer-row { flex-direction: column; gap: 10px; }
+  .salary-remark { font-size: 11px; }
 }
 
 
