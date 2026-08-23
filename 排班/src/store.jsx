@@ -173,20 +173,31 @@ function StoreProvider({ children }) {
   const addStaff = useCallback((person) => {
     setStaff(prev => {
       const maxId = prev.reduce((m, p) => Math.max(m, p.id), 0);
-      return [...prev, { role: 'member', ...person, id: maxId + 1 }];
+      const next = [...prev, { role: 'member', ...person, id: maxId + 1 }];
+      writeDutyState('dutyStaff', next);
+      return next;
     });
   }, []);
 
   const updateStaff = useCallback((id, patch) => {
-    setStaff(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
+    setStaff(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, ...patch } : p);
+      writeDutyState('dutyStaff', next);
+      return next;
+    });
   }, []);
 
   const deleteStaff = useCallback((id) => {
-    setStaff(prev => prev.filter(p => p.id !== id));
+    setStaff(prev => {
+      const next = prev.filter(p => p.id !== id);
+      writeDutyState('dutyStaff', next);
+      return next;
+    });
   }, []);
 
   const resetStaff = useCallback(() => {
     setStaff(defaultStaff);
+    writeDutyState('dutyStaff', defaultStaff);
   }, []);
 
   const genderMatch = (person, post) => {
@@ -439,16 +450,23 @@ function StoreProvider({ children }) {
 
   const saveScheduleHistory = useCallback((record) => {
     setScheduleHistory(prev => {
-      return [record, ...prev].slice(0, 5);
+      const next = [record, ...prev].slice(0, 5);
+      writeDutyState('dutyScheduleHistory', next);
+      return next;
     });
   }, []);
 
   const deleteScheduleHistory = useCallback((id) => {
-    setScheduleHistory(prev => prev.filter(r => r.id !== id));
+    setScheduleHistory(prev => {
+      const next = prev.filter(r => r.id !== id);
+      writeDutyState('dutyScheduleHistory', next);
+      return next;
+    });
   }, []);
 
   const clearScheduleHistory = useCallback(() => {
     setScheduleHistory([]);
+    writeDutyState('dutyScheduleHistory', []);
   }, []);
 
   const value = {

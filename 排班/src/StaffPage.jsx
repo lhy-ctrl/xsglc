@@ -120,15 +120,13 @@ function StaffPage({ onNavigate, canEdit }) {
 
   const isCaptainOrVice = (person) => person.role === 'captain' || person.role === 'vice_captain';
 
-  // 姓名对齐：两个字中间加全角空格
+  // 姓名对齐：两个字中间加全角空格（仅用于显示，不用于输入框）
   const formatName = (name) => {
     if (!name) return '';
     const n = name.trim();
     if (n.length === 2) return n.charAt(0) + '　' + n.charAt(1);
     return n;
   };
-  // 去除全角空格，保存原始姓名
-  const unformatName = (name) => name.replace(/　/g, '').trim();
 
   const filterBtnStyle = (active) => ({
     padding: '10px 16px', borderRadius: '10px',
@@ -243,10 +241,10 @@ function StaffPage({ onNavigate, canEdit }) {
                     <td style={{ textAlign: 'left' }}>
                       {editable ? (
                         <input
-                          type="text" value={formatName(person.name)}
-                          onChange={(e) => handleUpdate(person.id, { name: unformatName(e.target.value) })}
+                          type="text" value={person.name}
+                          onChange={(e) => handleUpdate(person.id, { name: e.target.value })}
                           placeholder="请输入姓名"
-                          style={{ ...nameInputStyle, letterSpacing: person.name && person.name.trim().length === 2 ? '2px' : '0' }}
+                          style={nameInputStyle}
                           onFocus={e => e.target.style.borderColor = '#2563eb'}
                           onBlur={e => e.target.style.borderColor = 'transparent'}
                         />

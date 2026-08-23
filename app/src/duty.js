@@ -355,24 +355,35 @@ function StoreProvider({
   const addStaff = useCallback(person => {
     setStaff(prev => {
       const maxId = prev.reduce((m, p) => Math.max(m, p.id), 0);
-      return [...prev, {
+      const next = [...prev, {
         role: 'member',
         ...person,
         id: maxId + 1
       }];
+      writeDutyState('dutyStaff', next);
+      return next;
     });
   }, []);
   const updateStaff = useCallback((id, patch) => {
-    setStaff(prev => prev.map(p => p.id === id ? {
-      ...p,
-      ...patch
-    } : p));
+    setStaff(prev => {
+      const next = prev.map(p => p.id === id ? {
+        ...p,
+        ...patch
+      } : p);
+      writeDutyState('dutyStaff', next);
+      return next;
+    });
   }, []);
   const deleteStaff = useCallback(id => {
-    setStaff(prev => prev.filter(p => p.id !== id));
+    setStaff(prev => {
+      const next = prev.filter(p => p.id !== id);
+      writeDutyState('dutyStaff', next);
+      return next;
+    });
   }, []);
   const resetStaff = useCallback(() => {
     setStaff(defaultStaff);
+    writeDutyState('dutyStaff', defaultStaff);
   }, []);
   const genderMatch = (person, post) => {
     if (post.gender === 'any') return true;
@@ -659,14 +670,21 @@ function StoreProvider({
   }, [staff, afterSchoolPointer]);
   const saveScheduleHistory = useCallback(record => {
     setScheduleHistory(prev => {
-      return [record, ...prev].slice(0, 5);
+      const next = [record, ...prev].slice(0, 5);
+      writeDutyState('dutyScheduleHistory', next);
+      return next;
     });
   }, []);
   const deleteScheduleHistory = useCallback(id => {
-    setScheduleHistory(prev => prev.filter(r => r.id !== id));
+    setScheduleHistory(prev => {
+      const next = prev.filter(r => r.id !== id);
+      writeDutyState('dutyScheduleHistory', next);
+      return next;
+    });
   }, []);
   const clearScheduleHistory = useCallback(() => {
     setScheduleHistory([]);
+    writeDutyState('dutyScheduleHistory', []);
   }, []);
   const value = {
     staff,
@@ -1090,15 +1108,13 @@ function StaffPage({
   };
   const isCaptainOrVice = person => person.role === 'captain' || person.role === 'vice_captain';
 
-  // 姓名对齐：两个字中间加全角空格
+  // 姓名对齐：两个字中间加全角空格（仅用于显示，不用于输入框）
   const formatName = name => {
     if (!name) return '';
     const n = name.trim();
     if (n.length === 2) return n.charAt(0) + '　' + n.charAt(1);
     return n;
   };
-  // 去除全角空格，保存原始姓名
-  const unformatName = name => name.replace(/　/g, '').trim();
   const filterBtnStyle = active => ({
     padding: '10px 16px',
     borderRadius: '10px',
@@ -1388,15 +1404,12 @@ function StaffPage({
       }
     }, editable ? /*#__PURE__*/React.createElement("input", {
       type: "text",
-      value: formatName(person.name),
+      value: person.name,
       onChange: e => handleUpdate(person.id, {
-        name: unformatName(e.target.value)
+        name: e.target.value
       }),
       placeholder: "\u8BF7\u8F93\u5165\u59D3\u540D",
-      style: {
-        ...nameInputStyle,
-        letterSpacing: person.name && person.name.trim().length === 2 ? '2px' : '0'
-      },
+      style: nameInputStyle,
       onFocus: e => e.target.style.borderColor = '#2563eb',
       onBlur: e => e.target.style.borderColor = 'transparent'
     }) : /*#__PURE__*/React.createElement("span", {
