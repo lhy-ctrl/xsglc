@@ -549,15 +549,19 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   /* 操作列按钮 */
   .duty-app .btn-sm { padding: 4px 8px !important; font-size: 11px !important; }
 
-  /* 工资页面：A4容器适配小屏，表格横向滚动 */
-  .salary-a4 { max-width: 100% !important; width: 100% !important; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* 工资页面：A4容器适配小屏，表格横向滚动，显示所有行 */
+  .salary-a4 { max-width: 100% !important; width: 100% !important; overflow-x: auto !important; overflow-y: visible !important; -webkit-overflow-scrolling: touch; padding: 10px !important; }
   .salary-landscape { max-width: 100% !important; width: 100% !important; }
   .salary-portrait { max-width: 100% !important; width: 100% !important; }
-  .salary-table { min-width: 800px; }
-  .salary-table th, .salary-table td { padding: 4px 6px; font-size: 11px; }
-  .salary-table input { font-size: 11px; padding: 3px 4px; }
+  .salary-table { min-width: 900px; width: max-content !important; }
+  .salary-table th, .salary-table td { padding: 6px 8px; font-size: 12px; height: auto !important; white-space: nowrap; }
+  .salary-table input { font-size: 12px; padding: 4px 6px; width: 100%; box-sizing: border-box; }
+  .salary-table textarea { font-size: 12px; padding: 4px 6px; }
   .salary-footer-row { flex-direction: column; gap: 10px; }
-  .salary-remark { font-size: 11px; }
+  .salary-remark { font-size: 12px; }
+  .salary-title { font-size: 14px !important; }
+  .salary-company { font-size: 18px !important; }
+  .salary-subtitle { font-size: 13px !important; }
 }
 
 
