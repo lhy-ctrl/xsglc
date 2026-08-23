@@ -15,7 +15,7 @@
     (typeof window !== 'undefined' && window.READONLY_MODE) || false;
   // 是否APK环境（Capacitor）：未登录时也自动从云端拉取同步，登录后可编辑推送
   var IS_APK = (typeof window !== 'undefined' && (window.Capacitor || (navigator && navigator.userAgent && /Capacitor|Android.*wv/i.test(navigator.userAgent)))) || false;
-  var CLOUD_REFRESH_MS = 60000; // 只读版每 60 秒从云端拉取一次
+  var CLOUD_REFRESH_MS = 3000; // 每 3 秒从云端拉取一次，实现实时同步
   // 同步状态缓存：{ lastPushAt: string|null, lastError: string|null, busy: bool, lastPullAt: Date|null }
   var cloudStatus = { lastPushAt: null, lastError: null, busy: false, lastPullAt: null };
   var CLOUD_STORAGE_KEY = 'STUDENT_ADMIN_CLOUD_LAST_PUSH';
@@ -51,7 +51,7 @@
   function scheduleAutoPush() {
     if (!isAdmin || !cloudAdminPassword || !AppCloudLib || cloudStatus.busy) return;
     if (autoPushTimer) clearTimeout(autoPushTimer);
-    autoPushTimer = setTimeout(doAutoPush, 800);
+    autoPushTimer = setTimeout(doAutoPush, 100);
   }
   function doAutoPush() {
     autoPushTimer = null;
@@ -68,6 +68,8 @@
       cloudStatus.lastError = null;
       cloudStatus.busy = false;
       updateCloudUI();
+      // 上传成功后立即拉取一次，确保多设备实时同步
+      setTimeout(pullFromCloudSilent, 200);
     }).catch(function (err) {
       cloudStatus.lastError = err.message;
       cloudStatus.busy = false;
