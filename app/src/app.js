@@ -363,7 +363,17 @@
     doc = rootDoc || (typeof document !== 'undefined' ? document : null);
     store = AppStoreLib.createStore(backend || AppStoreLib.localStorageBackend());
     // 暴露到window，供排班系统等React模块访问
-    if (typeof window !== 'undefined') window.appStore = store;
+    if (typeof window !== 'undefined') {
+      window.appStore = store;
+      // 排班系统数据变化时的回调：直接写入store并触发同步
+      window.onDutyDataChange = function(field, value) {
+        try {
+          var st = store.getState();
+          st[field] = value;
+          store.save();
+        } catch (e) {}
+      };
+    }
     // 本地存储写入失败（如配额不足）时提示用户
     if (typeof window !== 'undefined') {
       window.onStoreSaveError = function (e) {

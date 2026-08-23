@@ -101,6 +101,10 @@ function readDutyState(field, fallback) {
 // 写入全局store，同时写localStorage作为后备
 function writeDutyState(field, value) {
   try {
+    if (typeof window !== 'undefined' && typeof window.onDutyDataChange === 'function') {
+      window.onDutyDataChange(field, value);
+      return;
+    }
     if (typeof window !== 'undefined' && window.appStore) {
       const st = window.appStore.getState();
       st[field] = value;
