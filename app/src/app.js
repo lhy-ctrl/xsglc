@@ -2646,10 +2646,10 @@
 
   // ---------- 数据与设置 ----------
   function renderSettings(root) {
-    // 第一排：数据备份
-    var row1 = el('div', { style: 'display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap' });
+    // 卡片容器：一行两个，自动换行
+    var cardContainer = el('div', { style: 'display:flex;gap:16px;flex-wrap:wrap' });
     // 1. 数据备份
-    var backupPanel = el('div', { class: 'panel', id: 'backup-panel', style: 'flex:1;min-width:280px;margin:0' }, [
+    var backupPanel = el('div', { class: 'panel', id: 'backup-panel', style: 'flex:1 1 calc(50% - 8px);min-width:280px;margin:0' }, [
       el('h3', { text: '数据备份' }),
       el('div', { class: 'toolbar' }, [
         canEditSettings() ? el('button', { class: 'btn primary', id: 'btn-backup-export', onclick: doExport }, ['导出备份']) : null,
@@ -2658,35 +2658,30 @@
       ]),
       el('p', { class: 'muted', id: 'last-backup', text: lastBackupText() })
     ]);
-    row1.appendChild(backupPanel);
-    root.appendChild(row1);
-
-    // 第二排：云端网页 + 管理员 + 二级管理员
-    var row2 = el('div', { style: 'display:flex;gap:16px;flex-wrap:wrap' });
-    // 2. 云端同步（仅管理员可见）
+    cardContainer.appendChild(backupPanel);
+    // 2. 云端同步
     var cloudPanel = cloudPanelNode();
-    if (cloudPanel) { cloudPanel.style.flex = '1'; cloudPanel.style.minWidth = '240px'; cloudPanel.style.margin = '0'; row2.appendChild(cloudPanel); updateCloudUI(); }
-    // 3. 管理员（仅管理员可见）：修改密码 / 退出登录 / 管理二级权限
+    if (cloudPanel) { cloudPanel.style.flex = '1 1 calc(50% - 8px)'; cloudPanel.style.minWidth = '280px'; cloudPanel.style.margin = '0'; cardContainer.appendChild(cloudPanel); updateCloudUI(); }
+    // 3. 管理员（仅管理员可见）
     if (isAdmin) {
-      var adminPanel = el('div', { class: 'panel', id: 'admin-pass-panel', style: 'flex:1;min-width:240px;margin:0' }, [
+      var adminPanel = el('div', { class: 'panel', id: 'admin-pass-panel', style: 'flex:1 1 calc(50% - 8px);min-width:280px;margin:0' }, [
         el('h3', { text: '管理员' }),
         el('div', { class: 'toolbar' }, [
           canEditSettings() ? el('button', { class: 'btn', id: 'btn-set-admin-pass', onclick: openSetAdminPass }, [hasAdminPass() ? '修改密码' : '设置密码']) : null,
           el('button', { class: 'btn', id: 'btn-logout-admin', onclick: logoutAdmin }, ['退出管理员模式'])
         ])
       ]);
-      row2.appendChild(adminPanel);
+      cardContainer.appendChild(adminPanel);
+      // 4. 二级管理员
       var limitedPanel = limitedAdminPanelNode();
-      limitedPanel.style.flex = '1';
-      limitedPanel.style.minWidth = '240px';
+      limitedPanel.style.flex = '1 1 calc(50% - 8px)';
+      limitedPanel.style.minWidth = '280px';
       limitedPanel.style.margin = '0';
-      row2.appendChild(limitedPanel);
+      cardContainer.appendChild(limitedPanel);
     }
-    if (row2.childNodes.length > 0) {
-      root.appendChild(row2);
-      // 面板已挂载后再刷新二级管理员状态
-      if (isAdmin) refreshLimitedAdminPanel();
-    }
+    root.appendChild(cardContainer);
+    // 面板已挂载后再刷新二级管理员状态
+    if (isAdmin) refreshLimitedAdminPanel();
   }
   // ---------- 二级管理员（管理员面板内：可添加多个二级管理员，每个含名称与独立密码，仅查看） ----------
   function getSecondaryAdmins() {
