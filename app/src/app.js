@@ -2441,6 +2441,7 @@
 
     function renderSalaryTable() {
       clear(salaryWrap);
+      var needSave = false;
       staffList = sortStaffByRole(getDutyStaffList());
       // 自动清理无实际内容的额外行（姓名为空且所有薪资为0）
       var hasEmpty = false;
@@ -2511,10 +2512,26 @@
       }
       allRows.forEach(function (person) {
         var sid = person.id;
-        var s = salaryData[sid] || {
-          workDays: 0, baseSalary: 0, attendance: 0, performance: 0,
-          allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: ''
-        };
+        // 根据职位和性别设置默认薪资
+        var defaultSalary = { workDays: 0, baseSalary: 0, attendance: 0, performance: 0, allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: '' };
+        if (!person.isExtra && !person.isBlank && person.role) {
+          if (person.role === 'captain') {
+            defaultSalary.baseSalary = 3500; defaultSalary.attendance = 300; defaultSalary.performance = 1200;
+          } else if (person.role === 'vice_captain') {
+            defaultSalary.baseSalary = 2500; defaultSalary.attendance = 300; defaultSalary.performance = 100;
+          } else if (person.role === 'leader_a' || person.role === 'leader_b') {
+            defaultSalary.allowance = 100;
+          } else if (person.role === 'member') {
+            defaultSalary.baseSalary = (person.gender === 'female') ? 1800 : 2100;
+            defaultSalary.attendance = 300; defaultSalary.performance = 900;
+          }
+        }
+        var s = salaryData[sid] || defaultSalary;
+        // 使用默认值时保存到salaryData（仅正式员工）
+        if (!salaryData[sid] && !person.isExtra && !person.isBlank && person.role) {
+          salaryData[sid] = s;
+          needSave = true;
+        }
         // 从教官绩效记录自动获取当月扣除和原因（仅正式员工）
         if (!person.isExtra) {
           var empDed = getEmployeeDeduction(sid, salaryYear, salaryMonth);
@@ -2697,6 +2714,8 @@
       footer.appendChild(remark);
       footer.appendChild(totalRow);
       salaryWrap.appendChild(footer);
+      // 有默认值需要保存时，保存数据
+      if (needSave) saveSalaryData(salaryYear, salaryMonth, salaryData);
     }
 
     renderSalaryTable();
