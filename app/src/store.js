@@ -28,6 +28,15 @@
       scoreMonthly: [],   // {id, studentId, month:'YYYY-MM', banKou, banJiang, zhengKou, zhengJiang}
       employees: [],      // {id, name, gender}
       employeeRecords: [],// {id, employeeId, date, reason, amount}
+      // 排班系统数据
+      dutyStaff: [],      // 员工信息 [{id, name, gender, group, role}]
+      dutyAllPostPointers: {},   // 全员模式岗位指针 {personId: postIndex}
+      dutyGroupPostPointers: {}, // 分组模式岗位指针 {personId: postIndex}
+      dutyGroupRotation: 0,      // 分组模式主副班轮换 0=A主B副, 1=B主A副
+      dutyGatePointer: 0,        // 大门口岗位指针
+      dutyAfterSchoolPointer: 0, // 放学后岗位指针
+      dutyScheduleHistory: [],   // 排班历史
+      dutySalary: {},            // 工资数据 {'YYYY_M': [{name, gender, ...}]}
       settings: { lastBackupAt: null, homeOrder: null, scoreMonths: null, adminPass: null, secondaryAdmins: [] }
     };
   }
@@ -36,11 +45,21 @@
   function normalizeData(raw) {
     var base = defaultData();
     if (!raw || typeof raw !== 'object') return base;
-    var arrayKeys = ['students', 'scoreLogs', 'scoreItems', 'disciplineLogs', 'leaveRecords', 'dormReports', 'dormMap', 'scoreMonthly', 'employees', 'employeeRecords'];
+    var arrayKeys = ['students', 'scoreLogs', 'scoreItems', 'disciplineLogs', 'leaveRecords', 'dormReports', 'dormMap', 'scoreMonthly', 'employees', 'employeeRecords', 'dutyStaff', 'dutyScheduleHistory'];
     for (var i = 0; i < arrayKeys.length; i++) {
       var k = arrayKeys[i];
       if (Array.isArray(raw[k])) base[k] = raw[k];
     }
+    // 对象类型字段
+    var objKeys = ['dutyAllPostPointers', 'dutyGroupPostPointers', 'dutySalary'];
+    for (var j = 0; j < objKeys.length; j++) {
+      var ok = objKeys[j];
+      if (raw[ok] && typeof raw[ok] === 'object') base[ok] = raw[ok];
+    }
+    // 数字类型字段
+    if (typeof raw.dutyGroupRotation === 'number') base.dutyGroupRotation = raw.dutyGroupRotation;
+    if (typeof raw.dutyGatePointer === 'number') base.dutyGatePointer = raw.dutyGatePointer;
+    if (typeof raw.dutyAfterSchoolPointer === 'number') base.dutyAfterSchoolPointer = raw.dutyAfterSchoolPointer;
     // 兼容老数据：dormMap 元素缺 area / count 字段时补默认
     if (Array.isArray(base.dormMap)) {
       base.dormMap = base.dormMap.map(function (d) {

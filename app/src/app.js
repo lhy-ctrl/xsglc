@@ -362,6 +362,8 @@
   function init(rootDoc, backend) {
     doc = rootDoc || (typeof document !== 'undefined' ? document : null);
     store = AppStoreLib.createStore(backend || AppStoreLib.localStorageBackend());
+    // 暴露到window，供排班系统等React模块访问
+    if (typeof window !== 'undefined') window.appStore = store;
     // 本地存储写入失败（如配额不足）时提示用户
     if (typeof window !== 'undefined') {
       window.onStoreSaveError = function (e) {
@@ -377,6 +379,41 @@
       try {
         var st = store.getState();
         if (migrateClassFormatInPlace(st)) store.save();
+      } catch (e) { /* 迁移失败不影响正常使用 */ }
+    })();
+    // 数据迁移：把旧的localStorage中的排班/工资数据迁移到store中
+    (function migrateDutyData() {
+      try {
+        var st = store.getState();
+        var changed = false;
+        var lsMap = {
+          dutyStaff: 'duty_staff',
+          dutyAllPostPointers: 'duty_all_post_pointers',
+          dutyGroupPostPointers: 'duty_group_post_pointers',
+          dutyGroupRotation: 'duty_group_rotation',
+          dutyGatePointer: 'duty_gate_pointer',
+          dutyAfterSchoolPointer: 'duty_afterschool_pointer',
+          dutyScheduleHistory: 'duty_schedule_history'
+        };
+        Object.keys(lsMap).forEach(function(field) {
+          if (!st[field] || (Array.isArray(st[field]) && st[field].length === 0) || (typeof st[field] === 'object' && Object.keys(st[field]).length === 0)) {
+            try {
+              var raw = localStorage.getItem(lsMap[field]);
+              if (raw) { st[field] = JSON.parse(raw); changed = true; }
+            } catch (e) {}
+          }
+        });
+        // 迁移工资数据
+        if (!st.dutySalary || Object.keys(st.dutySalary).length === 0) {
+          st.dutySalary = {};
+          for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i);
+            if (key && key.indexOf('duty_salary_') === 0) {
+              try { st.dutySalary[key.replace('duty_salary_', '')] = JSON.parse(localStorage.getItem(key)); changed = true; } catch (e) {}
+            }
+          }
+        }
+        if (changed) store.save();
       } catch (e) { /* 迁移失败不影响正常使用 */ }
     })();
     // 包装 save：管理员每次修改数据后自动调度上传云端（本地版/云端版统一）
@@ -461,20 +498,10 @@
             if (!payload.settings) payload.settings = {};
             payload.settings.secondaryAdmins = finalSec;
             store.setState(payload);
-            // 恢复排班/工资数据到localStorage
-            var dutyUpdated = false;
-            if (payload.dutyData) {
-              restoreDutyData(payload.dutyData);
-              dutyUpdated = true;
-            }
             // 单设备登录检查：如果云端活跃设备不是本机，自动退出
             checkLoginSession(payload);
-            // 排班/工资模块使用独立状态，云端数据同步后需要重新挂载才能显示最新数据
-            if (state.current && (state.current === 'duty' || state.current === 'dutyStaff' || state.current === 'salary')) {
-              if (dutyUpdated) {
-                try { switchTo(state.current); } catch (e) {}
-              }
-            } else if (state.current) {
+            // 排班/工资模块数据已在store中，重新挂载即可显示最新数据
+            if (state.current) {
               try { switchTo(state.current); } catch (e) {}
             }
             updateCloudUI();
@@ -663,36 +690,6 @@
     cloudStatus.lastPushAt = t;
     try { if (typeof localStorage !== 'undefined') localStorage.setItem(CLOUD_STORAGE_KEY, t || ''); } catch (e) {}
   }
-  // 收集所有排班/工资相关的localStorage数据
-  function collectDutyData() {
-    var data = {};
-    var keys = ['duty_staff', 'duty_all_post_pointers', 'duty_group_post_pointers',
-                'duty_group_rotation', 'duty_gate_pointer', 'duty_afterschool_pointer',
-                'duty_schedule_history'];
-    keys.forEach(function(k) {
-      try {
-        var v = localStorage.getItem(k);
-        if (v !== null) data[k] = JSON.parse(v);
-      } catch (e) {}
-    });
-    // 收集所有工资数据（duty_salary_年_月）
-    for (var i = 0; i < localStorage.length; i++) {
-      var key = localStorage.key(i);
-      if (key && key.indexOf('duty_salary_') === 0) {
-        try { data[key] = JSON.parse(localStorage.getItem(key)); } catch (e) {}
-      }
-    }
-    return data;
-  }
-  // 把云端的排班/工资数据恢复到localStorage
-  function restoreDutyData(data) {
-    if (!data || typeof data !== 'object') return;
-    Object.keys(data).forEach(function(k) {
-      if (k.indexOf('duty_') === 0) {
-        try { localStorage.setItem(k, JSON.stringify(data[k])); } catch (e) {}
-      }
-    });
-  }
   // 把当前本地数据推送到云端（管理员）
   // 本地版与云端网页版统一走 RPC（admin_write），不再使用 secret key：
   // 需要云端管理员密码，首次同步时会弹窗让用户输入并记住（会话内）。
@@ -705,8 +702,6 @@
       cloudStatus.busy = true;
       updateCloudUI();
       var payload = store.getState();
-      // 加入排班/工资数据
-      payload.dutyData = collectDutyData();
       var doPush = AppCloudLib.adminWrite
         ? AppCloudLib.adminWrite(payload, cloudAdminPassword)
         : AppCloudLib.push(payload, cloudAdminPassword);
@@ -795,8 +790,6 @@
           }).filter(function (a) { return a.pwd || a.name; });
         }
         store.setState(payload);
-        // 恢复排班/工资数据到localStorage
-        if (payload.dutyData) restoreDutyData(payload.dutyData);
         cloudStatus.busy = false;
         refresh();
         updateCloudUI();
@@ -2290,8 +2283,8 @@
   // ---------- 员工工资 ----------
   function getDutyStaffList() {
     try {
-      var raw = localStorage.getItem('duty_staff');
-      return raw ? JSON.parse(raw) : [];
+      var st = store.getState();
+      return st.dutyStaff || [];
     } catch (e) { return []; }
   }
   function sortStaffByRole(list) {
@@ -2306,12 +2299,14 @@
   }
   function loadSalaryData(year, month) {
     try {
-      var raw = localStorage.getItem('duty_salary_' + year + '_' + month);
-      var data = raw ? JSON.parse(raw) : {};
+      var st = store.getState();
+      var allSalary = st.dutySalary || {};
+      var key = year + '_' + month;
+      var data = allSalary[key] || {};
       // 清理默认值：workDays=30且其他薪资都为0的，重置workDays为空
-      Object.keys(data).forEach(function (key) {
-        if (key === '_remark') return;
-        var s = data[key];
+      Object.keys(data).forEach(function (k) {
+        if (k === '_remark') return;
+        var s = data[k];
         if (s && s.workDays === 30 && !s.baseSalary && !s.attendance && !s.performance &&
             !s.allowance && !s.seniority && !s.bonus && !s.deduction && !s.actualManual) {
           s.workDays = 0;
@@ -2321,7 +2316,12 @@
     } catch (e) { return {}; }
   }
   function saveSalaryData(year, month, data) {
-    try { localStorage.setItem('duty_salary_' + year + '_' + month, JSON.stringify(data)); } catch (e) {}
+    try {
+      var st = store.getState();
+      if (!st.dutySalary) st.dutySalary = {};
+      st.dutySalary[year + '_' + month] = data;
+      store.save();
+    } catch (e) {}
   }
   function calcActual(s) {
     var base = parseFloat(s.baseSalary) || 0;

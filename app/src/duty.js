@@ -245,6 +245,43 @@ function saveState(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {}
 }
+
+// 全局store字段与localStorage key的映射
+const DUTY_FIELD_MAP = {
+  dutyStaff: 'duty_staff',
+  dutyAllPostPointers: 'duty_all_post_pointers',
+  dutyGroupPostPointers: 'duty_group_post_pointers',
+  dutyGroupRotation: 'duty_group_rotation',
+  dutyGatePointer: 'duty_gate_pointer',
+  dutyAfterSchoolPointer: 'duty_afterschool_pointer',
+  dutyScheduleHistory: 'duty_schedule_history'
+};
+
+// 从全局store读取，不存在则用localStorage后备
+function readDutyState(field, fallback) {
+  try {
+    if (typeof window !== 'undefined' && window.appStore) {
+      const st = window.appStore.getState();
+      if (st[field] !== undefined && st[field] !== null) return st[field];
+    }
+  } catch {}
+  const key = DUTY_FIELD_MAP[field];
+  if (key) return loadState(key, fallback);
+  return fallback;
+}
+
+// 写入全局store，同时写localStorage作为后备
+function writeDutyState(field, value) {
+  try {
+    if (typeof window !== 'undefined' && window.appStore) {
+      const st = window.appStore.getState();
+      st[field] = value;
+      window.appStore.save();
+    }
+  } catch {}
+  const key = DUTY_FIELD_MAP[field];
+  if (key) saveState(key, value);
+}
 function getDateStr(dayOffset) {
   const d = new Date();
   d.setDate(d.getDate() + dayOffset);
@@ -264,52 +301,52 @@ function StoreProvider({
   children
 }) {
   const [staff, setStaff] = useState(() => {
-    return loadState('duty_staff', defaultStaff);
+    return readDutyState('dutyStaff', defaultStaff);
   });
   useEffect(() => {
-    saveState('duty_staff', staff);
+    writeDutyState('dutyStaff', staff);
   }, [staff]);
 
   // 全员模式：每人独立岗位指针 { personId: postIndex }
   const [allPostPointers, setAllPostPointers] = useState(() => {
-    return loadState('duty_all_post_pointers', {});
+    return readDutyState('dutyAllPostPointers', {});
   });
   useEffect(() => {
-    saveState('duty_all_post_pointers', allPostPointers);
+    writeDutyState('dutyAllPostPointers', allPostPointers);
   }, [allPostPointers]);
 
   // 分组模式：每人独立岗位指针 { personId: postIndex }
   const [groupPostPointers, setGroupPostPointers] = useState(() => {
-    return loadState('duty_group_post_pointers', {});
+    return readDutyState('dutyGroupPostPointers', {});
   });
   useEffect(() => {
-    saveState('duty_group_post_pointers', groupPostPointers);
+    writeDutyState('dutyGroupPostPointers', groupPostPointers);
   }, [groupPostPointers]);
 
   // 分组模式主副班轮换：0=A主B副，1=B主A副，每次生成后翻转
   const [groupRotation, setGroupRotation] = useState(() => {
-    return loadState('duty_group_rotation', 0);
+    return readDutyState('dutyGroupRotation', 0);
   });
   useEffect(() => {
-    saveState('duty_group_rotation', groupRotation);
+    writeDutyState('dutyGroupRotation', groupRotation);
   }, [groupRotation]);
   const [gatePointer, setGatePointer] = useState(() => {
-    return loadState('duty_gate_pointer', 0);
+    return readDutyState('dutyGatePointer', 0);
   });
   useEffect(() => {
-    saveState('duty_gate_pointer', gatePointer);
+    writeDutyState('dutyGatePointer', gatePointer);
   }, [gatePointer]);
   const [afterSchoolPointer, setAfterSchoolPointer] = useState(() => {
-    return loadState('duty_afterschool_pointer', 0);
+    return readDutyState('dutyAfterSchoolPointer', 0);
   });
   useEffect(() => {
-    saveState('duty_afterschool_pointer', afterSchoolPointer);
+    writeDutyState('dutyAfterSchoolPointer', afterSchoolPointer);
   }, [afterSchoolPointer]);
   const [scheduleHistory, setScheduleHistory] = useState(() => {
-    return loadState('duty_schedule_history', []);
+    return readDutyState('dutyScheduleHistory', []);
   });
   useEffect(() => {
-    saveState('duty_schedule_history', scheduleHistory);
+    writeDutyState('dutyScheduleHistory', scheduleHistory);
   }, [scheduleHistory]);
   const addStaff = useCallback(person => {
     setStaff(prev => {
