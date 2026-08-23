@@ -37,14 +37,18 @@ function StaffPage({ onNavigate, canEdit }) {
     addStaff({ name: '', gender, group, role });
   };
 
-  // 排序：队长、副队长、A组组长、A组员工、B组组长、B组员工
-  const roleOrder = { captain: 0, vice_captain: 1, leader_a: 2, member: 3, leader_b: 4 };
+  // 排序：队长、副队长、A组组长、A组成员、B组组长、B组成员
   const sortedStaff = [...staff].sort((a, b) => {
-    const aOrder = roleOrder[a.role] ?? 5;
-    const bOrder = roleOrder[b.role] ?? 5;
-    if (aOrder !== bOrder) return aOrder - bOrder;
-    // 同角色内按A组在前、B组在后，再按id排序
+    // 队长、副队长排在最前面
+    const aTop = a.role === 'captain' ? 0 : (a.role === 'vice_captain' ? 1 : 2);
+    const bTop = b.role === 'captain' ? 0 : (b.role === 'vice_captain' ? 1 : 2);
+    if (aTop !== bTop) return aTop - bTop;
+    // 同级别按分组
     if (a.group !== b.group) return a.group === 'A' ? -1 : 1;
+    // 同组内组长在前
+    const aLeader = (a.role === 'leader_a' || a.role === 'leader_b') ? 0 : 1;
+    const bLeader = (b.role === 'leader_a' || b.role === 'leader_b') ? 0 : 1;
+    if (aLeader !== bLeader) return aLeader - bLeader;
     return a.id - b.id;
   });
 
@@ -67,7 +71,10 @@ function StaffPage({ onNavigate, canEdit }) {
         }
       });
     }
-    updateStaff(id, { role: newRole });
+    let patch = { role: newRole };
+    if (newRole === 'leader_a') patch.group = 'A';
+    if (newRole === 'leader_b') patch.group = 'B';
+    updateStaff(id, patch);
   };
 
   const handleUpdate = (id, patch) => {
@@ -96,8 +103,8 @@ function StaffPage({ onNavigate, canEdit }) {
     const opts = [{ value: 'member', label: '普通成员' }];
     opts.push({ value: 'captain', label: '队长' });
     opts.push({ value: 'vice_captain', label: '副队长' });
-    if (person.group === 'A') opts.push({ value: 'leader_a', label: 'A组组长' });
-    else if (person.group === 'B') opts.push({ value: 'leader_b', label: 'B组组长' });
+    opts.push({ value: 'leader_a', label: 'A组组长' });
+    opts.push({ value: 'leader_b', label: 'B组组长' });
     return opts;
   };
 
@@ -211,7 +218,7 @@ function StaffPage({ onNavigate, canEdit }) {
                 <th style={{ minWidth: '120px' }}>姓名</th>
                 <th style={{ width: '130px' }}>性别</th>
                 {showGroup && <th style={{ width: '130px' }}>分组</th>}
-                <th style={{ width: '160px' }}>角色</th>
+                <th style={{ width: '160px' }}>职位</th>
                 <th style={{ width: '90px', textAlign: 'right' }}>操作</th>
               </tr>
             </thead>
