@@ -8,6 +8,7 @@ const {
   useState,
   useEffect,
   useCallback,
+  useRef,
   createContext,
   useContext
 } = React;
@@ -304,10 +305,12 @@ function getWeekStr(dayOffset) {
 function StoreProvider({
   children
 }) {
+  const isCloudRefresh = useRef(false);
   const [staff, setStaff] = useState(() => {
     return readDutyState('dutyStaff', defaultStaff);
   });
   useEffect(() => {
+    if (isCloudRefresh.current) return;
     writeDutyState('dutyStaff', staff);
   }, [staff]);
 
@@ -316,6 +319,7 @@ function StoreProvider({
     return readDutyState('dutyAllPostPointers', {});
   });
   useEffect(() => {
+    if (isCloudRefresh.current) return;
     writeDutyState('dutyAllPostPointers', allPostPointers);
   }, [allPostPointers]);
 
@@ -324,6 +328,7 @@ function StoreProvider({
     return readDutyState('dutyGroupPostPointers', {});
   });
   useEffect(() => {
+    if (isCloudRefresh.current) return;
     writeDutyState('dutyGroupPostPointers', groupPostPointers);
   }, [groupPostPointers]);
 
@@ -332,26 +337,54 @@ function StoreProvider({
     return readDutyState('dutyGroupRotation', 0);
   });
   useEffect(() => {
+    if (isCloudRefresh.current) return;
     writeDutyState('dutyGroupRotation', groupRotation);
   }, [groupRotation]);
   const [gatePointer, setGatePointer] = useState(() => {
     return readDutyState('dutyGatePointer', 0);
   });
   useEffect(() => {
+    if (isCloudRefresh.current) return;
     writeDutyState('dutyGatePointer', gatePointer);
   }, [gatePointer]);
   const [afterSchoolPointer, setAfterSchoolPointer] = useState(() => {
     return readDutyState('dutyAfterSchoolPointer', 0);
   });
   useEffect(() => {
+    if (isCloudRefresh.current) return;
     writeDutyState('dutyAfterSchoolPointer', afterSchoolPointer);
   }, [afterSchoolPointer]);
   const [scheduleHistory, setScheduleHistory] = useState(() => {
     return readDutyState('dutyScheduleHistory', []);
   });
   useEffect(() => {
+    if (isCloudRefresh.current) return;
     writeDutyState('dutyScheduleHistory', scheduleHistory);
   }, [scheduleHistory]);
+
+  // 监听云端数据更新，静默刷新所有状态（不触发写入，避免循环）
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.onDutyDataUpdated = function () {
+      isCloudRefresh.current = true;
+      try {
+        setStaff(readDutyState('dutyStaff', defaultStaff));
+        setAllPostPointers(readDutyState('dutyAllPostPointers', {}));
+        setGroupPostPointers(readDutyState('dutyGroupPostPointers', {}));
+        setGroupRotation(readDutyState('dutyGroupRotation', 0));
+        setGatePointer(readDutyState('dutyGatePointer', 0));
+        setAfterSchoolPointer(readDutyState('dutyAfterSchoolPointer', 0));
+        setScheduleHistory(readDutyState('dutyScheduleHistory', []));
+      } finally {
+        setTimeout(() => {
+          isCloudRefresh.current = false;
+        }, 100);
+      }
+    };
+    return () => {
+      window.onDutyDataUpdated = null;
+    };
+  }, []);
   const addStaff = useCallback(person => {
     setStaff(prev => {
       const maxId = prev.reduce((m, p) => Math.max(m, p.id), 0);

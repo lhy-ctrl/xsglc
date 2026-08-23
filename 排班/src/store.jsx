@@ -1,5 +1,5 @@
 // 全局状态管理：人员数据 + 真实排班算法
-const { useState, useEffect, useCallback, createContext, useContext } = React;
+const { useState, useEffect, useCallback, useRef, createContext, useContext } = React;
 
 // ===== 角色定义 =====
 const ROLE_LABELS = {
@@ -132,43 +132,86 @@ function getWeekStr(dayOffset) {
 }
 
 function StoreProvider({ children }) {
+  const isCloudRefresh = useRef(false);
+
   const [staff, setStaff] = useState(() => {
     return readDutyState('dutyStaff', defaultStaff);
   });
-  useEffect(() => { writeDutyState('dutyStaff', staff); }, [staff]);
+  useEffect(() => {
+    if (isCloudRefresh.current) return;
+    writeDutyState('dutyStaff', staff);
+  }, [staff]);
 
   // 全员模式：每人独立岗位指针 { personId: postIndex }
   const [allPostPointers, setAllPostPointers] = useState(() => {
     return readDutyState('dutyAllPostPointers', {});
   });
-  useEffect(() => { writeDutyState('dutyAllPostPointers', allPostPointers); }, [allPostPointers]);
+  useEffect(() => {
+    if (isCloudRefresh.current) return;
+    writeDutyState('dutyAllPostPointers', allPostPointers);
+  }, [allPostPointers]);
 
   // 分组模式：每人独立岗位指针 { personId: postIndex }
   const [groupPostPointers, setGroupPostPointers] = useState(() => {
     return readDutyState('dutyGroupPostPointers', {});
   });
-  useEffect(() => { writeDutyState('dutyGroupPostPointers', groupPostPointers); }, [groupPostPointers]);
+  useEffect(() => {
+    if (isCloudRefresh.current) return;
+    writeDutyState('dutyGroupPostPointers', groupPostPointers);
+  }, [groupPostPointers]);
 
   // 分组模式主副班轮换：0=A主B副，1=B主A副，每次生成后翻转
   const [groupRotation, setGroupRotation] = useState(() => {
     return readDutyState('dutyGroupRotation', 0);
   });
-  useEffect(() => { writeDutyState('dutyGroupRotation', groupRotation); }, [groupRotation]);
+  useEffect(() => {
+    if (isCloudRefresh.current) return;
+    writeDutyState('dutyGroupRotation', groupRotation);
+  }, [groupRotation]);
 
   const [gatePointer, setGatePointer] = useState(() => {
     return readDutyState('dutyGatePointer', 0);
   });
-  useEffect(() => { writeDutyState('dutyGatePointer', gatePointer); }, [gatePointer]);
+  useEffect(() => {
+    if (isCloudRefresh.current) return;
+    writeDutyState('dutyGatePointer', gatePointer);
+  }, [gatePointer]);
 
   const [afterSchoolPointer, setAfterSchoolPointer] = useState(() => {
     return readDutyState('dutyAfterSchoolPointer', 0);
   });
-  useEffect(() => { writeDutyState('dutyAfterSchoolPointer', afterSchoolPointer); }, [afterSchoolPointer]);
+  useEffect(() => {
+    if (isCloudRefresh.current) return;
+    writeDutyState('dutyAfterSchoolPointer', afterSchoolPointer);
+  }, [afterSchoolPointer]);
 
   const [scheduleHistory, setScheduleHistory] = useState(() => {
     return readDutyState('dutyScheduleHistory', []);
   });
-  useEffect(() => { writeDutyState('dutyScheduleHistory', scheduleHistory); }, [scheduleHistory]);
+  useEffect(() => {
+    if (isCloudRefresh.current) return;
+    writeDutyState('dutyScheduleHistory', scheduleHistory);
+  }, [scheduleHistory]);
+
+  // 监听云端数据更新，静默刷新所有状态（不触发写入，避免循环）
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.onDutyDataUpdated = function() {
+      isCloudRefresh.current = true;
+      try {
+        setStaff(readDutyState('dutyStaff', defaultStaff));
+        setAllPostPointers(readDutyState('dutyAllPostPointers', {}));
+        setGroupPostPointers(readDutyState('dutyGroupPostPointers', {}));
+        setGroupRotation(readDutyState('dutyGroupRotation', 0));
+        setGatePointer(readDutyState('dutyGatePointer', 0));
+        setAfterSchoolPointer(readDutyState('dutyAfterSchoolPointer', 0));
+        setScheduleHistory(readDutyState('dutyScheduleHistory', []));
+      } finally {
+        setTimeout(() => { isCloudRefresh.current = false; }, 100);
+      }
+    };
+    return () => { window.onDutyDataUpdated = null; };
+  }, []);
 
   const addStaff = useCallback((person) => {
     setStaff(prev => {

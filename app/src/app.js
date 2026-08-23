@@ -510,9 +510,10 @@
             store.setState(payload);
             // 单设备登录检查：如果云端活跃设备不是本机，自动退出
             checkLoginSession(payload);
-            // 排班/工资模块数据已在store中，重新挂载即可显示最新数据
-            if (state.current) {
-              try { switchTo(state.current); } catch (e) {}
+            // 静默刷新：不重新渲染页面，避免跳动
+            // 通知排班系统React组件数据已更新
+            if (typeof window !== 'undefined' && typeof window.onDutyDataUpdated === 'function') {
+              try { window.onDutyDataUpdated(); } catch (e) {}
             }
             updateCloudUI();
             return payload;
