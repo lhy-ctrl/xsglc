@@ -1452,6 +1452,9 @@ function StaffPage({
         outline: 'none',
         cursor: 'pointer',
         width: '100px',
+        minWidth: '100px',
+        maxWidth: '100px',
+        flexShrink: 0,
         textAlign: 'center'
       }
     }, roleOpts.map(opt => /*#__PURE__*/React.createElement("option", {
