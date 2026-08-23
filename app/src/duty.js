@@ -1048,6 +1048,16 @@ function StaffPage({
     }
   };
   const isCaptainOrVice = person => person.role === 'captain' || person.role === 'vice_captain';
+
+  // 姓名对齐：两个字中间加全角空格
+  const formatName = name => {
+    if (!name) return '';
+    const n = name.trim();
+    if (n.length === 2) return n.charAt(0) + '　' + n.charAt(1);
+    return n;
+  };
+  // 去除全角空格，保存原始姓名
+  const unformatName = name => name.replace(/　/g, '').trim();
   const filterBtnStyle = active => ({
     padding: '10px 16px',
     borderRadius: '10px',
@@ -1287,21 +1297,24 @@ function StaffPage({
     } : {
       color: '#6b7280'
     }
-  }, "\u91CD\u7F6E\u4E3A\u9ED8\u8BA4"))), /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+  }, "\u91CD\u7F6E\u4E3A\u9ED8\u8BA4"))), /*#__PURE__*/React.createElement("table", {
     style: {
-      width: '50px'
+      width: '100%',
+      tableLayout: 'fixed',
+      borderCollapse: 'collapse'
     }
-  }, "\u5E8F\u53F7"), /*#__PURE__*/React.createElement("th", {
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     style: {
-      minWidth: '120px'
+      width: '60px',
+      whiteSpace: 'nowrap'
     }
-  }, "\u59D3\u540D"), /*#__PURE__*/React.createElement("th", {
+  }, "\u5E8F\u53F7"), /*#__PURE__*/React.createElement("th", null, "\u59D3\u540D"), /*#__PURE__*/React.createElement("th", {
     style: {
-      width: '130px'
+      width: '120px'
     }
   }, "\u6027\u522B"), showGroup && /*#__PURE__*/React.createElement("th", {
     style: {
-      width: '130px'
+      width: '120px'
     }
   }, "\u5206\u7EC4"), /*#__PURE__*/React.createElement("th", {
     style: {
@@ -1325,21 +1338,24 @@ function StaffPage({
       }
     }, idx + 1), /*#__PURE__*/React.createElement("td", null, editable ? /*#__PURE__*/React.createElement("input", {
       type: "text",
-      value: person.name,
+      value: formatName(person.name),
       onChange: e => handleUpdate(person.id, {
-        name: e.target.value
+        name: unformatName(e.target.value)
       }),
       placeholder: "\u8BF7\u8F93\u5165\u59D3\u540D",
-      style: inputStyle,
+      style: {
+        ...nameInputStyle,
+        letterSpacing: person.name && person.name.trim().length === 2 ? '2px' : '0'
+      },
       onFocus: e => e.target.style.borderColor = '#2563eb',
-      onBlur: e => e.target.style.borderColor = '#d1d5db'
+      onBlur: e => e.target.style.borderColor = 'transparent'
     }) : /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: '14px',
         color: '#374151',
         fontWeight: 500
       }
-    }, person.name || '（未命名）')), /*#__PURE__*/React.createElement("td", null, editable ? /*#__PURE__*/React.createElement("div", {
+    }, formatName(person.name) || '（未命名）')), /*#__PURE__*/React.createElement("td", null, editable ? /*#__PURE__*/React.createElement("div", {
       className: "radio-group"
     }, /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("input", {
       type: "radio",
@@ -1556,6 +1572,18 @@ const inputStyle = {
   fontSize: '14px',
   outline: 'none',
   transition: 'border-color .15s'
+};
+const nameInputStyle = {
+  width: '100%',
+  padding: '6px 10px',
+  border: '1px solid transparent',
+  borderRadius: '6px',
+  fontSize: '14px',
+  outline: 'none',
+  transition: 'border-color .15s',
+  background: 'transparent',
+  textAlign: 'center',
+  fontWeight: 500
 };
 Object.assign(window, {
   StaffPage

@@ -120,6 +120,16 @@ function StaffPage({ onNavigate, canEdit }) {
 
   const isCaptainOrVice = (person) => person.role === 'captain' || person.role === 'vice_captain';
 
+  // 姓名对齐：两个字中间加全角空格
+  const formatName = (name) => {
+    if (!name) return '';
+    const n = name.trim();
+    if (n.length === 2) return n.charAt(0) + '　' + n.charAt(1);
+    return n;
+  };
+  // 去除全角空格，保存原始姓名
+  const unformatName = (name) => name.replace(/　/g, '').trim();
+
   const filterBtnStyle = (active) => ({
     padding: '10px 16px', borderRadius: '10px',
     border: '1px solid', cursor: 'pointer',
@@ -211,13 +221,13 @@ function StaffPage({ onNavigate, canEdit }) {
             </div>
           </div>
 
-          <table>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ width: '50px' }}>序号</th>
-                <th style={{ minWidth: '120px' }}>姓名</th>
-                <th style={{ width: '130px' }}>性别</th>
-                {showGroup && <th style={{ width: '130px' }}>分组</th>}
+                <th style={{ width: '60px', whiteSpace: 'nowrap' }}>序号</th>
+                <th>姓名</th>
+                <th style={{ width: '120px' }}>性别</th>
+                {showGroup && <th style={{ width: '120px' }}>分组</th>}
                 <th style={{ width: '160px' }}>职位</th>
                 <th style={{ width: '90px', textAlign: 'right' }}>操作</th>
               </tr>
@@ -233,15 +243,15 @@ function StaffPage({ onNavigate, canEdit }) {
                     <td>
                       {editable ? (
                         <input
-                          type="text" value={person.name}
-                          onChange={(e) => handleUpdate(person.id, { name: e.target.value })}
+                          type="text" value={formatName(person.name)}
+                          onChange={(e) => handleUpdate(person.id, { name: unformatName(e.target.value) })}
                           placeholder="请输入姓名"
-                          style={inputStyle}
+                          style={{ ...nameInputStyle, letterSpacing: person.name && person.name.trim().length === 2 ? '2px' : '0' }}
                           onFocus={e => e.target.style.borderColor = '#2563eb'}
-                          onBlur={e => e.target.style.borderColor = '#d1d5db'}
+                          onBlur={e => e.target.style.borderColor = 'transparent'}
                         />
                       ) : (
-                        <span style={{ fontSize: '14px', color: '#374151', fontWeight: 500 }}>{person.name || '（未命名）'}</span>
+                        <span style={{ fontSize: '14px', color: '#374151', fontWeight: 500 }}>{formatName(person.name) || '（未命名）'}</span>
                       )}
                     </td>
                     <td>
@@ -374,6 +384,12 @@ function StaffPage({ onNavigate, canEdit }) {
 const inputStyle = {
   width: '100%', padding: '6px 10px', border: '1px solid #d1d5db',
   borderRadius: '6px', fontSize: '14px', outline: 'none', transition: 'border-color .15s',
+};
+
+const nameInputStyle = {
+  width: '100%', padding: '6px 10px', border: '1px solid transparent',
+  borderRadius: '6px', fontSize: '14px', outline: 'none', transition: 'border-color .15s',
+  background: 'transparent', textAlign: 'center', fontWeight: 500,
 };
 
 Object.assign(window, { StaffPage });
