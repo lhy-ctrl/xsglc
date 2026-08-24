@@ -198,6 +198,10 @@ function StoreProvider({ children }) {
     if (typeof window === 'undefined') return;
     window.onDutyDataUpdated = function() {
       try {
+        // 如果用户正在输入（input/textarea获得焦点），跳过staff更新，避免打断输入
+        var activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+        var isInputting = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+        
         var newStaff = readDutyState('dutyStaff', defaultStaff);
         var newAll = readDutyState('dutyAllPostPointers', {});
         var newGroup = readDutyState('dutyGroupPostPointers', {});
@@ -205,8 +209,9 @@ function StoreProvider({ children }) {
         var newGate = readDutyState('dutyGatePointer', 0);
         var newAfter = readDutyState('dutyAfterSchoolPointer', 0);
         var newHist = readDutyState('dutyScheduleHistory', []);
-        // 比较数据是否真的变化，只有变化时才更新（避免输入框跳动）
-        if (JSON.stringify(newStaff) !== JSON.stringify(staff)) {
+        
+        // 非输入状态下才更新staff
+        if (!isInputting && JSON.stringify(newStaff) !== JSON.stringify(staff)) {
           isCloudRefresh.current = true;
           setStaff(newStaff);
         }

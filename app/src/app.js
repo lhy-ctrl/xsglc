@@ -68,8 +68,7 @@
       cloudStatus.lastError = null;
       cloudStatus.busy = false;
       updateCloudUI();
-      // 上传成功后立即拉取一次，确保多设备实时同步
-      setTimeout(pullFromCloudSilent, 200);
+      // 上传后不立即拉取，避免打断用户输入（由定时拉取负责同步）
     }).catch(function (err) {
       cloudStatus.lastError = err.message;
       cloudStatus.busy = false;
@@ -2546,7 +2545,11 @@
           } else if (person.role === 'leader_a' || person.role === 'leader_b') {
             if (!s.allowance) { s.allowance = 100; changed = true; }
           } else if (person.role === 'member') {
-            if (!s.baseSalary) { s.baseSalary = (person.gender === 'female') ? 1800 : 2100; changed = true; }
+            var defaultBase = (person.gender === 'female') ? 1800 : 2100;
+            // 底薪为0时设置默认值；性别变化时，如果底薪是旧默认值也更新
+            if (!s.baseSalary || s.baseSalary === 2100 || s.baseSalary === 1800) {
+              if (s.baseSalary !== defaultBase) { s.baseSalary = defaultBase; changed = true; }
+            }
             if (!s.attendance) { s.attendance = 300; changed = true; }
             if (!s.performance) { s.performance = 900; changed = true; }
           }

@@ -244,12 +244,12 @@ function StaffPage({ onNavigate, canEdit }) {
                           type="text" value={person.name}
                           onChange={(e) => handleUpdate(person.id, { name: e.target.value })}
                           placeholder="请输入姓名"
-                          style={nameInputStyle}
+                          style={{ ...nameInputStyle, letterSpacing: person.name && person.name.trim().length === 2 ? '4px' : '0' }}
                           onFocus={e => e.target.style.borderColor = '#2563eb'}
                           onBlur={e => e.target.style.borderColor = 'transparent'}
                         />
                       ) : (
-                        <span style={{ fontSize: '14px', color: '#374151', fontWeight: 500 }}>{formatName(person.name) || '（未命名）'}</span>
+                        <span style={{ fontSize: '14px', color: '#374151', fontWeight: 500, letterSpacing: person.name && person.name.trim().length === 2 ? '4px' : '0' }}>{person.name || '（未命名）'}</span>
                       )}
                     </td>
                     <td style={{ textAlign: 'center' }}>

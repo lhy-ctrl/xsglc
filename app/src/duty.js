@@ -367,6 +367,9 @@ function StoreProvider({
     if (typeof window === 'undefined') return;
     window.onDutyDataUpdated = function () {
       try {
+        // 如果用户正在输入（input/textarea获得焦点），跳过staff更新，避免打断输入
+        var activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+        var isInputting = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
         var newStaff = readDutyState('dutyStaff', defaultStaff);
         var newAll = readDutyState('dutyAllPostPointers', {});
         var newGroup = readDutyState('dutyGroupPostPointers', {});
@@ -374,8 +377,9 @@ function StoreProvider({
         var newGate = readDutyState('dutyGatePointer', 0);
         var newAfter = readDutyState('dutyAfterSchoolPointer', 0);
         var newHist = readDutyState('dutyScheduleHistory', []);
-        // 比较数据是否真的变化，只有变化时才更新（避免输入框跳动）
-        if (JSON.stringify(newStaff) !== JSON.stringify(staff)) {
+
+        // 非输入状态下才更新staff
+        if (!isInputting && JSON.stringify(newStaff) !== JSON.stringify(staff)) {
           isCloudRefresh.current = true;
           setStaff(newStaff);
         }
@@ -1469,16 +1473,20 @@ function StaffPage({
         name: e.target.value
       }),
       placeholder: "\u8BF7\u8F93\u5165\u59D3\u540D",
-      style: nameInputStyle,
+      style: {
+        ...nameInputStyle,
+        letterSpacing: person.name && person.name.trim().length === 2 ? '4px' : '0'
+      },
       onFocus: e => e.target.style.borderColor = '#2563eb',
       onBlur: e => e.target.style.borderColor = 'transparent'
     }) : /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: '14px',
         color: '#374151',
-        fontWeight: 500
+        fontWeight: 500,
+        letterSpacing: person.name && person.name.trim().length === 2 ? '4px' : '0'
       }
-    }, formatName(person.name) || '（未命名）')), /*#__PURE__*/React.createElement("td", {
+    }, person.name || '（未命名）')), /*#__PURE__*/React.createElement("td", {
       style: {
         textAlign: 'center'
       }
