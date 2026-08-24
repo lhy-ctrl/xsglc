@@ -193,22 +193,49 @@ function StoreProvider({ children }) {
     writeDutyState('dutyScheduleHistory', scheduleHistory);
   }, [scheduleHistory]);
 
-  // 监听云端数据更新，静默刷新所有状态（不触发写入，避免循环）
+  // 监听云端数据更新，静默刷新所有状态（仅在数据真的变化时更新，避免打断用户输入）
   useEffect(() => {
     if (typeof window === 'undefined') return;
     window.onDutyDataUpdated = function() {
-      isCloudRefresh.current = true;
       try {
-        setStaff(readDutyState('dutyStaff', defaultStaff));
-        setAllPostPointers(readDutyState('dutyAllPostPointers', {}));
-        setGroupPostPointers(readDutyState('dutyGroupPostPointers', {}));
-        setGroupRotation(readDutyState('dutyGroupRotation', 0));
-        setGatePointer(readDutyState('dutyGatePointer', 0));
-        setAfterSchoolPointer(readDutyState('dutyAfterSchoolPointer', 0));
-        setScheduleHistory(readDutyState('dutyScheduleHistory', []));
-      } finally {
+        var newStaff = readDutyState('dutyStaff', defaultStaff);
+        var newAll = readDutyState('dutyAllPostPointers', {});
+        var newGroup = readDutyState('dutyGroupPostPointers', {});
+        var newRot = readDutyState('dutyGroupRotation', 0);
+        var newGate = readDutyState('dutyGatePointer', 0);
+        var newAfter = readDutyState('dutyAfterSchoolPointer', 0);
+        var newHist = readDutyState('dutyScheduleHistory', []);
+        // 比较数据是否真的变化，只有变化时才更新（避免输入框跳动）
+        if (JSON.stringify(newStaff) !== JSON.stringify(staff)) {
+          isCloudRefresh.current = true;
+          setStaff(newStaff);
+        }
+        if (JSON.stringify(newAll) !== JSON.stringify(allPostPointers)) {
+          isCloudRefresh.current = true;
+          setAllPostPointers(newAll);
+        }
+        if (JSON.stringify(newGroup) !== JSON.stringify(groupPostPointers)) {
+          isCloudRefresh.current = true;
+          setGroupPostPointers(newGroup);
+        }
+        if (newRot !== groupRotation) {
+          isCloudRefresh.current = true;
+          setGroupRotation(newRot);
+        }
+        if (newGate !== gatePointer) {
+          isCloudRefresh.current = true;
+          setGatePointer(newGate);
+        }
+        if (newAfter !== afterSchoolPointer) {
+          isCloudRefresh.current = true;
+          setAfterSchoolPointer(newAfter);
+        }
+        if (JSON.stringify(newHist) !== JSON.stringify(scheduleHistory)) {
+          isCloudRefresh.current = true;
+          setScheduleHistory(newHist);
+        }
         setTimeout(() => { isCloudRefresh.current = false; }, 100);
-      }
+      } catch (e) {}
     };
     return () => { window.onDutyDataUpdated = null; };
   }, []);
