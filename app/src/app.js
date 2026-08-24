@@ -2306,12 +2306,18 @@
     } catch (e) { return []; }
   }
   function sortStaffByRole(list) {
-    var order = { captain: 0, vice_captain: 1, leader_a: 2, member: 3, leader_b: 4 };
+    // 与员工管理页面排序一致：队长→副队长→(按分组A/B，组内组长在前)→按id
     return list.slice().sort(function (a, b) {
-      var oa = order[a.role] != null ? order[a.role] : 5;
-      var ob = order[b.role] != null ? order[b.role] : 5;
-      if (oa !== ob) return oa - ob;
+      // 队长、副队长排在最前面
+      var aTop = a.role === 'captain' ? 0 : (a.role === 'vice_captain' ? 1 : 2);
+      var bTop = b.role === 'captain' ? 0 : (b.role === 'vice_captain' ? 1 : 2);
+      if (aTop !== bTop) return aTop - bTop;
+      // 同级别按分组
       if (a.group !== b.group) return a.group === 'A' ? -1 : 1;
+      // 同组内组长在前
+      var aLeader = (a.role === 'leader_a' || a.role === 'leader_b') ? 0 : 1;
+      var bLeader = (b.role === 'leader_a' || b.role === 'leader_b') ? 0 : 1;
+      if (aLeader !== bLeader) return aLeader - bLeader;
       return a.id - b.id;
     });
   }
