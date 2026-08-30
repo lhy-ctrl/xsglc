@@ -3271,18 +3271,30 @@
       });
       panel.appendChild(nfRow);
     }
-    // 空白宿舍：分为男寝/女寝/科技楼三个卡片展示
+    // 空白宿舍：分为男寝/女寝/科技楼三个卡片展示（区域后标注数量，寝室号按楼层分组）
     if (blanks.length) {
       panel.appendChild(el('div', { class: 'dorm-notfull-title', text: '空白宿舍：' }));
       var blankRow = el('div', { class: 'dorm-notfull-cards' });
       d.areas.forEach(function (a) {
         var rooms = a.blankRooms || [];
         var card = el('div', { class: 'dorm-notfull-card dorm-blank-card' });
-        card.appendChild(el('div', { class: 'dorm-notfull-card-title', text: a.area }));
+        card.appendChild(el('div', { class: 'dorm-notfull-card-title', text: a.area + '（' + rooms.length + '间）' }));
         if (rooms.length === 0) {
           card.appendChild(el('div', { class: 'dorm-notfull-empty', text: '无空白' }));
         } else {
-          card.appendChild(el('div', { class: 'dorm-blank-rooms', text: rooms.join('、') }));
+          // 按楼层分组
+          var floorMap = {};
+          rooms.forEach(function (r) {
+            var f = parseInt(String(r).charAt(0), 10) || 0;
+            if (!floorMap[f]) floorMap[f] = [];
+            floorMap[f].push(r);
+          });
+          var floors = Object.keys(floorMap).map(Number).sort(function (x, y) { return x - y; });
+          var cnNum = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+          floors.forEach(function (f) {
+            var fname = cnNum[f] != null ? cnNum[f] + '楼' : f + '楼';
+            card.appendChild(el('div', { class: 'dorm-blank-floor', text: fname + '：' + floorMap[f].join('、') }));
+          });
         }
         blankRow.appendChild(card);
       });
