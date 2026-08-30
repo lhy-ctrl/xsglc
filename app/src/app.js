@@ -3183,8 +3183,9 @@
     C.DORM_AREAS.forEach(function (a) {
       var roomsList = C.DORM_ROOMS[a] || [];
       var rooms = roomsList.length;
-      var cnt = 0, blank = 0, totalCapacity = 0;
+      var cnt = 0, totalCapacity = 0;
       var notFull = [];
+      var blankRooms = [];
       roomsList.forEach(function (room) {
         var cap = C.dormCapacity(a, room); // 大寝室（科技楼301/401/421）容量20，其余8
         totalCapacity += cap;
@@ -3195,14 +3196,14 @@
             notFull.push({ room: room, count: agg.count, lack: cap - agg.count, classes: agg.classes ? agg.classes.slice() : [] });
           }
         } else {
-          blank++;
+          blankRooms.push(room);
         }
       });
       totalRooms += rooms;
       totalCount += cnt;
       if (a === '男寝' || a === '科技楼') male += cnt;
       else female += cnt;
-      areas.push({ area: a, rooms: rooms, count: cnt, notFull: notFull, blank: blank, totalCapacity: totalCapacity, free: totalCapacity - cnt });
+      areas.push({ area: a, rooms: rooms, count: cnt, notFull: notFull, blankRooms: blankRooms, blank: blankRooms.length, totalCapacity: totalCapacity, free: totalCapacity - cnt });
     });
     return { areas: areas, male: male, female: female, totalRooms: totalRooms, totalCount: totalCount };
   }
@@ -3270,9 +3271,12 @@
       });
       panel.appendChild(nfRow);
     }
-    // 空白宿舍数量（不逐个列出，只显示数量）
+    // 空白宿舍（显示数量+具体寝室号）
     if (blanks.length) {
-      panel.appendChild(el('div', { class: 'dorm-blank-line', text: '空白宿舍：' + blanks.map(function (a) { return a.area + ' ' + a.blank + ' 间'; }).join(' · ') }));
+      panel.appendChild(el('div', { class: 'dorm-blank-line', text: '空白宿舍：' + blanks.map(function (a) {
+        var roomTxt = (a.blankRooms && a.blankRooms.length) ? '（' + a.blankRooms.join('、') + '）' : '';
+        return a.area + ' ' + a.blank + ' 间' + roomTxt;
+      }).join(' · ') }));
     }
     // 汇总住校男女生
     var totalCap = d.areas.reduce(function (sum, a) { return sum + a.totalCapacity; }, 0);
