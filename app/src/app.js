@@ -3271,12 +3271,22 @@
       });
       panel.appendChild(nfRow);
     }
-    // 空白宿舍（显示数量+具体寝室号）
+    // 空白宿舍：分为男寝/女寝/科技楼三个卡片展示
     if (blanks.length) {
-      panel.appendChild(el('div', { class: 'dorm-blank-line', text: '空白宿舍：' + blanks.map(function (a) {
-        var roomTxt = (a.blankRooms && a.blankRooms.length) ? '（' + a.blankRooms.join('、') + '）' : '';
-        return a.area + ' ' + a.blank + ' 间' + roomTxt;
-      }).join(' · ') }));
+      panel.appendChild(el('div', { class: 'dorm-notfull-title', text: '空白宿舍：' }));
+      var blankRow = el('div', { class: 'dorm-notfull-cards' });
+      d.areas.forEach(function (a) {
+        var rooms = a.blankRooms || [];
+        var card = el('div', { class: 'dorm-notfull-card dorm-blank-card' });
+        card.appendChild(el('div', { class: 'dorm-notfull-card-title', text: a.area }));
+        if (rooms.length === 0) {
+          card.appendChild(el('div', { class: 'dorm-notfull-empty', text: '无空白' }));
+        } else {
+          card.appendChild(el('div', { class: 'dorm-blank-rooms', text: rooms.join('、') }));
+        }
+        blankRow.appendChild(card);
+      });
+      panel.appendChild(blankRow);
     }
     // 汇总住校男女生
     var totalCap = d.areas.reduce(function (sum, a) { return sum + a.totalCapacity; }, 0);

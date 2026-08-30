@@ -612,6 +612,10 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .dorm-notfull-empty { font-size: 13px; color: #9aa0aa; padding: 6px 0; }
 .dorm-notfull-card table { margin-top: 0; }
 .dorm-notfull-card th, .dorm-notfull-card td { font-size: 12px; padding: 3px 6px; }
+/* 空白宿舍：三个区域卡片（黄色标记） */
+.dorm-blank-card { background: rgba(154,107,0,.05); border-color: rgba(154,107,0,.2); }
+.dorm-blank-card .dorm-notfull-card-title { color: #9a6b00; }
+.dorm-blank-rooms { font-size: 13px; color: #7a5a10; padding: 6px 0; line-height: 1.7; }
 
 /* ================= 管理二级权限 ================= */
 #secondary-admin-panel .form-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
