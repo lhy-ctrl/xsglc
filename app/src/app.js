@@ -3242,21 +3242,33 @@
       panel.appendChild(el('p', { class: 'muted', text: blanks.length ? '无未住满宿舍' : '已登记寝室均住满' }));
     } else {
       panel.appendChild(el('div', { class: 'dorm-notfull-title', text: '未住满宿舍：' }));
-      var nft = el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '区域' }), el('th', { text: '楼层' }), el('th', { text: '班级' }), el('th', { text: '寝室号' }), el('th', { text: '已住人数' }), el('th', { text: '差' })])])]);
-      var ntb = el('tbody', {});
-      notFullAll.forEach(function (n) {
-        var floor = parseInt(String(n.room).charAt(0), 10) || '';
-        ntb.appendChild(el('tr', {}, [
-          el('td', { text: n.area }),
-          el('td', { text: floor ? floor + '楼' : '' }),
-          el('td', { text: (n.classes || []).join('、') }),
-          el('td', { class: 'dorm-room-no', text: n.room }),
-          el('td', { text: String(n.count) }),
-          el('td', { text: String(n.lack) })
-        ]));
+      // 未住满宿舍分为男寝/女寝/科技楼三个卡片展示
+      var nfRow = el('div', { class: 'dorm-notfull-cards' });
+      d.areas.forEach(function (a) {
+        var areaNotFull = notFullAll.filter(function (n) { return n.area === a.area; });
+        var card = el('div', { class: 'dorm-notfull-card' });
+        card.appendChild(el('div', { class: 'dorm-notfull-card-title', text: a.area }));
+        if (areaNotFull.length === 0) {
+          card.appendChild(el('div', { class: 'dorm-notfull-empty', text: '无未住满' }));
+        } else {
+          var tbl = el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '楼层' }), el('th', { text: '班级' }), el('th', { text: '寝室号' }), el('th', { text: '已住' }), el('th', { text: '差' })])])]);
+          var tb = el('tbody', {});
+          areaNotFull.forEach(function (n) {
+            var floor = parseInt(String(n.room).charAt(0), 10) || '';
+            tb.appendChild(el('tr', {}, [
+              el('td', { text: floor ? floor + '楼' : '' }),
+              el('td', { text: (n.classes || []).join('、') }),
+              el('td', { class: 'dorm-room-no', text: n.room }),
+              el('td', { text: String(n.count) }),
+              el('td', { text: String(n.lack) })
+            ]));
+          });
+          tbl.appendChild(tb);
+          card.appendChild(tbl);
+        }
+        nfRow.appendChild(card);
       });
-      nft.appendChild(ntb);
-      panel.appendChild(nft);
+      panel.appendChild(nfRow);
     }
     // 空白宿舍数量（不逐个列出，只显示数量）
     if (blanks.length) {

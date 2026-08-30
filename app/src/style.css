@@ -605,6 +605,13 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .dorm-card:hover { background: rgba(60,80,120,.1); }
 .dorm-card-name { font-size: 16px; font-weight: 700; color: #2a3a55; margin-bottom: 6px; }
 .dorm-card-line { font-size: 13px; color: rgba(60,70,90,.85); margin-top: 2px; }
+/* 未住满宿舍：三个区域卡片 */
+.dorm-notfull-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 6px; }
+.dorm-notfull-card { background: rgba(214,69,65,.04); border: 1px solid rgba(214,69,65,.18); border-radius: 12px; padding: 10px 12px; }
+.dorm-notfull-card-title { font-size: 14px; font-weight: 700; color: #d64541; margin-bottom: 6px; }
+.dorm-notfull-empty { font-size: 13px; color: #9aa0aa; padding: 6px 0; }
+.dorm-notfull-card table { margin-top: 0; }
+.dorm-notfull-card th, .dorm-notfull-card td { font-size: 12px; padding: 3px 6px; }
 
 /* ================= 管理二级权限 ================= */
 #secondary-admin-panel .form-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
