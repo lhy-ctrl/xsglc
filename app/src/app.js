@@ -913,11 +913,11 @@
       'home-today-score': function () { return homeCard('home-today-score', '+' + sm.todayScore.add + ' / ' + sm.todayScore.sub, '今日加/扣分（' + sm.todayScore.count + ' 笔）', 'score'); },
       'home-today-discipline': function () { return homeCard('home-today-discipline', String(sm.todayDiscipline), '今日违纪', 'discipline'); },
       'home-student-count': function () {
-        // 学生总数卡片：总数 + 住校人数 + 男女生数量 放一行
+        // 学生总数卡片：总数 + 男女生数量 + 住校人数 放一行
         var numRow = el('div', { class: 'home-student-num-row' }, [
           el('span', { class: 'num num-val', text: String(sm.studentCount) }),
-          el('span', { class: 'home-stu-sub', text: '住校 ' + (sm.boardingCount || 0) }),
-          el('span', { class: 'home-stu-sub', text: '男 ' + (sm.totalMale || 0) + ' · 女 ' + (sm.totalFemale || 0) })
+          el('span', { class: 'home-stu-sub', text: '男 ' + (sm.totalMale || 0) + ' · 女 ' + (sm.totalFemale || 0) }),
+          el('span', { class: 'home-stu-sub', text: '住校 ' + (sm.boardingCount || 0) })
         ]);
         return homeCard('home-student-count', '', '学生总数', 'students', { num: numRow, extra: gradeCountHtml(sm) });
       }
@@ -940,14 +940,19 @@
     root.appendChild(warnPanel(sm.warnings));
   }
 
-  // 各年级人数+男女生小字（学生总数卡片内；总男女生数量已移到卡片主数值行）
+  // 各年级人数+男女生小字（学生总数卡片内；总男女生/住校数量已移到卡片主数值行）
   function gradeCountHtml(sm) {
     var gc = sm.gradeCount || {};
     var gg = sm.gradeGender || {};
     var wrap = el('div', { class: 'grade-chips' });
     ['高一', '高二', '高三'].forEach(function (g) {
       var gd = gg[g] || { male: 0, female: 0 };
-      wrap.appendChild(el('span', { class: 'grade-chip', text: g + ' ' + (gc[g] || 0) + '（男' + gd.male + ' 女' + gd.female + '）' }));
+      // 年级总人数一行，男女生数量放其下边
+      var chip = el('span', { class: 'grade-chip' }, [
+        el('span', { text: g + ' ' + (gc[g] || 0) }),
+        el('span', { style: 'display:block;font-size:10.5px;font-weight:600;opacity:.9;margin-top:2px', text: '男' + gd.male + ' · 女' + gd.female })
+      ]);
+      wrap.appendChild(chip);
     });
     return [wrap];
   }
@@ -1216,9 +1221,12 @@
       var input;
       if (opts.select) {
         // 单击直接弹出选项菜单（性别/状态），点选即保存
-        clear(td);
-        td.appendChild(menuEl);
         var optsList = opts.select.concat(opts.emptyLabel ? [''] : []);
+        var menuEl = el('div', { class: 'cell-select-menu' });
+        function docClose(ev) {
+          if (menuEl.contains(ev.target)) return;
+          closeMenu();
+        }
         function closeMenu() {
           if (!editing) return;
           editing = false;
@@ -1227,21 +1235,20 @@
           td.appendChild(document.createTextNode(v == null ? '' : v));
           document.removeEventListener('click', docClose);
         }
-        function docClose(ev) {
-          if (menuEl.contains(ev.target)) return;
-          closeMenu();
-        }
-        var menuEl = el('div', { class: 'cell-select-menu' });
         optsList.forEach(function (opt) {
           var btn = el('div', { class: 'cell-select-opt' + (opt === raw ? ' active' : ''), text: opt === '' ? (opts.emptyLabel || '') : opt });
           btn.addEventListener('click', function (ev) {
             ev.stopPropagation();
+            document.removeEventListener('click', docClose);
+            editing = false;
             var d = {};
             d[field] = opt;
             updateStudent(studentId, d);
           });
           menuEl.appendChild(btn);
         });
+        clear(td);
+        td.appendChild(menuEl);
         document.addEventListener('click', docClose);
         return;
       }
