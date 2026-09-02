@@ -102,9 +102,10 @@
     });
     return _xlsxPromise;
   }
-  // 权限：isAdmin=false 为普通模式（仅请假/通报可操作，其余只读）；true 为管理员（全功能）
+  // 权限：isAdmin=false 为普通模式（仅请假/通报可操作，其余只读）；true 为管理员
   var isAdmin = false;
-  // 管理员角色：'full' 全权限（可改一切）/ 'limited' 受限（不可改学生信息、数据与设置，其余可用）/ null 非管理员
+  // 管理员角色：'full' 全权限（可改一切）/ 'limited' 二级管理员（不可改学生信息、数据与设置，其余可用）
+  //            / 'tertiary' 三级管理员（仅可查看与修改：学生信息、量化管理分、违纪次数；其余模块不可修改）/ null 非管理员
   var adminRole = null;
 
   // ---------- 权限守卫 ----------
@@ -112,21 +113,71 @@
   function setAdminPass(p) { store.getState().settings.adminPass = p; store.save(); }
   // 管理员是否已初始化密码
   function hasAdminPass() { return !!getAdminPass(); }
-  // 二级管理员不可修改学生信息
+  // 三级管理员列表
+  function getTertiaryAdmins() {
+    var list = (store && store.getState().settings && store.getState().settings.tertiaryAdmins) || [];
+    return Array.isArray(list) ? list : [];
+  }
+  function addTertiaryAdminLocal(name, pwd) {
+    var st = store.getState();
+    pwd = String(pwd);
+    if (pwd === getAdminPass()) return false;
+    if (getSecondaryAdmins().some(function (a) { return a.pwd === pwd; })) return false;
+    if (getTertiaryAdmins().some(function (a) { return a.pwd === pwd; })) return false;
+    st.settings.tertiaryAdmins = getTertiaryAdmins().concat([{ id: C.uid('l'), name: String(name), pwd: pwd }]);
+    store.save();
+    return true;
+  }
+  function delTertiaryAdminLocal(id) {
+    var st = store.getState();
+    st.settings.tertiaryAdmins = getTertiaryAdmins().filter(function (a) { return String(a.id) !== String(id); });
+    store.save();
+  }
+  // 学生信息可编辑：主管理员 + 三级管理员（二级管理员不可）
   function canEditStudents() { return isAdmin && adminRole !== 'limited'; }
-  // 二级管理员不可修改数据与设置
-  function canEditSettings() { return isAdmin && adminRole !== 'limited'; }
+  // 数据与设置可编辑：仅主管理员
+  function canEditSettings() { return isAdmin && adminRole === 'full'; }
+  // 中级模块可编辑（请假/通报/寝室/教官绩效/值班排班/员工管理等）：主管理员 + 二级管理员（三级管理员不可）
+  function canEditMid() { return isAdmin && adminRole !== 'tertiary'; }
+  // 三级管理员是否可编辑指定模块（学生信息/量化管理分/违纪次数）
+  function tertiaryCanEditMod(mod) {
+    return mod === 'students' || mod === 'score' || mod === 'discipline';
+  }
   // 普通模式守卫：非管理员且操作被拦截时给出提示，返回 false
   function guardAdmin(actionName) {
     if (isAdmin) return true;
     if (typeof alert === 'function') alert('当前为只读模式，此操作（' + (actionName || '修改数据') + '）需要管理员登录后使用。');
     return false;
   }
-  // 受限守卫：仅全权限管理员可执行（学生信息 / 数据与设置相关操作）
+  // 仅主管理员守卫：数据与设置 / 管理员密码 / 备份 / 寝室对照表 / 清空数据 等
   function guardFull(actionName) {
+    if (isAdmin && adminRole === 'full') return true;
+    if (isAdmin && adminRole === 'limited') {
+      if (typeof alert === 'function') alert('当前为二级管理员，此操作（' + (actionName || '修改数据') + '）需要主管理员。');
+      return false;
+    }
+    if (isAdmin && adminRole === 'tertiary') {
+      if (typeof alert === 'function') alert('当前为三级管理员，此操作（' + (actionName || '修改数据') + '）需要主管理员。');
+      return false;
+    }
+    if (typeof alert === 'function') alert('当前为只读模式，此操作（' + (actionName || '修改数据') + '）需要管理员登录后使用。');
+    return false;
+  }
+  // 中级守卫：主管理员 + 二级管理员（三级管理员不可），用于请假/通报/寝室数据/教官绩效等
+  function guardMid(actionName) {
+    if (isAdmin && adminRole !== 'tertiary') return true;
+    if (isAdmin && adminRole === 'tertiary') {
+      if (typeof alert === 'function') alert('当前为三级管理员，此操作（' + (actionName || '修改数据') + '）无权限，仅可修改学生信息、量化管理分、违纪次数。');
+      return false;
+    }
+    if (typeof alert === 'function') alert('当前为只读模式，此操作（' + (actionName || '修改数据') + '）需要管理员登录后使用。');
+    return false;
+  }
+  // 学生信息守卫：主管理员 + 三级管理员（二级管理员不可）
+  function guardStudent(actionName) {
     if (isAdmin && adminRole !== 'limited') return true;
     if (isAdmin && adminRole === 'limited') {
-      if (typeof alert === 'function') alert('当前为二级管理员，此操作（' + (actionName || '修改数据') + '）需要全权限管理员。');
+      if (typeof alert === 'function') alert('当前为二级管理员，此操作（' + (actionName || '修改数据') + '）需要主管理员或三级管理员。');
       return false;
     }
     if (typeof alert === 'function') alert('当前为只读模式，此操作（' + (actionName || '修改数据') + '）需要管理员登录后使用。');
@@ -154,8 +205,8 @@
         btnLogin.disabled = true;
         cerr.textContent = '验证中…';
         AppCloudLib.verifyAdmin(v).then(function (role) {
-          // verify_admin 返回角色：'full' 全权限 / 'limited' 受限 / 其他（密码错误）
-          if (role === 'full' || role === 'limited') {
+          // verify_admin 返回角色：'full' 全权限 / 'limited' 二级 / 'tertiary' 三级 / 其他（密码错误）
+          if (role === 'full' || role === 'limited' || role === 'tertiary') {
             cloudAdminPassword = v;
             cloudAdminVerified = true;
             isAdmin = true;
@@ -172,6 +223,16 @@
             adminRole = 'full';
             persistAdminLogin(v, 'full');
             updateLoginSession('full');
+            closeModal(loginMask);
+            refresh();
+          } else if (getTertiaryAdmins().some(function (a) { return v === a.pwd; })) {
+            // 云端 RPC 不识别三级管理员密码时，按同步数据中的三级管理员校验（仅可修改学生信息/量化管理分/违纪次数）
+            cloudAdminPassword = v;
+            cloudAdminVerified = false;
+            isAdmin = true;
+            adminRole = 'tertiary';
+            persistAdminLogin(v, 'tertiary');
+            updateLoginSession('tertiary');
             closeModal(loginMask);
             refresh();
           } else {
@@ -234,7 +295,7 @@
         refresh();
         return true;
       }
-      // 二级管理员登录（多个二级管理员中任一密码匹配；仅查看权限）
+      // 二级管理员登录（多个二级管理员中任一密码匹配；除学生信息、数据与设置外可修改）
       if (getSecondaryAdmins().some(function (a) { return v === a.pwd; })) {
         isAdmin = true;
         adminRole = 'limited';
@@ -247,6 +308,26 @@
               cloudAdminVerified = true;
               updateCloudUI();
               updateLoginSession('limited');
+              pullFromCloudSilent();
+            }
+          }).catch(function () {});
+        }
+        refresh();
+        return true;
+      }
+      // 三级管理员登录（多个三级管理员中任一密码匹配；仅可修改学生信息、量化管理分、违纪次数）
+      if (getTertiaryAdmins().some(function (a) { return v === a.pwd; })) {
+        isAdmin = true;
+        adminRole = 'tertiary';
+        persistAdminLogin(null, 'tertiary');
+        // 三级管理员也尝试云端校验，启用只读同步
+        if (AppCloudLib && AppCloudLib.verifyAdmin) {
+          AppCloudLib.verifyAdmin(v).then(function (role) {
+            if (role === 'full' || role === 'limited' || role === 'tertiary' || role === true) {
+              cloudAdminPassword = v;
+              cloudAdminVerified = true;
+              updateCloudUI();
+              updateLoginSession('tertiary');
               pullFromCloudSilent();
             }
           }).catch(function () {});
@@ -294,7 +375,7 @@
       if (d && d.adminLoggedIn) {
         isAdmin = true;
         // 兼容旧版持久化数据（无 adminRole 字段）：默认视为全权限
-        adminRole = (d.adminRole === 'limited') ? 'limited' : 'full';
+        adminRole = (d.adminRole === 'limited') ? 'limited' : (d.adminRole === 'tertiary' ? 'tertiary' : 'full');
         if (d.adminPwd) { cloudAdminPassword = d.adminPwd; cloudAdminVerified = true; }
         return true;
       }
@@ -499,6 +580,14 @@
             }
             if (!payload.settings) payload.settings = {};
             payload.settings.secondaryAdmins = finalSec;
+            // 三级管理员：无独立云端表，随 payload 同步（云端有则用云端，无则保留本地）
+            var cloudTer = Array.isArray(payload.settings.tertiaryAdmins) ? payload.settings.tertiaryAdmins : [];
+            if (cloudTer.length) {
+              payload.settings.tertiaryAdmins = cloudTer;
+            } else {
+              var localTer = getTertiaryAdmins();
+              if (localTer.length) payload.settings.tertiaryAdmins = localTer;
+            }
             store.setState(payload);
             // 单设备登录检查：如果云端活跃设备不是本机，自动退出
             checkLoginSession(payload);
@@ -639,12 +728,12 @@
     if (status) {
       if (READONLY_MODE) {
         if (isAdmin) {
-          status.textContent = adminRole === 'limited' ? '二级管理员已登录（云端）' : '管理员已登录（云端）';
+          status.textContent = adminRole === 'limited' ? '二级管理员已登录（云端）' : (adminRole === 'tertiary' ? '三级管理员已登录（云端）' : '管理员已登录（云端）');
         } else {
           status.textContent = '';
         }
       } else {
-        status.textContent = isAdmin ? (adminRole === 'limited' ? '二级管理员' : '管理员') : '';
+        status.textContent = isAdmin ? (adminRole === 'limited' ? '二级管理员' : (adminRole === 'tertiary' ? '三级管理员' : '管理员')) : '';
       }
     }
   }
@@ -1326,7 +1415,7 @@
   }
 
   function openAddStudent() {
-    if (!guardFull('添加学生')) return;
+    if (!guardStudent('添加学生')) return;
     var form = studentFormNodes({ score: 100 });
     openModal('手动添加学生', form.nodes, function () {
       var d = form.read();
@@ -1335,7 +1424,7 @@
     }, '添加');
   }
   function openEditStudent(id) {
-    if (!guardFull('编辑学生')) return;
+    if (!guardStudent('编辑学生')) return;
     var s = store.getState().students.filter(function (x) { return x.id === id; })[0];
     if (!s) return;
     var form = studentFormNodes(s);
@@ -1347,7 +1436,7 @@
   }
 
   function addStudent(data) {
-    if (!guardFull('添加学生')) return;
+    if (!guardStudent('添加学生')) return;
     var pc = C.parseClass(data.class);
     var s = {
       id: C.uid('s'),
@@ -1362,7 +1451,7 @@
     store.save(); renderStudentTable(); return s;
   }
   function updateStudent(id, data, skipRender) {
-    if (!guardFull('编辑学生')) return;
+    if (!guardStudent('编辑学生')) return;
     var list = store.getState().students;
     for (var i = 0; i < list.length; i++) {
       if (list[i].id === id) {
@@ -1378,7 +1467,7 @@
     if (!skipRender) renderStudentTable();
   }
   function deleteStudent(id) {
-    if (!guardFull('删除学生')) return;
+    if (!guardStudent('删除学生')) return;
     var s = store.getState().students.filter(function (x) { return x.id === id; })[0];
     var name = s ? (s.class + ' ' + s.name) : '';
     openModal('删除学生', [
@@ -1397,7 +1486,7 @@
   }
 
   function deleteAllStudents() {
-    if (!guardFull('删除所有学生')) return;
+    if (!guardStudent('删除所有学生')) return;
     var count = store.getState().students.length;
     if (count === 0) { if (typeof alert === 'function') alert('当前没有学生数据'); return; }
     openModal('删除所有学生', [
@@ -1419,7 +1508,7 @@
 
   // 导入
   function importStudentsFromRows(rows) {
-    if (!guardFull('导入学生')) return;
+    if (!guardStudent('导入学生')) return;
     var built = C.buildStudents(rows);
     var list = store.getState().students;
     built.forEach(function (b) { list.push(b); });
@@ -1470,14 +1559,14 @@
     }, '确认导入');
   }
   function exportStudentsCSV() {
-    if (!guardFull('导出学生名单')) return;
+    if (!guardStudent('导出学生名单')) return;
     var list = C.sortStudentsByClass(store.getState().students);
     var lines = ['班级,姓名,性别,走读/住校,量化分'];
     list.forEach(function (s) { lines.push([s.class, s.name, s.gender, s.boarding || '', s.score].map(csvCell).join(',')); });
     downloadText('学生名单_' + C.todayStr() + '.csv', '\uFEFF' + lines.join('\n'), 'text/csv');
   }
   function downloadStudentTemplate() {
-    if (!guardFull('下载导入模板')) return;
+    if (!guardStudent('下载导入模板')) return;
     downloadText('学生导入模板.csv', '\uFEFF班级,姓名,性别,走读/住校,量化分\n高一1班,张三,男,住校,100\n高一1班,李四,女,走读,\n', 'text/csv');
   }
   function csvCell(v) {
@@ -2194,7 +2283,7 @@
 
   function renderEmployee(root) {
     employeeContainer = root;
-    if (!isAdmin) {
+    if (!isAdmin || adminRole === 'tertiary') {
       root.appendChild(el('div', { class: 'panel' }, [
         el('h3', { text: '教官绩效（仅管理员可见）' })
       ]));
@@ -2369,12 +2458,12 @@
   }
 
   function renderDutySchedule(root) {
-    if (!isAdmin) { root.appendChild(el('div', { class: 'muted', style: 'padding:40px;text-align:center', text: '仅管理员可查看此模块' })); return; }
+    if (!isAdmin || adminRole === 'tertiary') { root.appendChild(el('div', { class: 'muted', style: 'padding:40px;text-align:center', text: '仅管理员可查看此模块' })); return; }
     mountDutyApp(root, 'dutySelect');
   }
 
   function renderDutyStaff(root) {
-    if (!isAdmin) { root.appendChild(el('div', { class: 'muted', style: 'padding:40px;text-align:center', text: '仅管理员可查看此模块' })); return; }
+    if (!isAdmin || adminRole === 'tertiary') { root.appendChild(el('div', { class: 'muted', style: 'padding:40px;text-align:center', text: '仅管理员可查看此模块' })); return; }
     mountDutyApp(root, 'staff');
   }
 
@@ -2396,8 +2485,8 @@
     // 2. 云端同步
     var cloudPanel = cloudPanelNode();
     if (cloudPanel) { cloudPanel.style.flex = '1 1 calc(50% - 8px)'; cloudPanel.style.minWidth = '280px'; cloudPanel.style.margin = '0'; cardContainer.appendChild(cloudPanel); updateCloudUI(); }
-    // 3. 管理员（仅管理员可见）
-    if (isAdmin) {
+    // 3. 管理员（仅主管理员 / 二级管理员可见；三级管理员与未登录用户一致）
+    if (isAdmin && adminRole !== 'tertiary') {
       var adminPanel = el('div', { class: 'panel', id: 'admin-pass-panel', style: 'flex:1 1 calc(50% - 8px);min-width:280px;margin:0' }, [
         el('h3', { text: '管理员' }),
         el('div', { class: 'toolbar' }, [
@@ -2412,10 +2501,17 @@
       limitedPanel.style.minWidth = '280px';
       limitedPanel.style.margin = '0';
       cardContainer.appendChild(limitedPanel);
+      // 5. 三级管理员（主管理员 / 二级管理员可添加删除）
+      var tertiaryPanel = tertiaryAdminPanelNode();
+      tertiaryPanel.style.flex = '1 1 calc(50% - 8px)';
+      tertiaryPanel.style.minWidth = '280px';
+      tertiaryPanel.style.margin = '0';
+      cardContainer.appendChild(tertiaryPanel);
     }
     root.appendChild(cardContainer);
-    // 面板已挂载后再刷新二级管理员状态
-    if (isAdmin) refreshLimitedAdminPanel();
+    // 面板已挂载后再刷新管理员状态
+    if (isAdmin && adminRole !== 'tertiary') refreshLimitedAdminPanel();
+    if (isAdmin && adminRole !== 'tertiary') refreshTertiaryAdminPanel();
   }
   // ---------- 二级管理员（管理员面板内：可添加多个二级管理员，每个含名称与独立密码，仅查看） ----------
   function getSecondaryAdmins() {
@@ -2582,6 +2678,105 @@
     var mask = openModal('删除二级管理员', body, null, '关闭');
   }
 
+  // ---------- 三级管理员（管理员面板内：主管理员 / 二级管理员可添加多个三级管理员，仅可修改学生信息、量化管理分、违纪次数） ----------
+  function tertiaryAdminPanelNode() {
+    var panel = el('div', { class: 'panel', id: 'tertiary-admin-panel' }, [
+      el('h3', { text: '三级管理员' }),
+      el('p', { class: 'muted', style: 'font-size:12px', text: '三级管理员仅可查看与修改：学生信息、量化管理分、违纪次数，其余与未登录用户一致。' }),
+      el('div', { id: 'tertiary-admin-list' }),
+      el('div', { id: 'tertiary-admin-actions' })
+    ]);
+    return panel;
+  }
+  function refreshTertiaryAdminPanel() {
+    var st = $('#tertiary-admin-list'), ac = $('#tertiary-admin-actions');
+    if (!st || !ac) return;
+    renderTertiaryStatus(getTertiaryAdmins());
+  }
+  function renderTertiaryStatus(list) {
+    var st = $('#tertiary-admin-list'), ac = $('#tertiary-admin-actions');
+    if (!st || !ac) return;
+    clear(st); clear(ac);
+    list = list || [];
+    if (!list.length) {
+      st.appendChild(el('span', { class: 'muted', text: '尚未添加三级管理员' }));
+    } else {
+      var tbl = el('table', {}, [el('thead', {}, [el('tr', {}, [
+        el('th', { text: '名称' }), el('th', { text: '状态' })
+      ])])]);
+      var tbody = el('tbody', {});
+      list.forEach(function (a) {
+        tbody.appendChild(el('tr', {}, [
+          el('td', { text: a.name || ('#' + a.id) }),
+          el('td', { class: 'sa-name', text: '已启用' })
+        ]));
+      });
+      tbl.appendChild(tbody);
+      st.appendChild(tbl);
+    }
+    // 主管理员 / 二级管理员 均可管理三级管理员
+    if (canEditMid()) {
+      ac.appendChild(el('button', { class: 'btn', id: 'btn-add-tertiary', onclick: onAddTertiary }, ['添加三级管理员']));
+      if (list.length) ac.appendChild(el('button', { class: 'btn danger', id: 'btn-del-tertiary', onclick: onDeleteTertiary }, ['删除三级管理员']));
+    }
+  }
+  function onAddTertiary() {
+    var name = el('input', { type: 'text', id: 'tertiary-name-input', placeholder: '如：李老师 / 值班组长' });
+    var pass = el('input', { type: 'password', id: 'tertiary-pass-input' });
+    var pass2 = el('input', { type: 'password', id: 'tertiary-pass-input2' });
+    var err = el('p', { class: 'muted', style: 'color:#e5484d;min-height:1.2em' });
+    var mask = openModal('添加三级管理员', [
+      el('div', { class: 'form-row' }, [el('label', { text: '名称' }), name]),
+      el('div', { class: 'form-row' }, [el('label', { text: '密码' }), pass]),
+      el('div', { class: 'form-row' }, [el('label', { text: '确认密码' }), pass2]),
+      err
+    ], function () {
+      var n = name.value.trim(), v = pass.value.trim(), v2 = pass2.value.trim();
+      if (!n) { err.textContent = '请输入名称'; return false; }
+      if (!v || v.length < 4) { err.textContent = '密码至少 4 位'; return false; }
+      if (v !== v2) { err.textContent = '两次输入不一致'; return false; }
+      if (v === getAdminPass()) { err.textContent = '不能与主管理员密码相同'; return false; }
+      var dup = getSecondaryAdmins().some(function (a) { return a.pwd === v; });
+      if (dup) { err.textContent = '该密码与二级管理员重复，请换一个'; return false; }
+      var dup2 = getTertiaryAdmins().some(function (a) { return a.pwd === v; });
+      if (dup2) { err.textContent = '该密码已存在，请换一个'; return false; }
+      addTertiaryAdminLocal(n, v);
+      if (typeof alert === 'function') alert('三级管理员已添加');
+      refreshTertiaryAdminPanel();
+      return true;
+    }, '确定');
+  }
+  function onDeleteTertiary() {
+    var err = el('p', { class: 'muted', style: 'color:#e5484d;min-height:1.2em' });
+    var listWrap = el('div', { class: 'sa-delete-list' });
+    var body = [
+      el('p', { class: 'muted', text: '请选择要删除的三级管理员：' }),
+      listWrap,
+      err
+    ];
+    renderDeleteList(getTertiaryAdmins());
+    function renderDeleteList(items) {
+      clear(listWrap);
+      if (!items || !items.length) {
+        listWrap.appendChild(el('p', { class: 'muted', text: '暂无三级管理员。' }));
+        return;
+      }
+      items.forEach(function (a) {
+        listWrap.appendChild(el('div', { class: 'sa-delete-row' }, [
+          el('span', { text: a.name || ('#' + a.id) }),
+          el('button', { class: 'btn danger', onclick: function () { doDel(a.id); } }, ['删除'])
+        ]));
+      });
+    }
+    function doDel(id) {
+      delTertiaryAdminLocal(id);
+      closeModal(mask);
+      if (typeof alert === 'function') alert('三级管理员已删除');
+      refreshTertiaryAdminPanel();
+    }
+    var mask = openModal('删除三级管理员', body, null, '关闭');
+  }
+
   // ---------- 寝室数据（独立模块：男寝/女寝/科技楼 三选项，寝室号一个班级栏【高（一/二/三）（1~15）班】+ 人数，按楼层分组） ----------
   var dormArea = '男寝';
 
@@ -2604,7 +2799,7 @@
 
   // 删除当前区域全部寝室信息（对照表）
   function deleteDormArea(area) {
-    if (!guardAdmin('删除寝室区域')) return;
+    if (!guardMid('删除寝室区域')) return;
     var st = store.getState();
     var list = st.dormMap || [];
     var cnt = list.filter(function (d) { return String(d.area).trim() === area; }).length;
@@ -2655,8 +2850,8 @@
     var listNode = $('#dorm-room-list');
     if (!listNode) return;
     clear(listNode);
-    // 寝室数据：管理员（含二级管理员）均可编辑保存（二级管理员只读学生信息/数据与设置）
-    var canEdit = isAdmin;
+    // 寝室数据：主管理员/二级管理员可编辑（三级管理员只读）
+    var canEdit = canEditMid();
     var area = dormArea;
     var groups = dormFloorGroups(C.DORM_ROOMS[area]);
     var map = {};
@@ -2750,7 +2945,7 @@
   }
 
   function saveDormRoom(floor) {
-    if (!guardAdmin('保存寝室数据')) return;
+    if (!guardMid('保存寝室数据')) return;
     var area = dormArea;
     var dm = store.getState().dormMap;
     var cells = doc.querySelectorAll('#dorm-room-table .dorm-cell');
@@ -2957,9 +3152,9 @@
     return t ? ('最近备份：' + t) : '尚未备份';
   }
 
-  function addScoreItem(d) { if (!guardFull('新增量化项目')) return; var it = { id: C.uid('i'), type: d.type, name: d.name, delta: d.delta }; store.getState().scoreItems.push(it); store.save(); return it; }
-  function updateScoreItem(id, d) { if (!guardFull('编辑量化项目')) return; var l = store.getState().scoreItems; for (var i = 0; i < l.length; i++) if (l[i].id === id) { Object.assign(l[i], d); break; } store.save(); }
-  function deleteScoreItem(id) { if (!guardFull('删除量化项目')) return; if (typeof confirm === 'function' && !confirm('确定删除该项目？')) return; var s = store.getState(); s.scoreItems = s.scoreItems.filter(function (x) { return x.id !== id; }); store.setState(s); }
+  function addScoreItem(d) { if (!guardAdmin('新增量化项目')) return; var it = { id: C.uid('i'), type: d.type, name: d.name, delta: d.delta }; store.getState().scoreItems.push(it); store.save(); return it; }
+  function updateScoreItem(id, d) { if (!guardAdmin('编辑量化项目')) return; var l = store.getState().scoreItems; for (var i = 0; i < l.length; i++) if (l[i].id === id) { Object.assign(l[i], d); break; } store.save(); }
+  function deleteScoreItem(id) { if (!guardAdmin('删除量化项目')) return; if (typeof confirm === 'function' && !confirm('确定删除该项目？')) return; var s = store.getState(); s.scoreItems = s.scoreItems.filter(function (x) { return x.id !== id; }); store.setState(s); }
 
   function addDormMap(d) { if (!guardFull('新增对照')) return; store.getState().dormMap.push({ room: d.room, class: d.class, area: d.area || '' }); store.save(); return d; }
   function updateDormMap(idx, d) { if (!guardFull('编辑对照')) return; var l = store.getState().dormMap; if (l[idx]) { l[idx] = { room: d.room, class: d.class, area: d.area || '' }; store.save(); } }
@@ -3062,6 +3257,8 @@
     setAdminForTest: function (v) { isAdmin = !!v; if (!v) adminRole = null; else if (adminRole !== 'limited') adminRole = 'full'; refresh(); },
     // 仅供测试：设定二级管理员角色
     setLimitedForTest: function () { isAdmin = true; adminRole = 'limited'; refresh(); },
+    // 仅供测试：设定三级管理员角色
+    setTertiaryForTest: function () { isAdmin = true; adminRole = 'tertiary'; refresh(); },
     get state() { return state; },
     get store() { return store; },
     get core() { return C; }

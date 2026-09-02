@@ -37,7 +37,7 @@
       dutyAfterSchoolPointer: 0, // 放学后岗位指针
       dutyScheduleHistory: [],   // 排班历史
       lastModified: 0,           // 最后修改时间戳（用于多设备同步）
-      settings: { lastBackupAt: null, homeOrder: null, scoreMonths: null, adminPass: null, secondaryAdmins: [] }
+      settings: { lastBackupAt: null, homeOrder: null, scoreMonths: null, adminPass: null, secondaryAdmins: [], tertiaryAdmins: [] }
     };
   }
 
@@ -86,11 +86,12 @@
       var homeOrder = Array.isArray(raw.settings.homeOrder) ? raw.settings.homeOrder : null;
       var scoreMonths = Array.isArray(raw.settings.scoreMonths) ? raw.settings.scoreMonths : null;
       var secondaryAdmins = Array.isArray(raw.settings.secondaryAdmins) ? raw.settings.secondaryAdmins : [];
+      var tertiaryAdmins = Array.isArray(raw.settings.tertiaryAdmins) ? raw.settings.tertiaryAdmins : [];
       // 兼容老数据：旧单密码 limitedPass 迁移为一条二级管理员（名称用密码），并清空旧字段
       if (!secondaryAdmins.length && raw.settings.limitedPass) {
         secondaryAdmins = [{ id: 'l' + Date.now().toString(36), name: String(raw.settings.limitedPass), pwd: String(raw.settings.limitedPass) }];
       }
-      base.settings = Object.assign({ lastBackupAt: null, homeOrder: null, scoreMonths: null, adminPass: null, secondaryAdmins: [] }, raw.settings, { homeOrder: homeOrder, scoreMonths: scoreMonths, secondaryAdmins: secondaryAdmins });
+      base.settings = Object.assign({ lastBackupAt: null, homeOrder: null, scoreMonths: null, adminPass: null, secondaryAdmins: [], tertiaryAdmins: [] }, raw.settings, { homeOrder: homeOrder, scoreMonths: scoreMonths, secondaryAdmins: secondaryAdmins, tertiaryAdmins: tertiaryAdmins });
     }
     if (typeof raw.version === 'number') base.version = raw.version;
     return base;
