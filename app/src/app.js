@@ -1151,8 +1151,8 @@
       var tr = el('tr', { 'data-id': s.id, style: rowStyle }, [
         canEditStudents() ? editableCell('class', s.class, s.id, tr) : el('td', { text: s.class }),
         canEditStudents() ? editableCell('name', C.formatName(s.name), s.id, tr) : el('td', { text: C.formatName(s.name) }),
-        canEditStudents() ? el('td', {}, [segmentedButtons('gender', s.gender, s.id, ['男', '女'])]) : el('td', { text: s.gender }),
-        canEditStudents() ? el('td', {}, [segmentedButtons('boarding', s.boarding || '住校', s.id, ['住校', '走读'])]) : el('td', { text: s.boarding || '住校' }),
+        canEditStudents() ? cellPicker('gender', s.gender, s.id, ['男', '女']) : el('td', { text: s.gender }),
+        canEditStudents() ? cellPicker('boarding', s.boarding || '住校', s.id, ['住校', '走读']) : el('td', { text: s.boarding || '住校' }),
         el('td', { text: String(totals.banKou) }),
         el('td', { text: String(totals.banJiang) }),
         el('td', { text: String(totals.zhengKou) }),
@@ -1206,21 +1206,56 @@
     return nav;
   }
 
-  // 性别/状态 常驻按钮组：点选即改，无需弹菜单
-  function segmentedButtons(field, value, studentId, options) {
-    var wrap = el('div', { class: 'seg-btns' });
-    options.forEach(function (opt) {
-      var btn = el('div', { class: 'seg-btn' + (opt === value ? ' active' : ''), text: opt });
-      btn.addEventListener('click', function (ev) {
-        ev.stopPropagation();
-        if (opt === value) return;
-        var d = {};
-        d[field] = opt;
-        updateStudent(studentId, d);
+  // 性别/状态 单击弹出选项（点击单元格才显示按钮组，点选即改，点击其他处自动收起）
+  var cellPickerActive = null;
+  function closeCellPicker() {
+    if (cellPickerActive) {
+      try { cellPickerActive.restore(); } catch (e) {}
+      cellPickerActive = null;
+    }
+  }
+  if (typeof document !== 'undefined') {
+    // capture 阶段先于 td 的 stopPropagation，确保点击其他处能收起
+    document.addEventListener('click', function (ev) {
+      if (cellPickerActive && cellPickerActive.td && !cellPickerActive.td.contains(ev.target)) closeCellPicker();
+    }, true);
+  }
+  function cellPicker(field, value, studentId, options) {
+    var td = el('td', { 'data-field': field, text: value });
+    var open = false;
+    td.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (open) return;
+      open = true;
+      closeCellPicker();
+      var cur = store.getState().students.filter(function (x) { return x.id === studentId; })[0];
+      var v = cur ? cur[field] : value;
+      var wrap = el('div', { class: 'seg-btns' });
+      options.forEach(function (opt) {
+        var btn = el('div', { class: 'seg-btn' + (opt === v ? ' active' : ''), text: opt });
+        btn.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          if (opt === v) { closeCellPicker(); return; }
+          var d = {};
+          d[field] = opt;
+          closeCellPicker();
+          updateStudent(studentId, d);
+        });
+        wrap.appendChild(btn);
       });
-      wrap.appendChild(btn);
+      clear(td);
+      td.appendChild(wrap);
+      cellPickerActive = {
+        td: td,
+        restore: function () {
+          open = false;
+          var cur2 = store.getState().students.filter(function (x) { return x.id === studentId; })[0];
+          clear(td);
+          td.appendChild(document.createTextNode(cur2 ? (cur2[field] == null ? '' : cur2[field]) : ''));
+        }
+      };
     });
-    return wrap;
+    return td;
   }
 
   // 可编辑单元格：点击变 input/失焦或回车保存；class/name 文本编辑
