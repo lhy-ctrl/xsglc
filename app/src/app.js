@@ -1053,21 +1053,6 @@
   var studentPage = 1;
   var scorePage = 1;
 
-  // 单元格选项菜单（性别/状态 单击弹出）全局管理：同时只存在一个，点击菜单外任意处自动关闭
-  var cellMenuActive = null;
-  function closeCellMenu() {
-    if (cellMenuActive) {
-      try { cellMenuActive.restore(); } catch (e) {}
-      cellMenuActive = null;
-    }
-  }
-  // capture 阶段先于 td 的 stopPropagation 执行，确保点击菜单外能关闭
-  if (typeof document !== 'undefined') {
-    document.addEventListener('click', function (ev) {
-      if (cellMenuActive && !cellMenuActive.menuEl.contains(ev.target)) closeCellMenu();
-    }, true);
-  }
-
   function renderStudents(root) {
     var st = store.getState();
     // 工具栏
@@ -1166,8 +1151,8 @@
       var tr = el('tr', { 'data-id': s.id, style: rowStyle }, [
         canEditStudents() ? editableCell('class', s.class, s.id, tr) : el('td', { text: s.class }),
         canEditStudents() ? editableCell('name', C.formatName(s.name), s.id, tr) : el('td', { text: C.formatName(s.name) }),
-        canEditStudents() ? editableCell('gender', s.gender, s.id, tr, { select: ['男', '女'] }) : el('td', { text: s.gender }),
-        canEditStudents() ? editableCell('boarding', s.boarding || '住校', s.id, tr, { select: ['住校', '走读'] }) : el('td', { text: s.boarding || '住校' }),
+        canEditStudents() ? el('td', {}, [segmentedButtons('gender', s.gender, s.id, ['男', '女'])]) : el('td', { text: s.gender }),
+        canEditStudents() ? el('td', {}, [segmentedButtons('boarding', s.boarding || '住校', s.id, ['住校', '走读'])]) : el('td', { text: s.boarding || '住校' }),
         el('td', { text: String(totals.banKou) }),
         el('td', { text: String(totals.banJiang) }),
         el('td', { text: String(totals.zhengKou) }),
@@ -1221,7 +1206,24 @@
     return nav;
   }
 
-  // 可编辑单元格：点击变 input/select，失焦或回车保存；class/name 文本、gender/boarding 用下拉
+  // 性别/状态 常驻按钮组：点选即改，无需弹菜单
+  function segmentedButtons(field, value, studentId, options) {
+    var wrap = el('div', { class: 'seg-btns' });
+    options.forEach(function (opt) {
+      var btn = el('div', { class: 'seg-btn' + (opt === value ? ' active' : ''), text: opt });
+      btn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        if (opt === value) return;
+        var d = {};
+        d[field] = opt;
+        updateStudent(studentId, d);
+      });
+      wrap.appendChild(btn);
+    });
+    return wrap;
+  }
+
+  // 可编辑单元格：点击变 input/失焦或回车保存；class/name 文本编辑
   function editableCell(field, value, studentId, tr, opts) {
     opts = opts || {};
     var td = el('td', { 'data-field': field, text: value });
@@ -1234,33 +1236,6 @@
       if (!cur) return;
       var raw = cur[field];
       var input;
-      if (opts.select) {
-        // 单击直接弹出选项菜单（性别/状态），点选即保存；点击菜单外任意处自动关闭
-        closeCellMenu();
-        var menuEl = el('div', { class: 'cell-select-menu' });
-        clear(td);
-        td.appendChild(menuEl);
-        cellMenuActive = {
-          menuEl: menuEl,
-          restore: function () {
-            clear(td);
-            td.appendChild(document.createTextNode(cur[field] == null ? '' : cur[field]));
-          }
-        };
-        var optsList = opts.select.concat(opts.emptyLabel ? [''] : []);
-        optsList.forEach(function (opt) {
-          var btn = el('div', { class: 'cell-select-opt' + (opt === raw ? ' active' : ''), text: opt === '' ? (opts.emptyLabel || '') : opt });
-          btn.addEventListener('click', function (ev) {
-            ev.stopPropagation();
-            var d = {};
-            d[field] = opt;
-            closeCellMenu();
-            updateStudent(studentId, d);
-          });
-          menuEl.appendChild(btn);
-        });
-        return;
-      }
       input = el('input', { type: 'text', 'data-field': field, value: raw == null ? '' : String(raw), style: 'width:100%;box-sizing:border-box' });
       clear(td);
       td.appendChild(input);
