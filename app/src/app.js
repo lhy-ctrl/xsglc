@@ -1053,6 +1053,21 @@
   var studentPage = 1;
   var scorePage = 1;
 
+  // 单元格选项菜单（性别/状态 单击弹出）全局管理：同时只存在一个，点击菜单外任意处自动关闭
+  var cellMenuActive = null;
+  function closeCellMenu() {
+    if (cellMenuActive) {
+      try { cellMenuActive.restore(); } catch (e) {}
+      cellMenuActive = null;
+    }
+  }
+  // capture 阶段先于 td 的 stopPropagation 执行，确保点击菜单外能关闭
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', function (ev) {
+      if (cellMenuActive && !cellMenuActive.menuEl.contains(ev.target)) closeCellMenu();
+    }, true);
+  }
+
   function renderStudents(root) {
     var st = store.getState();
     // 工具栏
@@ -1220,36 +1235,30 @@
       var raw = cur[field];
       var input;
       if (opts.select) {
-        // 单击直接弹出选项菜单（性别/状态），点选即保存
-        var optsList = opts.select.concat(opts.emptyLabel ? [''] : []);
+        // 单击直接弹出选项菜单（性别/状态），点选即保存；点击菜单外任意处自动关闭
+        closeCellMenu();
         var menuEl = el('div', { class: 'cell-select-menu' });
-        function docClose(ev) {
-          if (menuEl.contains(ev.target)) return;
-          closeMenu();
-        }
-        function closeMenu() {
-          if (!editing) return;
-          editing = false;
-          var v = cur[field];
-          clear(td);
-          td.appendChild(document.createTextNode(v == null ? '' : v));
-          document.removeEventListener('click', docClose);
-        }
+        clear(td);
+        td.appendChild(menuEl);
+        cellMenuActive = {
+          menuEl: menuEl,
+          restore: function () {
+            clear(td);
+            td.appendChild(document.createTextNode(cur[field] == null ? '' : cur[field]));
+          }
+        };
+        var optsList = opts.select.concat(opts.emptyLabel ? [''] : []);
         optsList.forEach(function (opt) {
           var btn = el('div', { class: 'cell-select-opt' + (opt === raw ? ' active' : ''), text: opt === '' ? (opts.emptyLabel || '') : opt });
           btn.addEventListener('click', function (ev) {
             ev.stopPropagation();
-            document.removeEventListener('click', docClose);
-            editing = false;
             var d = {};
             d[field] = opt;
+            closeCellMenu();
             updateStudent(studentId, d);
           });
           menuEl.appendChild(btn);
         });
-        clear(td);
-        td.appendChild(menuEl);
-        document.addEventListener('click', docClose);
         return;
       }
       input = el('input', { type: 'text', 'data-field': field, value: raw == null ? '' : String(raw), style: 'width:100%;box-sizing:border-box' });
