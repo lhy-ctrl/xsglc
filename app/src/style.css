@@ -227,6 +227,9 @@ body { position: relative; }
 .card:active { transform: translateY(0) scale(.992); }
 .card .num { font-size: 27px; font-weight: 700; letter-spacing: .3px; color: rgba(14,16,20,.94); font-variant-numeric: tabular-nums; position: relative; }
 .card .lbl { color: rgba(88,94,104,.78); font-size: 12.5px; margin-top: 6px; font-weight: 500; position: relative; }
+/* 学生总数卡片：总数+住校+男女生 一行 */
+.home-student-num-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: nowrap; }
+.home-student-num-row .home-stu-sub { font-size: 14px; font-weight: 600; color: #2f6fe0; white-space: nowrap; }
 /* 学生总数卡片内的年级人数 */
 .card .grade-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; position: relative; }
 .grade-chip {
@@ -299,6 +302,20 @@ tbody tr:last-child td { border-bottom: none; }
 
 /* 可编辑单元格（学生信息/量化分） */
 td[data-field] { cursor: text; }
+/* 单击弹出选项菜单（性别/状态） */
+td[data-field] { position: relative; }
+.cell-select-menu {
+  position: absolute; left: 4px; top: 4px; z-index: 20;
+  min-width: 72px; background: #fff; border: 1px solid rgba(90,140,255,.35);
+  border-radius: 8px; box-shadow: 0 6px 20px rgba(30,50,90,.16);
+  overflow: hidden; padding: 3px;
+}
+.cell-select-opt {
+  padding: 6px 14px; font-size: 13px; color: #2a3a55; border-radius: 6px; cursor: pointer;
+  text-align: center; white-space: nowrap;
+}
+.cell-select-opt:hover { background: rgba(90,140,255,.12); }
+.cell-select-opt.active { background: linear-gradient(180deg, #4d93ff, #2878ef); color: #fff; }
 td[data-field]:hover { background: rgba(90,140,255,.07); box-shadow: inset 0 0 0 1px rgba(90,140,255,.25); border-radius: 6px; }
 td[data-field] input, td[data-field] select { width: 100%; min-width: 56px; box-sizing: border-box; padding: 4px 6px; font-size: 13px; }
 td[data-cat] { cursor: text; font-variant-numeric: tabular-nums; }

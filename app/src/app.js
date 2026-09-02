@@ -913,7 +913,13 @@
       'home-today-score': function () { return homeCard('home-today-score', '+' + sm.todayScore.add + ' / ' + sm.todayScore.sub, '今日加/扣分（' + sm.todayScore.count + ' 笔）', 'score'); },
       'home-today-discipline': function () { return homeCard('home-today-discipline', String(sm.todayDiscipline), '今日违纪', 'discipline'); },
       'home-student-count': function () {
-        return homeCard('home-student-count', String(sm.studentCount), '学生总数', 'students', { extra: gradeCountHtml(sm) });
+        // 学生总数卡片：总数 + 住校人数 + 男女生数量 放一行
+        var numRow = el('div', { class: 'home-student-num-row' }, [
+          el('span', { class: 'num num-val', text: String(sm.studentCount) }),
+          el('span', { class: 'home-stu-sub', text: '住校 ' + (sm.boardingCount || 0) }),
+          el('span', { class: 'home-stu-sub', text: '男 ' + (sm.totalMale || 0) + ' · 女 ' + (sm.totalFemale || 0) })
+        ]);
+        return homeCard('home-student-count', '', '学生总数', 'students', { num: numRow, extra: gradeCountHtml(sm) });
       }
     };
     order.forEach(function (key) {
@@ -934,13 +940,11 @@
     root.appendChild(warnPanel(sm.warnings));
   }
 
-  // 各年级人数+男女生小字（学生总数卡片内）
+  // 各年级人数+男女生小字（学生总数卡片内；总男女生数量已移到卡片主数值行）
   function gradeCountHtml(sm) {
     var gc = sm.gradeCount || {};
     var gg = sm.gradeGender || {};
     var wrap = el('div', { class: 'grade-chips' });
-    // 总男女生数量
-    wrap.appendChild(el('span', { class: 'grade-chip', text: '男生 ' + (sm.totalMale || 0) + ' · 女生 ' + (sm.totalFemale || 0) }));
     ['高一', '高二', '高三'].forEach(function (g) {
       var gd = gg[g] || { male: 0, female: 0 };
       wrap.appendChild(el('span', { class: 'grade-chip', text: g + ' ' + (gc[g] || 0) + '（男' + gd.male + ' 女' + gd.female + '）' }));
@@ -979,7 +983,8 @@
 
   function homeCard(id, num, lbl, jumpTo, extra) {
     extra = extra || {};
-    var children = [el('div', { class: 'num num-val', text: num }), el('div', { class: 'lbl', text: lbl })];
+    var numNode = extra.num || el('div', { class: 'num num-val', text: num });
+    var children = [numNode, el('div', { class: 'lbl', text: lbl })];
     if (extra.extra) children = children.concat(extra.extra);
     if (extra.chart) children.push(extra.chart);
     return el('div', {
@@ -1121,7 +1126,7 @@
     panel.appendChild(el('div', { class: 'muted', id: 'student-count', text: countText }));
     var table = el('table', { style: 'table-layout:fixed;width:100%' }, [
       el('thead', {}, [el('tr', {}, [
-        el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '性别' }), el('th', { text: '走读住校' }),
+        el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '性别' }), el('th', { text: '状态' }),
         el('th', { text: '班扣' }), el('th', { text: '班奖' }), el('th', { text: '政扣' }), el('th', { text: '政奖' }),
         el('th', { text: '量化分' }), canEditStudents() ? el('th', { text: '操作' }) : null
       ])])
@@ -1210,15 +1215,37 @@
       var raw = cur[field];
       var input;
       if (opts.select) {
-        input = el('select', { 'data-field': field, style: 'width:100%;box-sizing:border-box' });
-        opts.select.forEach(function (opt) {
-          input.appendChild(el('option', { value: opt }, [opt]));
+        // 单击直接弹出选项菜单（性别/状态），点选即保存
+        clear(td);
+        td.appendChild(menuEl);
+        var optsList = opts.select.concat(opts.emptyLabel ? [''] : []);
+        function closeMenu() {
+          if (!editing) return;
+          editing = false;
+          var v = cur[field];
+          clear(td);
+          td.appendChild(document.createTextNode(v == null ? '' : v));
+          document.removeEventListener('click', docClose);
+        }
+        function docClose(ev) {
+          if (menuEl.contains(ev.target)) return;
+          closeMenu();
+        }
+        var menuEl = el('div', { class: 'cell-select-menu' });
+        optsList.forEach(function (opt) {
+          var btn = el('div', { class: 'cell-select-opt' + (opt === raw ? ' active' : ''), text: opt === '' ? (opts.emptyLabel || '') : opt });
+          btn.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            var d = {};
+            d[field] = opt;
+            updateStudent(studentId, d);
+          });
+          menuEl.appendChild(btn);
         });
-        if (opts.emptyLabel) input.appendChild(el('option', { value: '' }, [opts.emptyLabel]));
-        input.value = raw || '';
-      } else {
-        input = el('input', { type: 'text', 'data-field': field, value: raw == null ? '' : String(raw), style: 'width:100%;box-sizing:border-box' });
+        document.addEventListener('click', docClose);
+        return;
       }
+      input = el('input', { type: 'text', 'data-field': field, value: raw == null ? '' : String(raw), style: 'width:100%;box-sizing:border-box' });
       clear(td);
       td.appendChild(input);
       input.focus();
@@ -1227,11 +1254,7 @@
         editing = false;
         var v = input.value;
         var d = {};
-        if (opts.select) {
-          d[field] = (v === '' && opts.emptyLabel) ? '' : v;
-        } else {
-          d[field] = v;
-        }
+        d[field] = v;
         if (field === 'score') {
           var sc = Number(v);
           if (isNaN(sc)) sc = 100;
@@ -1266,7 +1289,7 @@
         el('div', { class: 'form-row' }, [el('label', { text: '班级（如 高一3班）' }), cls]),
         el('div', { class: 'form-row' }, [el('label', { text: '姓名' }), name]),
         el('div', { class: 'form-row' }, [el('label', { text: '性别' }), gender]),
-        el('div', { class: 'form-row' }, [el('label', { text: '走读住校' }), boarding]),
+        el('div', { class: 'form-row' }, [el('label', { text: '状态' }), boarding]),
         el('div', { class: 'form-row' }, [el('label', { text: '量化分' }), score])
       ],
       read: function () {

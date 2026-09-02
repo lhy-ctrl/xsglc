@@ -760,7 +760,7 @@
     // 各年级人数（高一/高二/高三）+ 男女生数量
     var gradeCount = { '高一': 0, '高二': 0, '高三': 0 };
     var gradeGender = { '高一': { male: 0, female: 0 }, '高二': { male: 0, female: 0 }, '高三': { male: 0, female: 0 } };
-    var totalMale = 0, totalFemale = 0;
+    var totalMale = 0, totalFemale = 0, boardingCount = 0;
     students.forEach(function (s) {
       var g = studentGrade(s.class);
       if (gradeCount[g] != null) gradeCount[g] += 1;
@@ -770,6 +770,7 @@
       }
       if (s.gender === '男') totalMale += 1;
       else if (s.gender === '女') totalFemale += 1;
+      if (s.boarding !== '走读') boardingCount += 1; // 住校人数（默认住校，仅"走读"不计）
     });
 
     // 请假折线数据：按日期汇总每日请假总数（升序），供首页折线图使用
@@ -794,7 +795,7 @@
       studentCount: students.length,
       gradeCount: gradeCount,
       gradeGender: gradeGender,
-      totalMale: totalMale, totalFemale: totalFemale,
+      totalMale: totalMale, totalFemale: totalFemale, boardingCount: boardingCount,
       todayScore: { add: addSum, sub: subSum, count: cnt },
       todayDiscipline: todayDiscipline,
       leaveCount: leaveCount, leaveDate: leaveDate,

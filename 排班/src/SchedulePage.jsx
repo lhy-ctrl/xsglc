@@ -107,6 +107,8 @@ function SchedulePage({ mode, onNavigate, embedded, customAssignments, setCustom
     const { mainDuty, subDuty } = record;
     mainDuty.forEach(post => {
       const postName = post.label || post.name || '';
+      // 办公室未安排人员时输出结果中不显示该岗位（提醒保留）
+      if ((post.key === 'office' || postName === '办公室') && (!post.person || post.person.name === '无' || post.person.name === '待分配')) return;
       lines.push(`${padPost(postName)}：${post.person.name || '待分配'}`);
     });
     const canteenNames = subDuty.canteen.map(p => p.name || '待分配').join(' ');

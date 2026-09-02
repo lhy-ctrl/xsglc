@@ -273,40 +273,45 @@ function StoreProvider({ children }) {
     return person.gender === post.gender;
   };
 
-  // 按岗位顺序轮换：每人独立维护岗位指针，从自己的指针位置开始找第一个能值且未满的岗位
+  // 按岗位顺序轮换：按岗位依次填充，候选按指针升序保证轮换公平
+  // 特殊优先级：寝室优先安排女生、餐厅优先安排男生
   // filterType: 'all'=全员模式, 'main'=分组主班, 'sub'=分组副班
   function scheduleByPostRotation(people, pointers, filterType) {
-    const posts = POST_ORDER;
-    const sorted = [...people].sort((a, b) => (pointers[a.id] || 0) - (pointers[b.id] || 0));
+    const posts = POST_ORDER.filter(p => p.capacity > 0 && (filterType === 'all' || p.type === filterType));
     const assignments = {};
     posts.forEach(p => { assignments[p.key] = []; });
+    const used = new Set();
     const newPointers = { ...pointers };
 
-    sorted.forEach(person => {
-      const ptr = pointers[person.id] || 0;
-      for (let i = 0; i < posts.length; i++) {
-        const idx = (ptr + i) % posts.length;
-        const post = posts[idx];
+    const nextPostIdx = (person, curIdx) => {
+      let nextIdx = (curIdx + 1) % POST_ORDER.length;
+      while (nextIdx !== curIdx) {
+        const np = POST_ORDER[nextIdx];
+        if (np.capacity > 0 &&
+            (filterType === 'all' || np.type === filterType) &&
+            (np.gender === 'any' || person.gender === np.gender)) break;
+        nextIdx = (nextIdx + 1) % POST_ORDER.length;
+      }
+      return nextIdx;
+    };
 
-        if (post.capacity === 0) continue;
-        if (filterType !== 'all' && post.type !== filterType) continue;
-        if (post.gender !== 'any' && person.gender !== post.gender) continue;
-        if (assignments[post.key].length >= post.capacity) continue;
-
+    posts.forEach(post => {
+      // 候选：未分配 + 性别符合，按指针升序（保证轮换公平）
+      let candidates = people.filter(p => !used.has(p.id) && genderMatch(p, post));
+      candidates.sort((a, b) => (pointers[a.id] || 0) - (pointers[b.id] || 0));
+      // 性别优先级：寝室优先女生、餐厅优先男生（其余按指针轮换）
+      if (post.key === 'dorm') {
+        candidates.sort((a, b) => (a.gender === 'female' ? 0 : 1) - (b.gender === 'female' ? 0 : 1));
+      } else if (post.key === 'canteen') {
+        candidates.sort((a, b) => (a.gender === 'male' ? 0 : 1) - (b.gender === 'male' ? 0 : 1));
+      }
+      const need = post.capacity;
+      for (let i = 0; i < candidates.length && assignments[post.key].length < need; i++) {
+        const person = candidates[i];
         assignments[post.key].push(person);
-
-        let nextIdx = (idx + 1) % posts.length;
-        while (nextIdx !== idx) {
-          const np = posts[nextIdx];
-          if (np.capacity > 0 &&
-              (filterType === 'all' || np.type === filterType) &&
-              (np.gender === 'any' || person.gender === np.gender)) {
-            break;
-          }
-          nextIdx = (nextIdx + 1) % posts.length;
-        }
-        newPointers[person.id] = nextIdx;
-        break;
+        used.add(person.id);
+        const curIdx = POST_ORDER.indexOf(post);
+        newPointers[person.id] = nextPostIdx(person, curIdx);
       }
     });
 
