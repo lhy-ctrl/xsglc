@@ -29,36 +29,29 @@ const defaultStaff = [
 ];
 
 // ===== 岗位定义 =====
+// 岗位只保留：大门口、寝室（男寝女寝合并）、操场、餐厅、餐厅口、办公室、科技楼
 const MAIN_POSTS = [
-  { key: 'gate',       label: '大门口',  gender: 'male'   },
-  { key: 'dorm_m',     label: '男寝',    gender: 'any'    },
-  { key: 'playground', label: '操场',    gender: 'male'   },
-  { key: 'dorm_f',     label: '女寝',    gender: 'female' },
-  { key: 'office',     label: '办公室',  gender: 'female' },
-  { key: 'tech',       label: '科技楼',  gender: 'male'   },
+  { key: 'gate',       label: '大门口',  gender: 'male' },
+  { key: 'dorm',       label: '寝室',    gender: 'any'  },
+  { key: 'playground', label: '操场',    gender: 'male' },
+  { key: 'office',     label: '办公室',  gender: 'any'  },
+  { key: 'tech',       label: '科技楼',  gender: 'male' },
 ];
 
 const SUB_POSITIONS = [
-  { key: 'garden',      label: '花园口',  gender: 'any', type: 'single'  },
+  { key: 'canteen',     label: '餐厅',    gender: 'any', type: 'canteen' },
   { key: 'canteenGate', label: '餐厅口',  gender: 'any', type: 'single'  },
-  { key: 'canteen1',    label: '餐厅1',   gender: 'any', type: 'canteen' },
-  { key: 'canteen2',    label: '餐厅2',   gender: 'any', type: 'canteen' },
-  { key: 'canteen3',    label: '餐厅3',   gender: 'any', type: 'canteen' },
-  { key: 'canteen4',    label: '餐厅4',   gender: 'any', type: 'canteen' },
 ];
 
-// 岗位顺序（用户指定）：大门口、花园口、男寝、厕所口、操场、餐厅、餐厅口、女寝、办公室、科技楼
+// 岗位顺序（用户指定）：大门口、寝室、操场、餐厅、餐厅口、办公室、科技楼
 // 每个人独立维护岗位指针，按此顺序轮换，遇到不符合性别的岗位跳过
 const POST_ORDER = [
   { key: 'gate',        label: '大门口',  gender: 'male',   type: 'main', capacity: 1 },
-  { key: 'garden',      label: '花园口',  gender: 'any',    type: 'sub',  capacity: 1 },
-  { key: 'dorm_m',      label: '男寝',    gender: 'any',    type: 'main', capacity: 1 },
-  { key: 'toilet',      label: '厕所口',  gender: 'any',    type: 'sub',  capacity: 0 }, // 由餐厅第1人兼任
+  { key: 'dorm',        label: '寝室',    gender: 'any',    type: 'main', capacity: 1 },
   { key: 'playground',  label: '操场',    gender: 'male',   type: 'main', capacity: 1 },
-  { key: 'canteen',     label: '餐厅',    gender: 'any',    type: 'sub',  capacity: 4 },
+  { key: 'canteen',     label: '餐厅',    gender: 'any',    type: 'sub',  capacity: 2 }, // 餐厅默认2人值班
   { key: 'canteenGate', label: '餐厅口',  gender: 'any',    type: 'sub',  capacity: 1 },
-  { key: 'dorm_f',      label: '女寝',    gender: 'female', type: 'main', capacity: 1 },
-  { key: 'office',      label: '办公室',  gender: 'female', type: 'main', capacity: 1 },
+  { key: 'office',      label: '办公室',  gender: 'any',    type: 'main', capacity: 0 }, // 办公室默认"无"
   { key: 'tech',        label: '科技楼',  gender: 'male',   type: 'main', capacity: 1 },
 ];
 
@@ -283,11 +276,7 @@ function StoreProvider({ children }) {
   // 按岗位顺序轮换：每人独立维护岗位指针，从自己的指针位置开始找第一个能值且未满的岗位
   // filterType: 'all'=全员模式, 'main'=分组主班, 'sub'=分组副班
   function scheduleByPostRotation(people, pointers, filterType) {
-    // 四男二女时女生不值男寝（女寝+办公室已用掉2个女生）
-    const femaleCount = people.filter(p => p.gender === 'female').length;
-    const dormMGender = (filterType === 'main' && femaleCount <= 2) ? 'male' : 'any';
-    const posts = POST_ORDER.map(p => p.key === 'dorm_m' ? { ...p, gender: dormMGender } : p);
-
+    const posts = POST_ORDER;
     const sorted = [...people].sort((a, b) => (pointers[a.id] || 0) - (pointers[b.id] || 0));
     const assignments = {};
     posts.forEach(p => { assignments[p.key] = []; });
@@ -321,10 +310,6 @@ function StoreProvider({ children }) {
       }
     });
 
-    if (assignments.canteen.length > 0) {
-      assignments.toilet = [assignments.canteen[0]];
-    }
-
     return { assignments, newPointers };
   }
 
@@ -332,13 +317,12 @@ function StoreProvider({ children }) {
   function buildDutyFromAssignments(assignments) {
     const mainDuty = POST_ORDER.filter(p => p.type === 'main').map(p => ({
       ...p,
-      person: assignments[p.key]?.[0] || { name: '待分配' },
+      // 办公室默认"无"，不自动分配
+      person: p.capacity === 0 ? { name: '无' } : (assignments[p.key]?.[0] || { name: '待分配' }),
     }));
     const subDuty = {
-      garden: assignments.garden?.[0] || { name: '待分配' },
       canteenGate: assignments.canteenGate?.[0] || { name: '待分配' },
       canteen: assignments.canteen || [],
-      toilet: assignments.toilet?.[0] || { name: '待分配' },
     };
     return { mainDuty, subDuty };
   }

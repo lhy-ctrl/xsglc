@@ -23,7 +23,6 @@
     { key: 'employee', label: '教官绩效' },
     { key: 'duty', label: '值班排班' },
     { key: 'dutyStaff', label: '员工管理' },
-    { key: 'salary', label: '员工工资' },
     { key: 'settings', label: '数据与设置' }
   ];
 
@@ -190,12 +189,13 @@
       if (!isNaN(n)) score = n;
     }
     var pc = parseClass(cls);
+    var bd = normalizeBoarding(boarding);
     return {
       class: pc ? pc.label : (cls != null ? String(cls).trim() : ''),
       name: name != null ? String(name).trim() : '',
       gender: gender != null ? String(gender).trim() : '',
       score: score,
-      boarding: normalizeBoarding(boarding)
+      boarding: bd || '住校' // 所有学生默认住校
     };
   }
 
@@ -757,11 +757,19 @@
     });
     warnings.sort(function (a, b) { return a.score - b.score; });
 
-    // 各年级人数（高一/高二/高三）
+    // 各年级人数（高一/高二/高三）+ 男女生数量
     var gradeCount = { '高一': 0, '高二': 0, '高三': 0 };
+    var gradeGender = { '高一': { male: 0, female: 0 }, '高二': { male: 0, female: 0 }, '高三': { male: 0, female: 0 } };
+    var totalMale = 0, totalFemale = 0;
     students.forEach(function (s) {
       var g = studentGrade(s.class);
       if (gradeCount[g] != null) gradeCount[g] += 1;
+      if (gradeGender[g]) {
+        if (s.gender === '男') gradeGender[g].male += 1;
+        else if (s.gender === '女') gradeGender[g].female += 1;
+      }
+      if (s.gender === '男') totalMale += 1;
+      else if (s.gender === '女') totalFemale += 1;
     });
 
     // 请假折线数据：按日期汇总每日请假总数（升序），供首页折线图使用
@@ -785,6 +793,8 @@
     return {
       studentCount: students.length,
       gradeCount: gradeCount,
+      gradeGender: gradeGender,
+      totalMale: totalMale, totalFemale: totalFemale,
       todayScore: { add: addSum, sub: subSum, count: cnt },
       todayDiscipline: todayDiscipline,
       leaveCount: leaveCount, leaveDate: leaveDate,

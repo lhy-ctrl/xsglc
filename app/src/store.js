@@ -36,7 +36,6 @@
       dutyGatePointer: 0,        // 大门口岗位指针
       dutyAfterSchoolPointer: 0, // 放学后岗位指针
       dutyScheduleHistory: [],   // 排班历史
-      dutySalary: {},            // 工资数据 {'YYYY_M': [{name, gender, ...}]}
       lastModified: 0,           // 最后修改时间戳（用于多设备同步）
       settings: { lastBackupAt: null, homeOrder: null, scoreMonths: null, adminPass: null, secondaryAdmins: [] }
     };
@@ -52,7 +51,7 @@
       if (Array.isArray(raw[k])) base[k] = raw[k];
     }
     // 对象类型字段
-    var objKeys = ['dutyAllPostPointers', 'dutyGroupPostPointers', 'dutySalary'];
+    var objKeys = ['dutyAllPostPointers', 'dutyGroupPostPointers'];
     for (var j = 0; j < objKeys.length; j++) {
       var ok = objKeys[j];
       if (raw[ok] && typeof raw[ok] === 'object') base[ok] = raw[ok];

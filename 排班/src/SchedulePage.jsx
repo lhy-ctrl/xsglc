@@ -109,15 +109,9 @@ function SchedulePage({ mode, onNavigate, embedded, customAssignments, setCustom
       const postName = post.label || post.name || '';
       lines.push(`${padPost(postName)}：${post.person.name || '待分配'}`);
     });
-    lines.push(`花园口：${subDuty.garden.name || '待分配'}`);
     const canteenNames = subDuty.canteen.map(p => p.name || '待分配').join(' ');
     lines.push(`餐  厅：${canteenNames}`);
     lines.push(`餐厅口：${subDuty.canteenGate.name || '待分配'}`);
-    lines.push(`厕所口：${subDuty.toilet?.name || '待分配'}`);
-    if (record.mode === 'all') {
-      const lunchPerson = subDuty.lunch || record.mainDuty.find(p => (p.key || p.label) === 'office' || (p.label || p.name) === '办公室')?.person;
-      lines.push(`中午收假条：${lunchPerson?.name || '待分配'}`);
-    }
     if (record.mode === 'group' && record.afterSchool) {
       lines.push('');
       lines.push('放学大门口：');
@@ -138,9 +132,7 @@ function SchedulePage({ mode, onNavigate, embedded, customAssignments, setCustom
       else assignedIds.add(person.id);
     };
     record.mainDuty.forEach(post => checkPerson(post.label || post.name, post.person));
-    checkPerson('花园口', record.subDuty.garden);
     checkPerson('餐厅口', record.subDuty.canteenGate);
-    checkPerson('厕所口', record.subDuty.toilet);
     record.subDuty.canteen.forEach((p, i) => checkPerson(`餐厅${i + 1}`, p));
     const unusedPeople = activeStaff.filter(p => !assignedIds.has(p.id) && p.name && p.name.trim());
     return { emptyPosts: [...new Set(emptyPosts)], unusedPeople };
@@ -169,10 +161,9 @@ function SchedulePage({ mode, onNavigate, embedded, customAssignments, setCustom
   const buildScheduleFromCustom = () => {
     const mainPosts = [
       { key: 'gate', label: '大门口', gender: 'male', type: 'main' },
-      { key: 'dorm_m', label: '男寝', gender: 'any', type: 'main' },
+      { key: 'dorm', label: '寝室', gender: 'any', type: 'main' },
       { key: 'playground', label: '操场', gender: 'male', type: 'main' },
-      { key: 'dorm_f', label: '女寝', gender: 'female', type: 'main' },
-      { key: 'office', label: '办公室', gender: 'female', type: 'main' },
+      { key: 'office', label: '办公室', gender: 'any', type: 'main' },
       { key: 'tech', label: '科技楼', gender: 'male', type: 'main' },
     ];
     const mainDuty = mainPosts.map(post => ({
@@ -180,11 +171,8 @@ function SchedulePage({ mode, onNavigate, embedded, customAssignments, setCustom
       person: customAssignments?.[post.key]?.[0] || { name: '待分配' },
     }));
     const subDuty = {
-      garden: customAssignments?.garden?.[0] || { name: '待分配' },
       canteenGate: customAssignments?.canteenGate?.[0] || { name: '待分配' },
       canteen: customAssignments?.canteen || [],
-      toilet: customAssignments?.toilet?.[0] || customAssignments?.canteen?.[0] || { name: '待分配' },
-      lunch: customAssignments?.lunch?.[0] || customAssignments?.office?.[0] || { name: '待分配' },
     };
     const d = new Date();
     d.setDate(d.getDate() + 1);

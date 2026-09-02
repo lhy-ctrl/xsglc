@@ -21,13 +21,11 @@ function DutyMainPage({ onNavigate }) {
 
   const CUSTOM_POSTS = [
     { key: 'gate',        label: '大门口',  gender: 'male',   type: 'main', capacity: 1 },
-    { key: 'garden',      label: '花园口',  gender: 'any',    type: 'sub',  capacity: 1 },
-    { key: 'dorm_m',      label: '男寝',    gender: 'any',    type: 'main', capacity: 1 },
+    { key: 'dorm',        label: '寝室',    gender: 'any',    type: 'main', capacity: 1 },
     { key: 'playground',  label: '操场',    gender: 'male',   type: 'main', capacity: 1 },
-    { key: 'canteen',     label: '餐厅',    gender: 'any',    type: 'sub',  capacity: 4 },
+    { key: 'canteen',     label: '餐厅',    gender: 'any',    type: 'sub',  capacity: 2 },
     { key: 'canteenGate', label: '餐厅口',  gender: 'any',    type: 'sub',  capacity: 1 },
-    { key: 'dorm_f',      label: '女寝',    gender: 'female', type: 'main', capacity: 1 },
-    { key: 'office',      label: '办公室',  gender: 'female', type: 'main', capacity: 1 },
+    { key: 'office',      label: '办公室',  gender: 'any',    type: 'main', capacity: 1 },
     { key: 'tech',        label: '科技楼',  gender: 'male',   type: 'main', capacity: 1 },
   ];
 
@@ -60,10 +58,9 @@ function DutyMainPage({ onNavigate }) {
     }
     const mainPosts = [
       { key: 'gate', label: '大门口', gender: 'male', type: 'main' },
-      { key: 'dorm_m', label: '男寝', gender: 'any', type: 'main' },
+      { key: 'dorm', label: '寝室', gender: 'any', type: 'main' },
       { key: 'playground', label: '操场', gender: 'male', type: 'main' },
-      { key: 'dorm_f', label: '女寝', gender: 'female', type: 'main' },
-      { key: 'office', label: '办公室', gender: 'female', type: 'main' },
+      { key: 'office', label: '办公室', gender: 'any', type: 'main' },
       { key: 'tech', label: '科技楼', gender: 'male', type: 'main' },
     ];
     const mainDuty = mainPosts.map(post => ({
@@ -71,10 +68,8 @@ function DutyMainPage({ onNavigate }) {
       person: customAssignments[post.key]?.[0] || { name: '待分配' },
     }));
     const subDuty = {
-      garden: customAssignments.garden?.[0] || { name: '待分配' },
       canteenGate: customAssignments.canteenGate?.[0] || { name: '待分配' },
       canteen: customAssignments.canteen || [],
-      toilet: customAssignments.canteen?.[0] || { name: '待分配' },
     };
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -154,40 +149,6 @@ function DutyMainPage({ onNavigate }) {
                   })}
                 </div>
               ))}
-              {/* 厕所口（可自定义，未填则默认餐厅第1人） */}
-              <div className="duty-custom-item">
-                <div className="duty-custom-post-label">
-                  <span>厕所口</span>
-                </div>
-                <select
-                  style={selectStyle}
-                  value={getCustomPerson('toilet', 0)?.id || ''}
-                  onChange={(e) => updateCustomPost('toilet', e.target.value ? parseInt(e.target.value) : null, 0)}
-                >
-                  <option value="">— 默认餐厅第1人 —</option>
-                  {staff.filter(p => p.name && p.name.trim()).map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-              {/* 中午收假条（可自定义，未填则默认办公室人员） */}
-              {mode === 'all' && (
-                <div className="duty-custom-item">
-                  <div className="duty-custom-post-label">
-                    <span>中午收假条</span>
-                  </div>
-                  <select
-                    style={selectStyle}
-                    value={getCustomPerson('lunch', 0)?.id || ''}
-                    onChange={(e) => updateCustomPost('lunch', e.target.value ? parseInt(e.target.value) : null, 0)}
-                  >
-                    <option value="">— 默认办公室人员 —</option>
-                    {staff.filter(p => p.name && p.name.trim()).map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
             {/* 底部按钮 */}
             <div className="duty-custom-footer">

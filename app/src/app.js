@@ -339,8 +339,7 @@
     settings: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3 17 7M7 17l-1.7 1.7"/></svg>',
     dorm: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/></svg>',
     duty: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="15" r="2.2"/><path d="M12 13v2l1.4 1"/></svg>',
-    dutyStaff: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.6"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-    salary: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>'
+    dutyStaff: '<svg class="lg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.6"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
   };
 
   // ---------- 模块注册 ----------
@@ -354,7 +353,6 @@
     employee: { title: '教官绩效', render: renderEmployee },
     duty: { title: '值班排班', render: renderDutySchedule },
     dutyStaff: { title: '员工管理', render: renderDutyStaff },
-    salary: { title: '员工工资', render: renderSalary },
     settings: { title: '数据与设置', render: renderSettings },
     dorm: { title: '寝室数据', render: renderDormRoom }
   };
@@ -414,16 +412,6 @@
             } catch (e) {}
           }
         });
-        // 迁移工资数据
-        if (!st.dutySalary || Object.keys(st.dutySalary).length === 0) {
-          st.dutySalary = {};
-          for (var i = 0; i < localStorage.length; i++) {
-            var key = localStorage.key(i);
-            if (key && key.indexOf('duty_salary_') === 0) {
-              try { st.dutySalary[key.replace('duty_salary_', '')] = JSON.parse(localStorage.getItem(key)); changed = true; } catch (e) {}
-            }
-          }
-        }
         if (changed) store.save();
       } catch (e) { /* 迁移失败不影响正常使用 */ }
     })();
@@ -925,7 +913,7 @@
       'home-today-score': function () { return homeCard('home-today-score', '+' + sm.todayScore.add + ' / ' + sm.todayScore.sub, '今日加/扣分（' + sm.todayScore.count + ' 笔）', 'score'); },
       'home-today-discipline': function () { return homeCard('home-today-discipline', String(sm.todayDiscipline), '今日违纪', 'discipline'); },
       'home-student-count': function () {
-        return homeCard('home-student-count', String(sm.studentCount), '学生总数', 'students', { extra: gradeCountHtml(sm.gradeCount) });
+        return homeCard('home-student-count', String(sm.studentCount), '学生总数', 'students', { extra: gradeCountHtml(sm) });
       }
     };
     order.forEach(function (key) {
@@ -946,12 +934,16 @@
     root.appendChild(warnPanel(sm.warnings));
   }
 
-  // 各年级人数小字（学生总数卡片内）
-  function gradeCountHtml(gradeCount) {
-    var gc = gradeCount || {};
+  // 各年级人数+男女生小字（学生总数卡片内）
+  function gradeCountHtml(sm) {
+    var gc = sm.gradeCount || {};
+    var gg = sm.gradeGender || {};
     var wrap = el('div', { class: 'grade-chips' });
+    // 总男女生数量
+    wrap.appendChild(el('span', { class: 'grade-chip', text: '男生 ' + (sm.totalMale || 0) + ' · 女生 ' + (sm.totalFemale || 0) }));
     ['高一', '高二', '高三'].forEach(function (g) {
-      wrap.appendChild(el('span', { class: 'grade-chip', text: g + ' ' + (gc[g] || 0) }));
+      var gd = gg[g] || { male: 0, female: 0 };
+      wrap.appendChild(el('span', { class: 'grade-chip', text: g + ' ' + (gc[g] || 0) + '（男' + gd.male + ' 女' + gd.female + '）' }));
     });
     return [wrap];
   }
@@ -1100,27 +1092,36 @@
     clear(panel);
     var list = C.sortStudentsByClass(C.filterStudents(store.getState().students, studentsFilter));
     var total = list.length;
-    // 按班级分组分页：每页只显示一个班级
-    var classGroups = [];
-    var classMap = {};
-    list.forEach(function (s) {
-      if (!classMap[s.class]) {
-        classMap[s.class] = [];
-        classGroups.push({ name: s.class, students: classMap[s.class] });
-      }
-      classMap[s.class].push(s);
-    });
-    var pageCount = Math.max(1, classGroups.length);
-    if (studentPage > pageCount) studentPage = pageCount;
-    if (studentPage < 1) studentPage = 1;
-    var currentClass = classGroups[studentPage - 1];
-    var pageList = currentClass ? currentClass.students : [];
-    var countText = '共 ' + total + ' 名学生 · ' + pageCount + ' 个班级';
-    if (pageCount > 1) countText += ' · 第 ' + studentPage + '/' + pageCount + ' 页（' + (currentClass ? currentClass.name : '') + '）';
+    var hasKeyword = studentsFilter.keyword && String(studentsFilter.keyword).trim() !== '';
+    var pageList, pageCount, countText;
+    if (hasKeyword) {
+      // 有搜索关键词：一页显示所有匹配学生（所有同名班级全部展示）
+      pageList = list;
+      pageCount = 1;
+      countText = '共 ' + total + ' 名学生';
+    } else {
+      // 按班级分组分页：每页只显示一个班级
+      var classGroups = [];
+      var classMap = {};
+      list.forEach(function (s) {
+        if (!classMap[s.class]) {
+          classMap[s.class] = [];
+          classGroups.push({ name: s.class, students: classMap[s.class] });
+        }
+        classMap[s.class].push(s);
+      });
+      pageCount = Math.max(1, classGroups.length);
+      if (studentPage > pageCount) studentPage = pageCount;
+      if (studentPage < 1) studentPage = 1;
+      var currentClass = classGroups[studentPage - 1];
+      pageList = currentClass ? currentClass.students : [];
+      countText = '共 ' + total + ' 名学生 · ' + pageCount + ' 个班级';
+      if (pageCount > 1) countText += ' · 第 ' + studentPage + '/' + pageCount + ' 页（' + (currentClass ? currentClass.name : '') + '）';
+    }
     panel.appendChild(el('div', { class: 'muted', id: 'student-count', text: countText }));
     var table = el('table', { style: 'table-layout:fixed;width:100%' }, [
       el('thead', {}, [el('tr', {}, [
-        el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '性别' }),
+        el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '性别' }), el('th', { text: '走读住校' }),
         el('th', { text: '班扣' }), el('th', { text: '班奖' }), el('th', { text: '政扣' }), el('th', { text: '政奖' }),
         el('th', { text: '量化分' }), canEditStudents() ? el('th', { text: '操作' }) : null
       ])])
@@ -1141,6 +1142,7 @@
         canEditStudents() ? editableCell('class', s.class, s.id, tr) : el('td', { text: s.class }),
         canEditStudents() ? editableCell('name', C.formatName(s.name), s.id, tr) : el('td', { text: C.formatName(s.name) }),
         canEditStudents() ? editableCell('gender', s.gender, s.id, tr, { select: ['男', '女'] }) : el('td', { text: s.gender }),
+        canEditStudents() ? editableCell('boarding', s.boarding || '住校', s.id, tr, { select: ['住校', '走读'] }) : el('td', { text: s.boarding || '住校' }),
         el('td', { text: String(totals.banKou) }),
         el('td', { text: String(totals.banJiang) }),
         el('td', { text: String(totals.zhengKou) }),
@@ -1254,17 +1256,22 @@
       el('option', { value: '男' }, ['男']), el('option', { value: '女' }, ['女'])
     ]);
     gender.value = data.gender || '男';
+    var boarding = el('select', { id: 'f-boarding' }, [
+      el('option', { value: '住校' }, ['住校']), el('option', { value: '走读' }, ['走读'])
+    ]);
+    boarding.value = data.boarding || '住校';
     var score = el('input', { type: 'number', id: 'f-score', value: (data.score != null ? String(data.score) : '100') });
     return {
       nodes: [
         el('div', { class: 'form-row' }, [el('label', { text: '班级（如 高一3班）' }), cls]),
         el('div', { class: 'form-row' }, [el('label', { text: '姓名' }), name]),
         el('div', { class: 'form-row' }, [el('label', { text: '性别' }), gender]),
+        el('div', { class: 'form-row' }, [el('label', { text: '走读住校' }), boarding]),
         el('div', { class: 'form-row' }, [el('label', { text: '量化分' }), score])
       ],
       read: function () {
         var sc = Number(score.value);
-        return { class: cls.value.trim(), name: name.value.trim(), gender: gender.value, score: isNaN(sc) ? 100 : sc };
+        return { class: cls.value.trim(), name: name.value.trim(), gender: gender.value, boarding: boarding.value, score: isNaN(sc) ? 100 : sc };
       }
     };
   }
@@ -1298,7 +1305,7 @@
       class: pc ? pc.label : (data.class || ''),
       name: data.name || '',
       gender: data.gender || '',
-      boarding: data.boarding || '',
+      boarding: data.boarding || '住校', // 所有学生默认住校
       score: (typeof data.score === 'number' ? data.score : 100)
     };
     store.getState().students.push(s);
@@ -1543,6 +1550,16 @@
       el('label', { text: '排序' }), sortSel
     ]);
     monthRow.appendChild(monthTools);
+    // 保存按钮：手动保存量化分数据并同步到学生信息
+    if (isAdmin) {
+      var saveBtn = el('button', { class: 'btn primary', id: 'score-save-btn', onclick: function () {
+        store.save();
+        if (typeof showToast === 'function') showToast('量化分已保存');
+        else if (typeof alert === 'function') alert('量化分已保存');
+        renderScoreTable();
+      } }, ['保存']);
+      monthRow.appendChild(saveBtn);
+    }
     root.appendChild(monthRow);
     root.appendChild(el('p', { class: 'muted', id: 'score-formula-hint' }));
     root.appendChild(el('div', { class: 'panel', id: 'score-panel' }));
@@ -1724,6 +1741,7 @@
     sortSel.value = discSort;
     root.appendChild(el('div', { class: 'toolbar' }, [
       isAdmin ? el('button', { class: 'btn primary', id: 'btn-record-disc', onclick: function () { openRecordDiscipline(); } }, ['＋记违纪']) : null,
+      isAdmin ? el('button', { class: 'btn danger', id: 'btn-clear-disc', onclick: function () { deleteAllDiscipline(); } }, ['删除所有违纪']) : null,
       el('span', { class: 'topbar-spacer' }), search, gradeSel, el('span', { text: '排序' }), sortSel
     ]));
     root.appendChild(el('div', { class: 'panel', id: 'disc-panel' }));
@@ -1834,6 +1852,19 @@
   }
 
   // 删除违纪：弹窗列出该生全部违纪记录，默认全选，可取消勾选只删除选中的几条
+  // 删除所有违纪记录（全部学生）
+  function deleteAllDiscipline() {
+    if (!guardAdmin('删除所有违纪')) return;
+    var st = store.getState();
+    var total = (st.disciplineLogs || []).length;
+    if (total === 0) { if (typeof alert === 'function') alert('暂无违纪记录'); return; }
+    if (typeof confirm === 'function' && !confirm('确定删除全部 ' + total + ' 条违纪记录？此操作不可恢复！')) return;
+    st.disciplineLogs = [];
+    store.save();
+    if (state.current === 'discipline') renderDisciplineTable();
+    if (typeof alert === 'function') alert('已删除全部违纪记录');
+  }
+
   function openDeleteDiscipline(studentId) {
     if (!guardAdmin('删除违纪')) return;
     var st = store.getState();
@@ -2298,466 +2329,6 @@
     mountDutyApp(root, 'staff');
   }
 
-  // ---------- 员工工资 ----------
-  function getDutyStaffList() {
-    try {
-      var st = store.getState();
-      return st.dutyStaff || [];
-    } catch (e) { return []; }
-  }
-  function sortStaffByRole(list) {
-    // 与员工管理页面排序一致：队长→副队长→(按分组A/B，组内组长在前)→按id
-    return list.slice().sort(function (a, b) {
-      // 队长、副队长排在最前面
-      var aTop = a.role === 'captain' ? 0 : (a.role === 'vice_captain' ? 1 : 2);
-      var bTop = b.role === 'captain' ? 0 : (b.role === 'vice_captain' ? 1 : 2);
-      if (aTop !== bTop) return aTop - bTop;
-      // 同级别按分组
-      if (a.group !== b.group) return a.group === 'A' ? -1 : 1;
-      // 同组内组长在前
-      var aLeader = (a.role === 'leader_a' || a.role === 'leader_b') ? 0 : 1;
-      var bLeader = (b.role === 'leader_a' || b.role === 'leader_b') ? 0 : 1;
-      if (aLeader !== bLeader) return aLeader - bLeader;
-      return a.id - b.id;
-    });
-  }
-  function loadSalaryData(year, month) {
-    try {
-      var st = store.getState();
-      var allSalary = st.dutySalary || {};
-      var key = year + '_' + month;
-      var data = allSalary[key] || {};
-      // 清理默认值：workDays=30且其他薪资都为0的，重置workDays为空
-      Object.keys(data).forEach(function (k) {
-        if (k === '_remark') return;
-        var s = data[k];
-        if (s && s.workDays === 30 && !s.baseSalary && !s.attendance && !s.performance &&
-            !s.allowance && !s.seniority && !s.bonus && !s.deduction && !s.actualManual) {
-          s.workDays = 0;
-        }
-      });
-      return data;
-    } catch (e) { return {}; }
-  }
-  function saveSalaryData(year, month, data) {
-    try {
-      var st = store.getState();
-      if (!st.dutySalary) st.dutySalary = {};
-      st.dutySalary[year + '_' + month] = data;
-      store.save();
-    } catch (e) {}
-  }
-  function calcActual(s) {
-    var base = parseFloat(s.baseSalary) || 0;
-    var att = parseFloat(s.attendance) || 0;
-    var perf = parseFloat(s.performance) || 0;
-    var days = parseFloat(s.workDays) || 0;
-    var allow = parseFloat(s.allowance) || 0;
-    var sen = parseFloat(s.seniority) || 0;
-    var bonus = parseFloat(s.bonus) || 0;
-    var ded = parseFloat(s.deduction) || 0;
-    return Math.round((base + att + perf) / 30 * days + allow + sen + bonus - ded);
-  }
-  // 获取某月某员工的绩效扣除汇总（金额+原因）
-  function getEmployeeDeduction(employeeId, year, month) {
-    var st = store.getState();
-    var records = st.employeeRecords || [];
-    var monthStr = year + '-' + (month < 10 ? '0' + month : month);
-    var total = 0;
-    var reasons = [];
-    records.forEach(function (r) {
-      if (String(r.employeeId) === String(employeeId) && r.date && r.date.substring(0, 7) === monthStr) {
-        total += parseFloat(r.amount) || 0;
-        if (r.reason) reasons.push(r.reason);
-      }
-    });
-    return { amount: total, reason: reasons.join('；') };
-  }
-  // 姓名对齐：两个字中间加全角空格
-  function formatName(name) {
-    if (!name) return '（未命名）';
-    var n = name.trim();
-    if (n.length === 2) return n.charAt(0) + '　' + n.charAt(1);
-    return n;
-  }
-  function renderSalary(root) {
-    if (!isAdmin) { root.appendChild(el('div', { class: 'muted', style: 'padding:40px;text-align:center', text: '仅管理员可查看此模块' })); return; }
-    var now = new Date();
-    var salaryYear = now.getFullYear();
-    var salaryMonth = now.getMonth() + 1;
-    var staffList = sortStaffByRole(getDutyStaffList());
-    var salaryData = loadSalaryData(salaryYear, salaryMonth);
-
-    // 工具栏
-    var toolbar = el('div', { class: 'toolbar salary-toolbar' });
-    var yearSel = el('select', { id: 'salary-year' });
-    for (var y = 2024; y <= 2030; y++) {
-      yearSel.appendChild(el('option', { value: y }, [y + '年']));
-    }
-    yearSel.value = salaryYear;
-    yearSel.onchange = function () { salaryYear = parseInt(this.value); salaryData = loadSalaryData(salaryYear, salaryMonth); renderSalaryTable(); };
-    var monthSel = el('select', { id: 'salary-month' });
-    for (var m = 1; m <= 12; m++) {
-      monthSel.appendChild(el('option', { value: m }, [m + '月']));
-    }
-    monthSel.value = salaryMonth;
-    monthSel.onchange = function () { salaryMonth = parseInt(this.value); salaryData = loadSalaryData(salaryYear, salaryMonth); renderSalaryTable(); };
-    var printBtn = el('button', { class: 'btn primary', onclick: function () {
-      var isPortrait = salaryWrap.classList.contains('salary-portrait');
-      var style = document.createElement('style');
-      style.id = 'salary-print-size';
-      style.textContent = '@page { size: A4 ' + (isPortrait ? 'portrait' : 'landscape') + '; margin: 0; }';
-      document.head.appendChild(style);
-      // 把工资表移到body直接子元素，确保打印时可见
-      var parent = salaryWrap.parentNode;
-      var nextSibling = salaryWrap.nextSibling;
-      document.body.appendChild(salaryWrap);
-      salaryWrap.classList.add('printing');
-      var cleanup = function () {
-        salaryWrap.classList.remove('printing');
-        if (parent) {
-          if (nextSibling) parent.insertBefore(salaryWrap, nextSibling);
-          else parent.appendChild(salaryWrap);
-        }
-        var s = document.getElementById('salary-print-size');
-        if (s && s.parentNode) s.parentNode.removeChild(s);
-        window.removeEventListener('afterprint', cleanup);
-      };
-      window.addEventListener('afterprint', cleanup);
-      setTimeout(function () { window.print(); }, 100);
-    } }, ['打印']);
-    toolbar.appendChild(el('span', { text: '年份：' }));
-    toolbar.appendChild(yearSel);
-    toolbar.appendChild(el('span', { text: '月份：' }));
-    toolbar.appendChild(monthSel);
-    toolbar.appendChild(printBtn);
-    root.appendChild(toolbar);
-
-    // 工资表容器（A4横版）
-    var salaryWrap = el('div', { class: 'salary-a4' });
-    root.appendChild(salaryWrap);
-
-    // 创建工资表数字输入框：0值显示为空、点击全选保持
-    function mkNumInput(value, oninput) {
-      var input = el('input', { type: 'number', value: value ? value : '', min: '0', step: '0.01' });
-      input.onfocus = function () { var self = this; setTimeout(function () { self.select(); }, 0); };
-      input.onmouseup = function (e) { e.preventDefault(); };
-      input.oninput = function () {
-        var v = parseFloat(this.value);
-        oninput(isNaN(v) ? 0 : v);
-      };
-      return input;
-    }
-
-    function renderSalaryTable() {
-      clear(salaryWrap);
-      var needSave = false;
-      staffList = sortStaffByRole(getDutyStaffList());
-      // 自动清理无实际内容的额外行（姓名为空且所有薪资为0）
-      var hasEmpty = false;
-      Object.keys(salaryData).forEach(function (key) {
-        if (key.indexOf('extra_') === 0 && salaryData[key].isExtra) {
-          var s = salaryData[key];
-          var hasContent = (s.name && s.name.trim()) ||
-            (s.workDays && s.workDays !== 30) ||
-            (s.baseSalary || 0) || (s.attendance || 0) || (s.performance || 0) ||
-            (s.allowance || 0) || (s.seniority || 0) || (s.bonus || 0) ||
-            (s.deduction || 0) || (s.reason && s.reason.trim()) ||
-            (s.actualManual != null);
-          if (!hasContent) { delete salaryData[key]; hasEmpty = true; }
-        }
-      });
-      if (hasEmpty) saveSalaryData(salaryYear, salaryMonth, salaryData);
-      // 计算所有行数（员工 + 额外行）
-      var rowCount = staffList.length;
-      Object.keys(salaryData).forEach(function (key) {
-        if (key.indexOf('extra_') === 0 && salaryData[key].isExtra) rowCount++;
-      });
-      // 超过16行用竖版，否则横版
-      var isPortrait = rowCount > 16;
-      salaryWrap.className = 'salary-a4' + (isPortrait ? ' salary-portrait' : ' salary-landscape');
-      // 标题
-      var title = el('div', { class: 'salary-title' }, [
-        el('div', { class: 'salary-company', text: '禹州市皓天拓展策划有限公司' }),
-        el('div', { class: 'salary-subtitle', text: salaryYear + '年' + salaryMonth + '月份员工工资（禹州四高）' })
-      ]);
-      salaryWrap.appendChild(title);
-
-      // 表格
-      var table = el('table', { class: 'salary-table' });
-      var thead = el('thead');
-      var headerRow = el('tr');
-      var headers = ['姓名', '性别', '工作时间', '底薪', '全勤', '绩效', '补助', '工龄', '奖金', '扣除', '实发', '奖、罚原因', '签名'];
-      headers.forEach(function (h) {
-        headerRow.appendChild(el('th', { text: h }));
-      });
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
-
-      var tbody = el('tbody');
-      var totalActual = 0;
-      // 更新总发工资
-      function updateTotal() {
-        var total = 0;
-        Object.keys(salaryData).forEach(function (k) {
-          var sd = salaryData[k];
-          if (!sd) return;
-          total += (sd.actualManual != null) ? sd.actualManual : calcActual(sd);
-        });
-        var totalEl = document.getElementById('salary-total');
-        if (totalEl) totalEl.textContent = total + '元';
-      }
-      // 收集所有行（员工 + 额外行）
-      var allRows = staffList.slice();
-      Object.keys(salaryData).forEach(function (key) {
-        if (key.indexOf('extra_') === 0 && salaryData[key].isExtra) {
-          allRows.push({ id: key, name: salaryData[key].name || '', gender: salaryData[key].gender || 'male', isExtra: true });
-        }
-      });
-      // 不足16行补充空白行
-      var blankCount = Math.max(0, 16 - allRows.length);
-      for (var bi = 0; bi < blankCount; bi++) {
-        var blankId = 'blank_' + bi;
-        allRows.push({ id: blankId, name: '', gender: '', isBlank: true });
-      }
-      allRows.forEach(function (person) {
-        var sid = person.id;
-        // 根据职位和性别设置默认薪资
-        var defaultSalary = { workDays: 0, baseSalary: 0, attendance: 0, performance: 0, allowance: 0, seniority: 0, bonus: 0, deduction: 0, reason: '' };
-        if (!person.isExtra && !person.isBlank && person.role) {
-          if (person.role === 'captain') {
-            defaultSalary.baseSalary = 3500; defaultSalary.attendance = 300; defaultSalary.performance = 1200;
-          } else if (person.role === 'vice_captain') {
-            defaultSalary.baseSalary = 2500; defaultSalary.attendance = 300; defaultSalary.performance = 100;
-          } else if (person.role === 'leader_a' || person.role === 'leader_b') {
-            defaultSalary.allowance = 100;
-          } else if (person.role === 'member') {
-            defaultSalary.baseSalary = (person.gender === 'female') ? 1800 : 2100;
-            defaultSalary.attendance = 300; defaultSalary.performance = 900;
-          }
-        }
-        var s = salaryData[sid] || defaultSalary;
-        // 与职位实时关联：根据当前职位，补全为0的默认字段（不覆盖已手动修改的值）
-        if (!person.isExtra && !person.isBlank && person.role) {
-          var changed = false;
-          if (person.role === 'captain') {
-            if (!s.baseSalary) { s.baseSalary = 3500; changed = true; }
-            if (!s.attendance) { s.attendance = 300; changed = true; }
-            if (!s.performance) { s.performance = 1200; changed = true; }
-          } else if (person.role === 'vice_captain') {
-            if (!s.baseSalary) { s.baseSalary = 2500; changed = true; }
-            if (!s.attendance) { s.attendance = 300; changed = true; }
-            if (!s.performance) { s.performance = 100; changed = true; }
-          } else if (person.role === 'leader_a' || person.role === 'leader_b') {
-            if (!s.allowance) { s.allowance = 100; changed = true; }
-          } else if (person.role === 'member') {
-            var defaultBase = (person.gender === 'female') ? 1800 : 2100;
-            // 底薪为0时设置默认值；性别变化时，如果底薪是旧默认值也更新
-            if (!s.baseSalary || s.baseSalary === 2100 || s.baseSalary === 1800) {
-              if (s.baseSalary !== defaultBase) { s.baseSalary = defaultBase; changed = true; }
-            }
-            if (!s.attendance) { s.attendance = 300; changed = true; }
-            if (!s.performance) { s.performance = 900; changed = true; }
-          }
-          if (changed) {
-            salaryData[sid] = s;
-            needSave = true;
-          }
-        }
-        // 使用默认值时保存到salaryData（仅正式员工）
-        if (!salaryData[sid] && !person.isExtra && !person.isBlank && person.role) {
-          salaryData[sid] = s;
-          needSave = true;
-        }
-        // 从教官绩效记录自动获取当月扣除和原因（仅正式员工）
-        if (!person.isExtra) {
-          var empDed = getEmployeeDeduction(sid, salaryYear, salaryMonth);
-          if (empDed.amount > 0) {
-            s.deduction = empDed.amount;
-            s.reason = empDed.reason;
-          }
-        }
-        var actual = (s.actualManual != null) ? s.actualManual : calcActual(s);
-        totalActual += actual;
-
-        var tr = el('tr');
-        // 姓名列（所有行可编辑）
-        var nameInput = el('input', { type: 'text', value: person.name || '', placeholder: '姓名' });
-        nameInput.onfocus = function () { this.select(); };
-        nameInput.oninput = function () {
-          s.name = this.value;
-          if (person.isBlank) {
-            // 空白行填写名字后转为额外行
-            var newId = 'extra_' + Date.now();
-            s.isExtra = true;
-            salaryData[newId] = s;
-            delete salaryData[sid];
-            saveSalaryData(salaryYear, salaryMonth, salaryData);
-            renderSalaryTable();
-            return;
-          }
-          if (person.isExtra) s.isExtra = true;
-          salaryData[sid] = s;
-          saveSalaryData(salaryYear, salaryMonth, salaryData);
-        };
-        nameInput.onblur = function () {
-          // 删除名字时清空当前行数据
-          if (!this.value.trim()) {
-            if (person.isExtra) {
-              delete salaryData[sid];
-              saveSalaryData(salaryYear, salaryMonth, salaryData);
-              renderSalaryTable();
-            } else {
-              // 正式员工清空薪资数据
-              s.baseSalary = 0; s.attendance = 0; s.performance = 0;
-              s.allowance = 0; s.seniority = 0; s.bonus = 0;
-              s.deduction = 0; s.reason = ''; s.actualManual = null;
-              salaryData[sid] = s;
-              saveSalaryData(salaryYear, salaryMonth, salaryData);
-              renderSalaryTable();
-            }
-          }
-        };
-        tr.appendChild(el('td', { class: 'salary-name' }, [nameInput]));
-        // 性别列（所有行可打字输入）
-        var genderShow = person.gender === 'male' ? '男' : (person.gender === 'female' ? '女' : (person.gender || ''));
-        var genderInput = el('input', { type: 'text', value: genderShow, placeholder: '性别', maxlength: '1', style: 'width:100%;border:none;outline:none;text-align:center;background:transparent;font-size:12px' });
-        genderInput.onfocus = function () { this.select(); };
-        genderInput.oninput = function () {
-          var v = this.value.trim();
-          s.gender = (v === '男') ? 'male' : (v === '女' ? 'female' : v);
-          if (person.isBlank) {
-            var newId2 = 'extra_' + Date.now();
-            s.isExtra = true;
-            salaryData[newId2] = s;
-            delete salaryData[sid];
-            saveSalaryData(salaryYear, salaryMonth, salaryData);
-            renderSalaryTable();
-            return;
-          }
-          salaryData[sid] = s;
-          saveSalaryData(salaryYear, salaryMonth, salaryData);
-        };
-        tr.appendChild(el('td', { class: 'salary-center' }, [genderInput]));
-        // 工作时间
-        var daysInput = mkNumInput(s.workDays, function (v) { s.workDays = v; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [daysInput]));
-        // 底薪
-        var baseInput = mkNumInput(s.baseSalary, function (v) { s.baseSalary = v; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input' }, [baseInput]));
-        // 全勤
-        var attInput = mkNumInput(s.attendance, function (v) { s.attendance = v; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [attInput]));
-        // 绩效
-        var perfInput = mkNumInput(s.performance, function (v) { s.performance = v; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [perfInput]));
-        // 补助
-        var allowInput = mkNumInput(s.allowance, function (v) { s.allowance = v; s.actualManual = null; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [allowInput]));
-        // 工龄
-        var senInput = mkNumInput(s.seniority, function (v) { s.seniority = v; s.actualManual = null; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [senInput]));
-        // 奖金
-        var bonusInput = mkNumInput(s.bonus, function (v) { s.bonus = v; s.actualManual = null; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [bonusInput]));
-        // 扣除
-        var dedInput = mkNumInput(s.deduction, function (v) { s.deduction = v; s.actualManual = null; updateRow(); });
-        tr.appendChild(el('td', { class: 'salary-input salary-input-narrow' }, [dedInput]));
-        // 实发（可手动编辑，默认自动计算）
-        var autoActual = calcActual(s);
-        var showActual = (s.actualManual != null) ? s.actualManual : autoActual;
-        var actualInput = el('input', { type: 'number', value: showActual ? showActual : '', min: '0', step: '1', style: 'font-weight:700;color:#c2410c;width:100%;border:none;outline:none;text-align:center;background:transparent;font-size:12px' });
-        actualInput.onfocus = function () { this.select(); };
-        actualInput.oninput = function () {
-          var v = parseFloat(this.value);
-          s.actualManual = isNaN(v) ? null : v;
-          if (person.isBlank) {
-            var newId4 = 'extra_' + Date.now();
-            s.isExtra = true;
-            salaryData[newId4] = s;
-            delete salaryData[sid];
-            saveSalaryData(salaryYear, salaryMonth, salaryData);
-            renderSalaryTable();
-            return;
-          }
-          salaryData[sid] = s;
-          saveSalaryData(salaryYear, salaryMonth, salaryData);
-          updateTotal();
-        };
-        var actualTd = el('td', { class: 'salary-actual' }, [actualInput]);
-        tr.appendChild(actualTd);
-        // 奖、罚原因
-        var reasonInput = el('input', { type: 'text', value: s.reason || '' });
-        reasonInput.onfocus = function () { this.select(); };
-        reasonInput.oninput = function () {
-          s.reason = this.value;
-          if (person.isBlank) {
-            var newId3 = 'extra_' + Date.now();
-            s.isExtra = true;
-            salaryData[newId3] = s;
-            delete salaryData[sid];
-            saveSalaryData(salaryYear, salaryMonth, salaryData);
-            renderSalaryTable();
-            return;
-          }
-          salaryData[sid] = s;
-          saveSalaryData(salaryYear, salaryMonth, salaryData);
-        };
-        tr.appendChild(el('td', { class: 'salary-reason' }, [reasonInput]));
-        // 签名
-        tr.appendChild(el('td', { class: 'salary-sign' }));
-
-        tbody.appendChild(tr);
-
-        function updateRow() {
-          if (person.isBlank) {
-            // 空白行修改数据后转为额外行
-            var newId = 'extra_' + Date.now();
-            s.isExtra = true;
-            salaryData[newId] = s;
-            delete salaryData[sid];
-            saveSalaryData(salaryYear, salaryMonth, salaryData);
-            renderSalaryTable();
-            return;
-          }
-          var a = calcActual(s);
-          if (s.actualManual == null) {
-            actualInput.value = a ? a : '';
-          }
-          salaryData[sid] = s;
-          saveSalaryData(salaryYear, salaryMonth, salaryData);
-          updateTotal();
-        }
-        function getRowActual() {
-          return (s.actualManual != null) ? s.actualManual : calcActual(s);
-        }
-      });
-      table.appendChild(tbody);
-      salaryWrap.appendChild(table);
-
-      // 底部备注 + 总发工资（同一排）
-      var footer = el('div', { class: 'salary-footer salary-footer-row' });
-      var remark = el('div', { class: 'salary-remark salary-remark-edit' });
-      var defaultRemark = '备注：各教官按考勤制度工作突出者奖励200元，工作落后者扣除100元。每月请假超过两天（包括两天）扣除全勤奖300元(请假一天扣当天全勤金额10元）旷工者扣除100元，给公司带来负面影响者扣除100元。满勤每月30天';
-      var remarkText = salaryData._remark || defaultRemark;
-      var remarkTextarea = el('textarea', { style: 'width:100%;border:none;outline:none;resize:none;background:transparent;font-size:13px;line-height:1.7;color:#444;font-family:inherit;rows:3' });
-      remarkTextarea.value = remarkText;
-      remarkTextarea.oninput = function () { salaryData._remark = this.value; saveSalaryData(salaryYear, salaryMonth, salaryData); };
-      remark.appendChild(remarkTextarea);
-      remark.appendChild(el('div', { class: 'salary-remark-sign', text: '皓天拓展有限公司' }));
-      var totalRow = el('div', { class: 'salary-total-row' });
-      totalRow.appendChild(el('span', { class: 'salary-total-label', text: '总发工资：' }));
-      totalRow.appendChild(el('span', { id: 'salary-total', class: 'salary-total-num', text: totalActual + '元' }));
-      footer.appendChild(remark);
-      footer.appendChild(totalRow);
-      salaryWrap.appendChild(footer);
-      // 有默认值需要保存时，保存数据
-      if (needSave) saveSalaryData(salaryYear, salaryMonth, salaryData);
-    }
-
-    renderSalaryTable();
-  }
-
   // ---------- 数据与设置 ----------
   function renderSettings(root) {
     // 卡片容器：一行两个，自动换行
@@ -2973,11 +2544,27 @@
         onclick: function () { dormArea = a; renderDormRoom(root); }
       }, [a]);
     }));
+    // 删除当前区域寝室信息按钮
+    var delAreaBtn = el('button', { class: 'btn danger', style: 'margin-left:auto', onclick: function () { deleteDormArea(dormArea); } }, ['删除当前区域']);
     root.appendChild(el('div', { class: 'panel' }, [
-      tabs,
+      el('div', { style: 'display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap' }, [tabs, delAreaBtn]),
       el('div', { id: 'dorm-room-list' })
     ]));
     renderDormRoomList();
+  }
+
+  // 删除当前区域全部寝室信息（对照表）
+  function deleteDormArea(area) {
+    if (!guardAdmin('删除寝室区域')) return;
+    var st = store.getState();
+    var list = st.dormMap || [];
+    var cnt = list.filter(function (d) { return String(d.area).trim() === area; }).length;
+    if (cnt === 0) { if (typeof alert === 'function') alert('该区域暂无寝室信息'); return; }
+    if (typeof confirm === 'function' && !confirm('确定删除「' + area + '」全部 ' + cnt + ' 条寝室信息？此操作不可恢复！')) return;
+    st.dormMap = list.filter(function (d) { return String(d.area).trim() !== area; });
+    store.save();
+    if (state.current === 'dorm') renderDormRoomList();
+    if (typeof alert === 'function') alert('已删除「' + area + '」全部寝室信息');
   }
 
   // 按楼层分组（寝室号百位即楼层），返回 [{floor, rooms}]

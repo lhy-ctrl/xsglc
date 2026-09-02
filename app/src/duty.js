@@ -110,64 +110,41 @@ const defaultStaff = [{
 }];
 
 // ===== 岗位定义 =====
+// 岗位只保留：大门口、寝室（男寝女寝合并）、操场、餐厅、餐厅口、办公室、科技楼
 const MAIN_POSTS = [{
   key: 'gate',
   label: '大门口',
   gender: 'male'
 }, {
-  key: 'dorm_m',
-  label: '男寝',
+  key: 'dorm',
+  label: '寝室',
   gender: 'any'
 }, {
   key: 'playground',
   label: '操场',
   gender: 'male'
 }, {
-  key: 'dorm_f',
-  label: '女寝',
-  gender: 'female'
-}, {
   key: 'office',
   label: '办公室',
-  gender: 'female'
+  gender: 'any'
 }, {
   key: 'tech',
   label: '科技楼',
   gender: 'male'
 }];
 const SUB_POSITIONS = [{
-  key: 'garden',
-  label: '花园口',
+  key: 'canteen',
+  label: '餐厅',
   gender: 'any',
-  type: 'single'
+  type: 'canteen'
 }, {
   key: 'canteenGate',
   label: '餐厅口',
   gender: 'any',
   type: 'single'
-}, {
-  key: 'canteen1',
-  label: '餐厅1',
-  gender: 'any',
-  type: 'canteen'
-}, {
-  key: 'canteen2',
-  label: '餐厅2',
-  gender: 'any',
-  type: 'canteen'
-}, {
-  key: 'canteen3',
-  label: '餐厅3',
-  gender: 'any',
-  type: 'canteen'
-}, {
-  key: 'canteen4',
-  label: '餐厅4',
-  gender: 'any',
-  type: 'canteen'
 }];
 
-// 岗位顺序（用户指定）：大门口、花园口、男寝、厕所口、操场、餐厅、餐厅口、女寝、办公室、科技楼
+// 岗位顺序（用户指定）：大门口、寝室、操场、餐厅、餐厅口、办公室、科技楼
 // 每个人独立维护岗位指针，按此顺序轮换，遇到不符合性别的岗位跳过
 const POST_ORDER = [{
   key: 'gate',
@@ -176,26 +153,12 @@ const POST_ORDER = [{
   type: 'main',
   capacity: 1
 }, {
-  key: 'garden',
-  label: '花园口',
-  gender: 'any',
-  type: 'sub',
-  capacity: 1
-}, {
-  key: 'dorm_m',
-  label: '男寝',
+  key: 'dorm',
+  label: '寝室',
   gender: 'any',
   type: 'main',
   capacity: 1
 }, {
-  key: 'toilet',
-  label: '厕所口',
-  gender: 'any',
-  type: 'sub',
-  capacity: 0
-},
-// 由餐厅第1人兼任
-{
   key: 'playground',
   label: '操场',
   gender: 'male',
@@ -206,26 +169,24 @@ const POST_ORDER = [{
   label: '餐厅',
   gender: 'any',
   type: 'sub',
-  capacity: 4
-}, {
+  capacity: 2
+},
+// 餐厅默认2人值班
+{
   key: 'canteenGate',
   label: '餐厅口',
   gender: 'any',
   type: 'sub',
   capacity: 1
 }, {
-  key: 'dorm_f',
-  label: '女寝',
-  gender: 'female',
-  type: 'main',
-  capacity: 1
-}, {
   key: 'office',
   label: '办公室',
-  gender: 'female',
+  gender: 'any',
   type: 'main',
-  capacity: 1
-}, {
+  capacity: 0
+},
+// 办公室默认"无"
+{
   key: 'tech',
   label: '科技楼',
   gender: 'male',
@@ -457,13 +418,7 @@ function StoreProvider({
   // 按岗位顺序轮换：每人独立维护岗位指针，从自己的指针位置开始找第一个能值且未满的岗位
   // filterType: 'all'=全员模式, 'main'=分组主班, 'sub'=分组副班
   function scheduleByPostRotation(people, pointers, filterType) {
-    // 四男二女时女生不值男寝（女寝+办公室已用掉2个女生）
-    const femaleCount = people.filter(p => p.gender === 'female').length;
-    const dormMGender = filterType === 'main' && femaleCount <= 2 ? 'male' : 'any';
-    const posts = POST_ORDER.map(p => p.key === 'dorm_m' ? {
-      ...p,
-      gender: dormMGender
-    } : p);
+    const posts = POST_ORDER;
     const sorted = [...people].sort((a, b) => (pointers[a.id] || 0) - (pointers[b.id] || 0));
     const assignments = {};
     posts.forEach(p => {
@@ -494,9 +449,6 @@ function StoreProvider({
         break;
       }
     });
-    if (assignments.canteen.length > 0) {
-      assignments.toilet = [assignments.canteen[0]];
-    }
     return {
       assignments,
       newPointers
@@ -507,21 +459,18 @@ function StoreProvider({
   function buildDutyFromAssignments(assignments) {
     const mainDuty = POST_ORDER.filter(p => p.type === 'main').map(p => ({
       ...p,
-      person: assignments[p.key]?.[0] || {
+      // 办公室默认"无"，不自动分配
+      person: p.capacity === 0 ? {
+        name: '无'
+      } : assignments[p.key]?.[0] || {
         name: '待分配'
       }
     }));
     const subDuty = {
-      garden: assignments.garden?.[0] || {
-        name: '待分配'
-      },
       canteenGate: assignments.canteenGate?.[0] || {
         name: '待分配'
       },
-      canteen: assignments.canteen || [],
-      toilet: assignments.toilet?.[0] || {
-        name: '待分配'
-      }
+      canteen: assignments.canteen || []
     };
     return {
       mainDuty,
@@ -1864,15 +1813,9 @@ function SchedulePage({
       const postName = post.label || post.name || '';
       lines.push(`${padPost(postName)}：${post.person.name || '待分配'}`);
     });
-    lines.push(`花园口：${subDuty.garden.name || '待分配'}`);
     const canteenNames = subDuty.canteen.map(p => p.name || '待分配').join(' ');
     lines.push(`餐  厅：${canteenNames}`);
     lines.push(`餐厅口：${subDuty.canteenGate.name || '待分配'}`);
-    lines.push(`厕所口：${subDuty.toilet?.name || '待分配'}`);
-    if (record.mode === 'all') {
-      const lunchPerson = subDuty.lunch || record.mainDuty.find(p => (p.key || p.label) === 'office' || (p.label || p.name) === '办公室')?.person;
-      lines.push(`中午收假条：${lunchPerson?.name || '待分配'}`);
-    }
     if (record.mode === 'group' && record.afterSchool) {
       lines.push('');
       lines.push('放学大门口：');
@@ -1894,9 +1837,7 @@ function SchedulePage({
       if (person.name === '待分配' || !person.id) emptyPosts.push(postLabel);else assignedIds.add(person.id);
     };
     record.mainDuty.forEach(post => checkPerson(post.label || post.name, post.person));
-    checkPerson('花园口', record.subDuty.garden);
     checkPerson('餐厅口', record.subDuty.canteenGate);
-    checkPerson('厕所口', record.subDuty.toilet);
     record.subDuty.canteen.forEach((p, i) => checkPerson(`餐厅${i + 1}`, p));
     const unusedPeople = activeStaff.filter(p => !assignedIds.has(p.id) && p.name && p.name.trim());
     return {
@@ -1932,8 +1873,8 @@ function SchedulePage({
       gender: 'male',
       type: 'main'
     }, {
-      key: 'dorm_m',
-      label: '男寝',
+      key: 'dorm',
+      label: '寝室',
       gender: 'any',
       type: 'main'
     }, {
@@ -1942,14 +1883,9 @@ function SchedulePage({
       gender: 'male',
       type: 'main'
     }, {
-      key: 'dorm_f',
-      label: '女寝',
-      gender: 'female',
-      type: 'main'
-    }, {
       key: 'office',
       label: '办公室',
-      gender: 'female',
+      gender: 'any',
       type: 'main'
     }, {
       key: 'tech',
@@ -1964,19 +1900,10 @@ function SchedulePage({
       }
     }));
     const subDuty = {
-      garden: customAssignments?.garden?.[0] || {
-        name: '待分配'
-      },
       canteenGate: customAssignments?.canteenGate?.[0] || {
         name: '待分配'
       },
-      canteen: customAssignments?.canteen || [],
-      toilet: customAssignments?.toilet?.[0] || customAssignments?.canteen?.[0] || {
-        name: '待分配'
-      },
-      lunch: customAssignments?.lunch?.[0] || customAssignments?.office?.[0] || {
-        name: '待分配'
-      }
+      canteen: customAssignments?.canteen || []
     };
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -3751,14 +3678,8 @@ function DutyMainPage({
     type: 'main',
     capacity: 1
   }, {
-    key: 'garden',
-    label: '花园口',
-    gender: 'any',
-    type: 'sub',
-    capacity: 1
-  }, {
-    key: 'dorm_m',
-    label: '男寝',
+    key: 'dorm',
+    label: '寝室',
     gender: 'any',
     type: 'main',
     capacity: 1
@@ -3773,7 +3694,7 @@ function DutyMainPage({
     label: '餐厅',
     gender: 'any',
     type: 'sub',
-    capacity: 4
+    capacity: 2
   }, {
     key: 'canteenGate',
     label: '餐厅口',
@@ -3781,15 +3702,9 @@ function DutyMainPage({
     type: 'sub',
     capacity: 1
   }, {
-    key: 'dorm_f',
-    label: '女寝',
-    gender: 'female',
-    type: 'main',
-    capacity: 1
-  }, {
     key: 'office',
     label: '办公室',
-    gender: 'female',
+    gender: 'any',
     type: 'main',
     capacity: 1
   }, {
@@ -3833,8 +3748,8 @@ function DutyMainPage({
       gender: 'male',
       type: 'main'
     }, {
-      key: 'dorm_m',
-      label: '男寝',
+      key: 'dorm',
+      label: '寝室',
       gender: 'any',
       type: 'main'
     }, {
@@ -3843,14 +3758,9 @@ function DutyMainPage({
       gender: 'male',
       type: 'main'
     }, {
-      key: 'dorm_f',
-      label: '女寝',
-      gender: 'female',
-      type: 'main'
-    }, {
       key: 'office',
       label: '办公室',
-      gender: 'female',
+      gender: 'any',
       type: 'main'
     }, {
       key: 'tech',
@@ -3865,16 +3775,10 @@ function DutyMainPage({
       }
     }));
     const subDuty = {
-      garden: customAssignments.garden?.[0] || {
-        name: '待分配'
-      },
       canteenGate: customAssignments.canteenGate?.[0] || {
         name: '待分配'
       },
-      canteen: customAssignments.canteen || [],
-      toilet: customAssignments.canteen?.[0] || {
-        name: '待分配'
-      }
+      canteen: customAssignments.canteen || []
     };
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -3960,33 +3864,7 @@ function DutyMainPage({
       key: p.id,
       value: p.id
     }, p.name)));
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "duty-custom-item"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "duty-custom-post-label"
-  }, /*#__PURE__*/React.createElement("span", null, "\u5395\u6240\u53E3")), /*#__PURE__*/React.createElement("select", {
-    style: selectStyle,
-    value: getCustomPerson('toilet', 0)?.id || '',
-    onChange: e => updateCustomPost('toilet', e.target.value ? parseInt(e.target.value) : null, 0)
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "\u2014 \u9ED8\u8BA4\u9910\u5385\u7B2C1\u4EBA \u2014"), staff.filter(p => p.name && p.name.trim()).map(p => /*#__PURE__*/React.createElement("option", {
-    key: p.id,
-    value: p.id
-  }, p.name)))), mode === 'all' && /*#__PURE__*/React.createElement("div", {
-    className: "duty-custom-item"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "duty-custom-post-label"
-  }, /*#__PURE__*/React.createElement("span", null, "\u4E2D\u5348\u6536\u5047\u6761")), /*#__PURE__*/React.createElement("select", {
-    style: selectStyle,
-    value: getCustomPerson('lunch', 0)?.id || '',
-    onChange: e => updateCustomPost('lunch', e.target.value ? parseInt(e.target.value) : null, 0)
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "\u2014 \u9ED8\u8BA4\u529E\u516C\u5BA4\u4EBA\u5458 \u2014"), staff.filter(p => p.name && p.name.trim()).map(p => /*#__PURE__*/React.createElement("option", {
-    key: p.id,
-    value: p.id
-  }, p.name))))), /*#__PURE__*/React.createElement("div", {
+  })))), /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-footer"
   }, /*#__PURE__*/React.createElement("button", {
     className: "btn btn-primary btn-sm",
