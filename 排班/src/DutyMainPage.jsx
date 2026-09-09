@@ -143,7 +143,7 @@ function DutyMainPage({ onNavigate }) {
                       >
                         <option value="">— 请选择 —</option>
                         {options.map(p => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
+                          <option key={p.id} value={p.id}>{p.group ? `[${p.group}组] ` : ''}{p.name}</option>
                         ))}
                       </select>
                     );
