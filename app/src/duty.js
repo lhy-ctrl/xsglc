@@ -1816,15 +1816,19 @@ function SchedulePage({
       mainDuty,
       subDuty
     } = record;
+    // 岗位前显示主班/副班标记
+    const dutyTypeTag = post => post && post.type === 'sub' ? '副班·' : '主班·';
+    // 分组值班：姓名前显示 A组/B组
+    const groupTag = p => record.mode === 'group' && p && p.group ? '[' + p.group + '组]' : '';
     mainDuty.forEach(post => {
       const postName = post.label || post.name || '';
       // 办公室未安排人员时输出结果中不显示该岗位（提醒保留）
       if ((post.key === 'office' || postName === '办公室') && (!post.person || post.person.name === '无' || post.person.name === '待分配')) return;
-      lines.push(`${padPost(postName)}：${post.person.name || '待分配'}`);
+      lines.push(`${dutyTypeTag(post)}${padPost(postName)}：${groupTag(post.person)}${post.person.name || '待分配'}`);
     });
-    const canteenNames = subDuty.canteen.map(p => p.name || '待分配').join(' ');
-    lines.push(`餐  厅：${canteenNames}`);
-    lines.push(`餐厅口：${subDuty.canteenGate.name || '待分配'}`);
+    const canteenNames = subDuty.canteen.map(p => groupTag(p) + (p.name || '待分配')).join(' ');
+    lines.push(`副班·餐  厅：${canteenNames}`);
+    lines.push(`副班·餐厅口：${groupTag(subDuty.canteenGate)}${subDuty.canteenGate.name || '待分配'}`);
     if (record.mode === 'group' && record.afterSchool) {
       lines.push('');
       lines.push('放学大门口：');
@@ -3854,7 +3858,9 @@ function DutyMainPage({
     className: "duty-custom-item"
   }, /*#__PURE__*/React.createElement("div", {
     className: "duty-custom-post-label"
-  }, /*#__PURE__*/React.createElement("span", null, post.label)), Array.from({
+  }, /*#__PURE__*/React.createElement("span", null, post.label), post.type && /*#__PURE__*/React.createElement("em", {
+    className: 'duty-post-type' + (post.type === 'sub' ? ' sub' : '')
+  }, post.type === 'sub' ? '副班' : '主班')), Array.from({
     length: post.capacity
   }).map((_, idx) => {
     const person = getCustomPerson(post.key, idx);

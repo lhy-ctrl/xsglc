@@ -129,6 +129,7 @@ function DutyMainPage({ onNavigate }) {
                 <div key={post.key} className="duty-custom-item">
                   <div className="duty-custom-post-label">
                     <span>{post.label}</span>
+                    {post.type && <em className={'duty-post-type' + (post.type === 'sub' ? ' sub' : '')}>{post.type === 'sub' ? '副班' : '主班'}</em>}
                   </div>
                   {Array.from({ length: post.capacity }).map((_, idx) => {
                     const person = getCustomPerson(post.key, idx);

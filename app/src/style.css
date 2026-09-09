@@ -760,6 +760,14 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .duty-app .duty-custom-post-label {
   display: flex; align-items: center; justify-content: space-between;
 }
+.duty-app .duty-post-type {
+  font-style: normal; font-size: 11px; font-weight: 600; line-height: 1;
+  padding: 3px 8px; border-radius: 999px;
+  background: rgba(37,99,235,.1); color: #2563eb;
+}
+.duty-app .duty-post-type.sub {
+  background: rgba(245,158,11,.14); color: #d97706;
+}
 .duty-app .duty-custom-post-label > span:first-child {
   font-size: 13px; font-weight: 600; color: #3a4a6a;
 }

@@ -3014,7 +3014,7 @@
     C.DORM_AREAS.forEach(function (a) {
       var roomsList = C.DORM_ROOMS[a] || [];
       var rooms = roomsList.length;
-      var cnt = 0, totalCapacity = 0;
+      var cnt = 0, totalCapacity = 0, occupiedRooms = 0;
       var notFull = [];
       var blankRooms = [];
       roomsList.forEach(function (room) {
@@ -3023,6 +3023,7 @@
         var agg = roomAgg[a + '|' + room];
         if (agg && agg.count != null && !isNaN(agg.count)) {
           cnt += agg.count;
+          if (agg.count > 0) occupiedRooms++;
           if (agg.count > 0 && agg.count < cap) {
             notFull.push({ room: room, count: agg.count, lack: cap - agg.count, classes: agg.classes ? agg.classes.slice() : [] });
           }
@@ -3034,7 +3035,7 @@
       totalCount += cnt;
       if (a === '男寝' || a === '科技楼') male += cnt;
       else female += cnt;
-      areas.push({ area: a, rooms: rooms, count: cnt, notFull: notFull, blankRooms: blankRooms, blank: blankRooms.length, totalCapacity: totalCapacity, free: totalCapacity - cnt });
+      areas.push({ area: a, rooms: rooms, count: cnt, occupiedRooms: occupiedRooms, notFull: notFull, blankRooms: blankRooms, blank: blankRooms.length, totalCapacity: totalCapacity, free: totalCapacity - cnt });
     });
     return { areas: areas, male: male, female: female, totalRooms: totalRooms, totalCount: totalCount };
   }
@@ -3048,8 +3049,8 @@
     d.areas.forEach(function (a) {
       cardRow.appendChild(el('div', { class: 'dorm-card link', onclick: function () { switchTo('dorm'); } }, [
         el('div', { class: 'dorm-card-name', text: a.area }),
-        el('div', { class: 'dorm-card-line', text: '已入住 ' + a.count + ' 人' }),
-        el('div', { class: 'dorm-card-line', text: '剩余空铺 ' + a.free + ' 人' })
+        el('div', { class: 'dorm-card-line', text: '已入住 ' + a.count + ' 人 · 已住 ' + a.occupiedRooms + ' 间' }),
+        el('div', { class: 'dorm-card-line', text: '剩余空铺 ' + a.free + ' 人 · 剩余空房 ' + a.blank + ' 间' })
       ]));
     });
     panel.appendChild(cardRow);
