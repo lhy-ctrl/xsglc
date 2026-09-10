@@ -617,15 +617,28 @@
     return { praise: praise, report: report, unresolved: unresolved };
   }
 
+  // 班级标签归一化：去括号/空白，中文数字转阿拉伯（"高一（8）班" → "高一8班"），用于班级对照比较
+  function normClassLabel(label) {
+    if (!label) return '';
+    var s = String(label).replace(/[（()）\s]/g, '');
+    var m = s.match(/^(高[一二三])([0-9一二三四五六七八九十]+)班$/);
+    if (!m) return s;
+    var n = cnToNum(m[2]);
+    if (n == null) return s;
+    return m[1] + n + '班';
+  }
+
   function verifyClass(entry, dormMap, issues) {
     if (!dormMap || !dormMap.length) return entry.classLabel;
     // 按通报区域核对：同名寝室号在男寝/女寝/科技楼各自独立，不合并为混寝
     var classes = findDormClassesInArea(dormMap, entry.room, entry.area);
     if (classes.length === 0) return entry.classLabel;
+    var normEntry = normClassLabel(entry.classLabel);
+    var normClasses = classes.map(normClassLabel);
     // 混寝：同一寝室号对应多个班级
     if (classes.length > 1) {
-      // 原始班级在对照表内 → 不更正，仅提示该寝室为混寝
-      if (classes.indexOf(entry.classLabel) !== -1) {
+      // 原始班级在对照表内（归一化后） → 不更正，仅提示该寝室为混寝
+      if (normClasses.indexOf(normEntry) !== -1) {
         return entry.classLabel;
       }
       var disp = dormClassDisplay(classes);
@@ -634,7 +647,7 @@
     }
     // 单个班级
     var correct = classes[0];
-    if (correct !== entry.classLabel) {
+    if (normClassLabel(correct) !== normEntry) {
       issues.push('原始『' + entry.classLabel + ' ' + entry.room + '』与对照表不符，' + entry.room + ' 实际属 ' + correct + '，已自动更正为 ' + correct);
       return correct;
     }
