@@ -609,7 +609,7 @@
             var cats = classifyReportDesc(r.desc);
             var e = Object.assign({}, base, { cats: cats, rawDesc: r.desc });
             report.push(e);
-            if (cats.length === 0 && r.desc) unresolved.push(pc.label + '（' + r.room + '）：' + r.desc);
+            if (cats.length === 0 && r.desc) unresolved.push(normClassLabel(pc.label) + '（' + r.room + '）：' + r.desc);
           }
         });
       }
@@ -665,14 +665,13 @@
     var mismatchIssues = [];
     var titleLabel = (typeof dateLabel === 'string' && dateLabel) ? dateLabel : monthDayLabel();
 
-    // 核对（以寝室号为准）并回填正确班级
+    // 核对（以寝室号为准）并回填正确班级；班级标签统一归一化为无括号格式（高一（8）班 → 高一8班）
     function fix(entry) {
       var label = verifyClass(entry, dormMap, mismatchIssues);
-      if (label !== entry.classLabel) {
-        var pc = parseClass(label);
-        entry.classLabel = label;
-        if (pc) { entry.grade = pc.grade; entry.classNo = pc.classNo; }
-      }
+      var norm = normClassLabel(label);
+      entry.classLabel = norm;
+      var pc = parseClass(norm);
+      if (pc) { entry.grade = pc.grade; entry.classNo = pc.classNo; }
       return entry;
     }
     parsed.praise.forEach(fix);
