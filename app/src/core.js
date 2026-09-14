@@ -609,7 +609,7 @@
             var cats = classifyReportDesc(r.desc);
             var e = Object.assign({}, base, { cats: cats, rawDesc: r.desc });
             report.push(e);
-            if (cats.length === 0 && r.desc) unresolved.push(normClassLabel(pc.label) + '（' + r.room + '）：' + r.desc);
+            if (cats.length === 0 && r.desc) unresolved.push(normClassLabel(pc.label) + ' ' + r.room + '：' + r.desc);
           }
         });
       }
@@ -722,7 +722,7 @@
           classRooms[label].push(room);
         }
       });
-      // 混寝行文案：同年级时第二班省略年级（高二5班和10班）
+      // 混寝行文案：同年级时第二班省略年级（高二5班、10班 混寝）
       function mixLabel(labels) {
         var first = labels[0], rest = labels.slice(1);
         var p0 = parseClass(first);
@@ -731,7 +731,7 @@
           if (p && p0 && p.grade === p0.grade) return p.classNo + '班';
           return l;
         });
-        return first + '和' + tail.join('和');
+        return first + '、' + tail.join('、');
       }
       var linesOut = [];
       order.map(function (k) { return { label: k, rooms: classRooms[k] }; }).sort(function (a, b) {
@@ -741,11 +741,11 @@
         return (pa ? pa.classNo : 999) - (pb ? pb.classNo : 999);
       }).forEach(function (g) {
         var rooms = g.rooms.slice().sort(function (a, b) { return Number(a) - Number(b); });
-        linesOut.push({ key: g.label, label: g.label + '（' + rooms.join('、') + '）' });
+        linesOut.push({ key: g.label, label: g.label + ' ' + rooms.join('、') });
       });
       mixRows.forEach(function (m) {
         var p0 = parseClass(m.labels[0]);
-        linesOut.push({ key: m.labels[0] + '+' + m.labels.join('+'), label: mixLabel(m.labels) + '（' + m.room + '）' });
+        linesOut.push({ key: m.labels[0] + '+' + m.labels.join('+'), label: mixLabel(m.labels) + ' 混寝 ' + m.room });
       });
       linesOut.sort(function (a, b) {
         var pa = parseClass(a.key), pb = parseClass(b.key);
@@ -766,7 +766,7 @@
       if (inArea.length === 0) { lines.push('（本区域本次无通报）'); return; }
       inArea.forEach(function (e) {
         var desc = e.cats.length ? e.cats.join('，') : e.rawDesc;
-        lines.push(e.classLabel + '（' + e.room + '）宿舍 ' + desc);
+        lines.push(e.classLabel + ' ' + e.room + '宿舍 ' + desc);
       });
     });
 
