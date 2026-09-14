@@ -689,24 +689,73 @@
 
     // 表扬
     lines.push('表现好的班级宿舍有：');
+    var anyPraise = false;
     AREAS.forEach(function (ar) {
       lines.push(ar);
       var inArea = parsed.praise.filter(function (e) { return e.area === ar; });
       if (inArea.length === 0) { lines.push('（本区域本次无表扬宿舍）'); return; }
-      // 按班级分组合并寝室
-      var groups = {};
-      var order = [];
+      anyPraise = true;
+      // 按寝室号聚合班级：单班级寝室按班级合并多寝室；多班级寝室（混寝）合并为“X班和Y班”
+      var roomMap = {};
       inArea.forEach(function (e) {
-        if (!groups[e.classLabel]) { groups[e.classLabel] = { label: e.classLabel, grade: e.grade, classNo: e.classNo, rooms: [] }; order.push(e.classLabel); }
-        if (groups[e.classLabel].rooms.indexOf(e.room) === -1) groups[e.classLabel].rooms.push(e.room);
+        if (!roomMap[e.room]) roomMap[e.room] = [];
+        roomMap[e.room].push(e);
       });
-      order.map(function (k) { return groups[k]; }).sort(function (a, b) {
-        var ga = gradeIndex(a.grade), gb = gradeIndex(b.grade); if (ga !== gb) return ga - gb; return a.classNo - b.classNo;
+      var classRooms = {};
+      var order = [];
+      var mixRows = [];
+      Object.keys(roomMap).forEach(function (room) {
+        var es = roomMap[room];
+        var labels = [];
+        es.forEach(function (e) { if (labels.indexOf(e.classLabel) === -1) labels.push(e.classLabel); });
+        if (labels.length > 1) {
+          labels.sort(function (a, b) {
+            var pa = parseClass(a), pb = parseClass(b);
+            var ga = pa ? gradeIndex(pa.grade) : 99, gb = pb ? gradeIndex(pb.grade) : 99;
+            if (ga !== gb) return ga - gb;
+            return (pa ? pa.classNo : 999) - (pb ? pb.classNo : 999);
+          });
+          mixRows.push({ labels: labels, room: room });
+        } else {
+          var label = labels[0];
+          if (!classRooms[label]) { classRooms[label] = []; order.push(label); }
+          classRooms[label].push(room);
+        }
+      });
+      // 混寝行文案：同年级时第二班省略年级（高二5班和10班）
+      function mixLabel(labels) {
+        var first = labels[0], rest = labels.slice(1);
+        var p0 = parseClass(first);
+        var tail = rest.map(function (l) {
+          var p = parseClass(l);
+          if (p && p0 && p.grade === p0.grade) return p.classNo + '班';
+          return l;
+        });
+        return first + '和' + tail.join('和');
+      }
+      var linesOut = [];
+      order.map(function (k) { return { label: k, rooms: classRooms[k] }; }).sort(function (a, b) {
+        var pa = parseClass(a.label), pb = parseClass(b.label);
+        var ga = pa ? gradeIndex(pa.grade) : 99, gb = pb ? gradeIndex(pb.grade) : 99;
+        if (ga !== gb) return ga - gb;
+        return (pa ? pa.classNo : 999) - (pb ? pb.classNo : 999);
       }).forEach(function (g) {
         var rooms = g.rooms.slice().sort(function (a, b) { return Number(a) - Number(b); });
-        lines.push(g.label + '（' + rooms.join('、') + '）宿舍 就寝秩序好 卫生干净整洁');
+        linesOut.push({ key: g.label, label: g.label + '（' + rooms.join('、') + '）' });
       });
+      mixRows.forEach(function (m) {
+        var p0 = parseClass(m.labels[0]);
+        linesOut.push({ key: m.labels[0] + '+' + m.labels.join('+'), label: mixLabel(m.labels) + '（' + m.room + '）' });
+      });
+      linesOut.sort(function (a, b) {
+        var pa = parseClass(a.key), pb = parseClass(b.key);
+        var ga = pa ? gradeIndex(pa.grade) : 99, gb = pb ? gradeIndex(pb.grade) : 99;
+        if (ga !== gb) return ga - gb;
+        return (pa ? pa.classNo : 999) - (pb ? pb.classNo : 999);
+      });
+      linesOut.forEach(function (r) { lines.push(r.label); });
     });
+    if (anyPraise) lines.push('就寝秩序好 卫生干净整洁');
 
     lines.push('');
     // 通报
