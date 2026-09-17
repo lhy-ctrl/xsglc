@@ -49,7 +49,7 @@ const POST_ORDER = [
   { key: 'gate',        label: '大门口',  gender: 'male',   type: 'main', capacity: 1 },
   { key: 'dorm',        label: '寝室',    gender: 'any',    type: 'main', capacity: 1 },
   { key: 'playground',  label: '操场',    gender: 'male',   type: 'main', capacity: 1 },
-  { key: 'canteen',     label: '餐厅',    gender: 'any',    type: 'sub',  capacity: 2 }, // 餐厅默认2人值班
+  { key: 'canteen',     label: '餐厅',    gender: 'any',    type: 'sub',  capacity: 3 }, // 餐厅默认3人值班
   { key: 'canteenGate', label: '餐厅口',  gender: 'any',    type: 'sub',  capacity: 1 },
   { key: 'office',      label: '办公室',  gender: 'any',    type: 'main', capacity: 0 }, // 办公室默认"无"
   { key: 'tech',        label: '科技楼',  gender: 'male',   type: 'main', capacity: 1 },

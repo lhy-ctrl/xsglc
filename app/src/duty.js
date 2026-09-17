@@ -169,9 +169,9 @@ const POST_ORDER = [{
   label: '餐厅',
   gender: 'any',
   type: 'sub',
-  capacity: 2
+  capacity: 3
 },
-// 餐厅默认2人值班
+// 餐厅默认3人值班
 {
   key: 'canteenGate',
   label: '餐厅口',
@@ -3703,7 +3703,7 @@ function DutyMainPage({
     label: '餐厅',
     gender: 'any',
     type: 'sub',
-    capacity: 2
+    capacity: 3
   }, {
     key: 'canteenGate',
     label: '餐厅口',
