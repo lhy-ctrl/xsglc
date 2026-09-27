@@ -499,6 +499,8 @@
     // 包装 save：管理员每次修改数据后自动调度上传云端（本地版/云端版统一）
     if (store && typeof store.save === 'function') {
       var baseSave = store.save;
+      // saveLocal：只写本地，不自动上传云端（量化管理分等模块手动点保存再上传）
+      store.saveLocal = function () { return baseSave(); };
       store.save = function () {
         var ret = baseSave();
         scheduleAutoPush();
@@ -1581,7 +1583,7 @@
 
   function saveScoreMonths() {
     store.getState().settings.scoreMonths = scoreMonths.slice();
-    store.save();
+    store.saveLocal();
   }
   // 重建月份 tab 条（含添加/删除按钮），并在无月份时隐藏
   function renderScoreMonthBar() {
@@ -1818,7 +1820,7 @@
             after: null
           });
         }
-        store.save();
+        store.saveLocal();
         renderScoreTable();
       }
       input.addEventListener('blur', commit);
@@ -1860,7 +1862,7 @@
     var month = (info.date || C.todayStr()).slice(0, 7);
     var d = {}; d[cat] = Math.abs(delta);
     C.setMonthScore(store.getState().scoreMonthly, studentId, month, d, 'add');
-    store.save();
+    store.saveLocal();
     if (state.current === 'score') renderScoreTable();
     return log;
   }
@@ -3153,8 +3155,8 @@
     return t ? ('最近备份：' + t) : '尚未备份';
   }
 
-  function addScoreItem(d) { if (!guardAdmin('新增量化项目')) return; var it = { id: C.uid('i'), type: d.type, name: d.name, delta: d.delta }; store.getState().scoreItems.push(it); store.save(); return it; }
-  function updateScoreItem(id, d) { if (!guardAdmin('编辑量化项目')) return; var l = store.getState().scoreItems; for (var i = 0; i < l.length; i++) if (l[i].id === id) { Object.assign(l[i], d); break; } store.save(); }
+  function addScoreItem(d) { if (!guardAdmin('新增量化项目')) return; var it = { id: C.uid('i'), type: d.type, name: d.name, delta: d.delta }; store.getState().scoreItems.push(it); store.saveLocal(); return it; }
+  function updateScoreItem(id, d) { if (!guardAdmin('编辑量化项目')) return; var l = store.getState().scoreItems; for (var i = 0; i < l.length; i++) if (l[i].id === id) { Object.assign(l[i], d); break; } store.saveLocal(); }
   function deleteScoreItem(id) { if (!guardAdmin('删除量化项目')) return; if (typeof confirm === 'function' && !confirm('确定删除该项目？')) return; var s = store.getState(); s.scoreItems = s.scoreItems.filter(function (x) { return x.id !== id; }); store.setState(s); }
 
   function addDormMap(d) { if (!guardFull('新增对照')) return; store.getState().dormMap.push({ room: d.room, class: d.class, area: d.area || '' }); store.save(); return d; }
