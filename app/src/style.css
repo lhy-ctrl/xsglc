@@ -910,3 +910,13 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
   flex: 1; min-width: 0;
 }
 
+
+
+/* 违纪汇总：三块年级卡片 */
+.disc-summary-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
+.disc-summary-card { flex: 1 1 0; min-width: 260px; border: 1px solid var(--bd-color, #e2e4ea); border-radius: 10px; padding: 12px 14px; background: var(--card-bg, #fff); }
+.disc-summary-card h4 { margin: 0 0 10px; font-size: 15px; color: #1f2937; }
+.disc-summary-card table { width: 100%; border-collapse: collapse; }
+.disc-summary-card th, .disc-summary-card td { padding: 6px 8px; border-bottom: 1px solid #eef0f4; font-size: 13px; text-align: left; white-space: normal; word-break: break-word; }
+.disc-summary-card th { color: #6b7280; font-weight: 600; background: #f8fafc; }
+.disc-summary-card .disc-reasons { color: #4b5563; }

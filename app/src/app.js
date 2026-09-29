@@ -1914,16 +1914,32 @@
       ]));
     });
     table.appendChild(tb); panel.appendChild(table);
-    // 班级汇总
-    var sum = $('#disc-summary'); if (sum) { clear(sum); sum.appendChild(el('h3', { text: '各班违纪次数汇总' }));
-      var summary = C.disciplineClassSummary(st.students, st.disciplineLogs);
-      if (summary.length === 0) sum.appendChild(el('p', { class: 'muted', text: '暂无违纪记录' }));
-      else { var t2 = el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '班级' }), el('th', { text: '违纪次数' }), el('th', { text: '违纪说明' })])])]); var tb2 = el('tbody', {});
-        summary.forEach(function (r) {
-          var clsReasons = C.disciplineClassReasons(st.students, st.disciplineLogs, r.class);
-          tb2.appendChild(el('tr', {}, [el('td', { text: r.class }), el('td', { text: String(r.count) }), el('td', { class: 'disc-reasons', text: clsReasons.length ? clsReasons.join('、') : '—' })]));
-        });
-        t2.appendChild(tb2); sum.appendChild(t2); }
+    // 班级汇总：三个年级各一块卡片，按班级顺序，只显示当月违纪
+    var sum = $('#disc-summary'); if (sum) { clear(sum); sum.appendChild(el('h3', { text: '各班违纪次数汇总（当月）' }));
+      var month = C.todayStr().slice(0, 7);
+      var byGrade = {};
+      C.GRADES.forEach(function (g) { byGrade[g] = []; });
+      C.disciplineClassSummaryMonth(st.students, st.disciplineLogs, month).forEach(function (r) {
+        var g = C.studentGrade(r.class);
+        if (!byGrade[g]) byGrade[g] = [];
+        byGrade[g].push(r);
+      });
+      var grid = el('div', { class: 'disc-summary-grid' });
+      C.GRADES.forEach(function (g) {
+        var rows = byGrade[g] || [];
+        var card = el('div', { class: 'disc-summary-card' }, [el('h4', { text: g + '年级' })]);
+        if (rows.length === 0) card.appendChild(el('p', { class: 'muted', text: '本月暂无违纪' }));
+        else {
+          var t2 = el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '班级' }), el('th', { text: '违纪人数' }), el('th', { text: '违纪次数' }), el('th', { text: '违纪原因' })])])]);
+          var tb2 = el('tbody', {});
+          rows.forEach(function (r) {
+            tb2.appendChild(el('tr', {}, [el('td', { text: r.class }), el('td', { text: String(r.persons) }), el('td', { text: String(r.count) }), el('td', { class: 'disc-reasons', text: r.reasons.length ? r.reasons.join('、') : '—' })]));
+          });
+          t2.appendChild(tb2); card.appendChild(t2);
+        }
+        grid.appendChild(card);
+      });
+      sum.appendChild(grid);
     }
   }
   function openRecordDiscipline(presetId) {
@@ -1943,16 +1959,21 @@
     ]);
     var dateInp = el('input', { type: 'date', id: 'dr-date', value: C.todayStr() });
     var note = el('input', { type: 'text', id: 'dr-note', placeholder: '说明（可选）' });
+    var reportSel = el('select', { id: 'dr-reported' }, [
+      el('option', { value: '0', text: '未通报' }),
+      el('option', { value: '1', text: '通报' })
+    ]);
     openModal('记一笔违纪', [
       el('div', { class: 'form-row' }, [el('label', { text: '学生' }), stuInp, stuList]),
       el('div', { class: 'form-row' }, [el('label', { text: '违纪说明' }), reasonSel]),
+      el('div', { class: 'form-row' }, [el('label', { text: '通报/未通报' }), reportSel]),
       el('div', { class: 'form-row' }, [el('label', { text: '日期' }), dateInp]),
       el('div', { class: 'form-row' }, [el('label', { text: '说明' }), note])
     ], function () {
       var val = stuInp.value.trim();
       var matched = students.filter(function (s) { return (s.class + ' ' + s.name) === val || s.name === val; })[0];
       if (!matched) { if (typeof alert === 'function') alert('未找到匹配的学生，请检查输入'); return false; }
-      recordDiscipline(matched.id, { date: dateInp.value || C.todayStr(), note: note.value.trim(), reason: reasonSel.value });
+      recordDiscipline(matched.id, { date: dateInp.value || C.todayStr(), note: note.value.trim(), reason: reasonSel.value, reported: reportSel.value === '1' });
     }, '保存');
   }
   // 更改违纪说明：列出该生全部违纪记录，可逐条修改 reason（违纪原因）
@@ -2038,7 +2059,7 @@
   function recordDiscipline(studentId, info) {
     if (!guardAdmin('记违纪')) return null;
     var date = info.date || C.todayStr();
-    var log = { id: C.uid('d'), studentId: studentId, date: date, type: info.type || '', note: info.note || '', reason: info.reason || '' };
+    var log = { id: C.uid('d'), studentId: studentId, date: date, type: info.type || '', note: info.note || '', reason: info.reason || '', reported: info.reported === true };
     store.getState().disciplineLogs.push(log);
     // 违纪仅记录次数，不关联量化分（不写政扣、不改学生量化分）
     store.save();

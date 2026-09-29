@@ -418,7 +418,29 @@
     return Object.keys(m).map(function (k) { return { class: k, count: m[k] }; })
       .sort(function (a, b) { return b.count - a.count; });
   }
-
+  // 指定月份按班级汇总违纪：[{class, count, persons, reasons}]，按班级顺序（高一1班、高一2班…）
+  function disciplineClassSummaryMonth(students, logs, month) {
+    var idToClass = {};
+    (students || []).forEach(function (s) { idToClass[s.id] = s.class; });
+    var m = {};
+    (logs || []).forEach(function (l) {
+      if (month && String(l.date).indexOf(month) !== 0) return; // 只统计该月份
+      var cls = idToClass[l.studentId] || '(未知班级)';
+      if (!m[cls]) m[cls] = { count: 0, persons: {}, reasons: {} };
+      m[cls].count++;
+      m[cls].persons[l.studentId] = true;
+      var r = l.reason || '';
+      if (r) m[cls].reasons[r] = true;
+    });
+    return Object.keys(m).map(function (k) {
+      return { class: k, count: m[k].count, persons: Object.keys(m[k].persons).length, reasons: Object.keys(m[k].reasons) };
+    }).sort(function (a, b) {
+      var pa = parseClass(a.class), pb = parseClass(b.class);
+      var ga = pa ? gradeIndex(pa.grade) : 99, gb = pb ? gradeIndex(pb.grade) : 99;
+      if (ga !== gb) return ga - gb;
+      return (pa ? pa.classNo : 999) - (pb ? pb.classNo : 999);
+    });
+  }
   // ================= 请假名单整理器 =================
   var CLASS_TOKEN_RE = /高[一二三][0-9一二三四五六七八九十]+班/g;
 
@@ -971,6 +993,7 @@
     studentDisciplineReasons: studentDisciplineReasons,
     disciplineClassReasons: disciplineClassReasons,
     disciplineClassSummary: disciplineClassSummary,
+    disciplineClassSummaryMonth: disciplineClassSummaryMonth,
     formatLeave: formatLeave,
     formatReport: formatReport,
     computeHomeSummary: computeHomeSummary,
