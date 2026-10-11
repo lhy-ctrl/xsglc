@@ -1970,7 +1970,7 @@
       sel.value = lg.reason || '';
       selByLog[lg.id] = sel;
       return el('div', { class: 'form-row' }, [
-        el('label', { text: lg.date }),
+        el('label', { text: lg.date + (lg.reported ? '　（通报）' : '　（未通报）') }),
         sel
       ]);
     });
@@ -2013,7 +2013,7 @@
       cb.checked = true; // 默认全选
       cbByLog[lg.id] = cb;
       var reasonText = lg.reason || lg.type || '';
-      var label = lg.date + (reasonText ? '　' + reasonText : '') + (lg.note ? '　（' + lg.note + '）' : '');
+      var label = lg.date + (lg.reported ? '　（通报）' : '　（未通报）') + (reasonText ? '　' + reasonText : '') + (lg.note ? '　（' + lg.note + '）' : '');
       return el('label', { class: 'form-row del-disc-row' }, [
         cb,
         el('span', { text: label })
