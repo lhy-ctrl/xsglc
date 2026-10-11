@@ -1772,6 +1772,7 @@
         el('td', { class: C.scoreClass(q.score), text: String(q.score) })
       ]));
     });
+    if (list.length === 0) panel.appendChild(el('p', { class: 'muted', text: (discFrom || discTo) ? '该时间段暂无违纪记录' : '暂无违纪记录' }));
     table.appendChild(tb); panel.appendChild(table);
     // 翻页栏（大数据量时显示）
     if (pageCount > 1) panel.appendChild(pagerNode('score', scorePage, pageCount, (scoreSort === 'class' ? classGroups : null)));
@@ -1882,7 +1883,13 @@
     root.appendChild(el('div', { class: 'toolbar' }, [
       isAdmin ? el('button', { class: 'btn primary', id: 'btn-record-disc', onclick: function () { openRecordDiscipline(); } }, ['＋记违纪']) : null,
       isAdmin ? el('button', { class: 'btn danger', id: 'btn-clear-disc', onclick: function () { deleteAllDiscipline(); } }, ['删除所有违纪']) : null,
-      el('span', { class: 'topbar-spacer' }), search, gradeSel, el('span', { text: '排序' }), sortSel
+      el('span', { class: 'topbar-spacer' }), search, gradeSel,
+      el('span', { class: 'muted', text: '从' }),
+      el('input', { type: 'date', id: 'disc-list-from', value: (state.disciplineListFrom || ''), onchange: function (e) { state.disciplineListFrom = e.target.value || ''; renderDisciplineTable(); } }),
+      el('span', { class: 'muted', text: '到' }),
+      el('input', { type: 'date', id: 'disc-list-to', value: (state.disciplineListTo || ''), onchange: function (e) { state.disciplineListTo = e.target.value || ''; renderDisciplineTable(); } }),
+      el('button', { class: 'btn btn-sm', type: 'button', onclick: function () { state.disciplineListFrom = ''; state.disciplineListTo = ''; renderDisciplineTable(); } }, ['全部']),
+      el('span', { text: '排序' }), sortSel
     ]));
     root.appendChild(el('div', { class: 'panel', id: 'disc-panel' }));
     root.appendChild(el('div', { class: 'panel', id: 'disc-summary' }));
@@ -1891,7 +1898,16 @@
   function renderDisciplineTable() {
     var panel = $('#disc-panel'); if (!panel) return; clear(panel);
     var st = store.getState();
-    var counts = C.disciplineCountByStudent(st.disciplineLogs);
+    // 列表日期范围筛选（空串不限）
+    var discFrom = state.disciplineListFrom || '';
+    var discTo = state.disciplineListTo || '';
+    var logsRange = (st.disciplineLogs || []).filter(function (l) {
+      var d = String(l.date);
+      if (discFrom && d < discFrom) return false;
+      if (discTo && d > discTo) return false;
+      return true;
+    });
+    var counts = C.disciplineCountByStudent(logsRange);
     var list = C.filterStudents(st.students, discFilter);
     if (discSort === 'class') list = C.sortStudentsByClass(list);
     else list = list.slice().sort(function (a, b) { return (counts[b.id] || 0) - (counts[a.id] || 0); });
@@ -1902,9 +1918,9 @@
     var tb = el('tbody', {});
     list.forEach(function (s) {
       var cnt = counts[s.id] || 0;
-      var reasons = C.studentDisciplineReasons(st.disciplineLogs, s.id);
-      // 该生全部违纪日期（按时间升序），用于显示通报日期列；是否通报取最近一条的状态
-      var myLogs = st.disciplineLogs.filter(function (lg) { return lg.studentId === s.id; });
+      var reasons = C.studentDisciplineReasons(logsRange, s.id);
+      // 该生范围内全部违纪日期（按时间升序），用于显示通报日期列；是否通报取最近一条的状态
+      var myLogs = logsRange.filter(function (lg) { return lg.studentId === s.id; });
       var dates = {};
       myLogs.forEach(function (lg) { dates[String(lg.date)] = true; });
       var repDate = Object.keys(dates).sort().join('、') || '—';
