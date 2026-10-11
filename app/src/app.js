@@ -1906,16 +1906,16 @@
       // 该生最近一条违纪记录（按日期最大），用于显示通报日期/是否通报
       var latest = null;
       st.disciplineLogs.forEach(function (lg) { if (lg.studentId === s.id && (!latest || String(lg.date) > String(latest.date))) latest = lg; });
-      var repDate = (latest && latest.reported) ? latest.date : '—';
+      var repDate = latest ? latest.date : '—';
       var repText = latest ? (latest.reported ? '通报' : '未通报') : '—';
       tb.appendChild(el('tr', { 'data-id': s.id }, [
         el('td', { text: s.class }), el('td', { text: C.formatName(s.name) }),
         el('td', { class: (cnt > 0 ? 'score-red' : ''), text: String(cnt) }),
         el('td', { class: 'disc-reasons', text: reasons.length ? reasons.join('、') : '—' }),
         el('td', { text: repDate }),
-        el('td', { class: (latest && latest.reported ? 'rep-tag rep-yes' : 'rep-tag'), text: repText }),
+        el('td', { text: repText }),
         el('td', { class: 'ops' }, [
-          isAdmin ? el('span', { class: 'link', onclick: function () { openEditDiscipline(s.id); } }, ['更改说明']) : null,
+          isAdmin ? el('span', { class: 'link', onclick: function () { openEditDiscipline(s.id); } }, ['修改']) : null,
           isAdmin ? el('span', { class: 'link del', onclick: function () { openDeleteDiscipline(s.id); } }, ['删除']) : null
         ])
       ]));
@@ -1958,13 +1958,14 @@
       recordDiscipline(matched.id, { date: dateInp.value || C.todayStr(), note: note.value.trim(), reason: reasonSel.value, reported: reportSel.value === '1' });
     }, '保存');
   }
-  // 更改违纪说明：列出该生全部违纪记录，可逐条修改 reason（违纪原因）
+  // 修改违纪：列出该生全部违纪记录，可逐条修改原因与是否通报
   function openEditDiscipline(studentId) {
-    if (!guardAdmin('更改说明')) return;
+    if (!guardAdmin('修改违纪')) return;
     var s = store.getState().students.filter(function (x) { return x.id === studentId; })[0]; if (!s) return;
     var logs = studentDisciplineLogs(studentId);
     if (logs.length === 0) { if (typeof alert === 'function') alert('该生暂无违纪记录'); return; }
     var selByLog = {};
+    var repByLog = {};
     var body = logs.map(function (lg) {
       var sel = el('select', { class: 'edit-reason', 'data-log': lg.id }, [
         el('option', { value: '', text: '（不选）' }),
@@ -1976,17 +1977,27 @@
       ]);
       sel.value = lg.reason || '';
       selByLog[lg.id] = sel;
+      var repSel = el('select', { class: 'edit-rep', 'data-log': lg.id }, [
+        el('option', { value: '0', text: '未通报' }),
+        el('option', { value: '1', text: '通报' })
+      ]);
+      repSel.value = lg.reported ? '1' : '0';
+      repByLog[lg.id] = repSel;
       return el('div', { class: 'form-row' }, [
-        el('label', { text: lg.date + (lg.reported ? '　（通报）' : '　（未通报）') }),
+        el('label', { text: lg.date }),
+        el('span', { class: 'muted', text: '是否通报' }),
+        repSel,
         sel
       ]);
     });
-    openModal('更改违纪说明 —— ' + s.class + ' ' + s.name, body, function () {
+    openModal('修改违纪 —— ' + s.class + ' ' + s.name, body, function () {
       var st = store.getState();
       var changed = false;
       st.disciplineLogs.forEach(function (lg) {
         var sel = selByLog[lg.id];
         if (sel && sel.value !== lg.reason) { lg.reason = sel.value; changed = true; }
+        var repSel = repByLog[lg.id];
+        if (repSel && (repSel.value === '1') !== !!lg.reported) { lg.reported = repSel.value === '1'; changed = true; }
       });
       if (changed) store.save();
       if (state.current === 'discipline') renderDisciplineTable();
