@@ -1914,33 +1914,8 @@
       ]));
     });
     table.appendChild(tb); panel.appendChild(table);
-    // 班级汇总：三个年级各一块卡片，按班级顺序，只显示当月违纪
-    var sum = $('#disc-summary'); if (sum) { clear(sum); sum.appendChild(el('h3', { text: '各班违纪次数汇总（当月）' }));
-      var month = C.todayStr().slice(0, 7);
-      var byGrade = {};
-      C.GRADES.forEach(function (g) { byGrade[g] = []; });
-      C.disciplineClassSummaryMonth(st.students, st.disciplineLogs, month).forEach(function (r) {
-        var g = C.studentGrade(r.class);
-        if (!byGrade[g]) byGrade[g] = [];
-        byGrade[g].push(r);
-      });
-      var grid = el('div', { class: 'disc-summary-grid' });
-      C.GRADES.forEach(function (g) {
-        var rows = byGrade[g] || [];
-        var card = el('div', { class: 'disc-summary-card' }, [el('h4', { text: g + '年级' })]);
-        if (rows.length === 0) card.appendChild(el('p', { class: 'muted', text: '本月暂无违纪' }));
-        else {
-          var t2 = el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '班级' }), el('th', { text: '违纪人数' }), el('th', { text: '违纪次数' }), el('th', { text: '违纪原因' })])])]);
-          var tb2 = el('tbody', {});
-          rows.forEach(function (r) {
-            tb2.appendChild(el('tr', {}, [el('td', { text: r.class }), el('td', { text: String(r.persons) }), el('td', { text: String(r.count) }), el('td', { class: 'disc-reasons', text: r.reasons.length ? r.reasons.join('、') : '—' })]));
-          });
-          t2.appendChild(tb2); card.appendChild(t2);
-        }
-        grid.appendChild(card);
-      });
-      sum.appendChild(grid);
-    }
+    // 班级汇总：三个年级各一块卡片，按班级顺序；支持月份筛选（默认当月，可切换查看全部/其他月份）
+    if (typeof renderDisciplineSummary === 'function') renderDisciplineSummary();
   }
   function openRecordDiscipline(presetId) {
     if (!guardAdmin('记违纪')) return;
@@ -2055,6 +2030,53 @@
       if (state.current === 'discipline') renderDisciplineTable();
       return true;
     }, '删除选中');
+  }
+
+  // 违纪汇总渲染：三块年级卡片 + 月份筛选（'' = 全部月份）
+  function renderDisciplineSummary() {
+    var st = store.getState();
+    var sum = $('#disc-summary'); if (!sum) return;
+    clear(sum);
+    var logs = st.disciplineLogs || [];
+    // 所有有违纪记录的月份（去重、降序）
+    var months = {};
+    logs.forEach(function (l) { var m = String(l.date).slice(0, 7); if (m && /^\d{4}-\d{2}$/.test(m)) months[m] = true; });
+    var monthList = Object.keys(months).sort().reverse();
+    var cur = (state.disciplineSummaryMonth || C.todayStr().slice(0, 7));
+    if (monthList.indexOf(cur) === -1) cur = C.todayStr().slice(0, 7);
+    var sel = el('select', { id: 'disc-month-sel' }, [
+      el('option', { value: '', text: '全部月份' })
+    ].concat(monthList.map(function (m) { return el('option', { value: m, text: m + ' 月' }); })));
+    sel.value = cur;
+    sel.onchange = function () { state.disciplineSummaryMonth = sel.value; renderDisciplineSummary(); };
+    var headRow = el('div', { class: 'disc-summary-head' }, [
+      el('h3', { text: '各班违纪次数汇总' }),
+      sel
+    ]);
+    sum.appendChild(headRow);
+    var byGrade = {};
+    C.GRADES.forEach(function (g) { byGrade[g] = []; });
+    C.disciplineClassSummaryMonth(st.students, logs, cur).forEach(function (r) {
+      var g = C.studentGrade(r.class);
+      if (!byGrade[g]) byGrade[g] = [];
+      byGrade[g].push(r);
+    });
+    var grid = el('div', { class: 'disc-summary-grid' });
+    C.GRADES.forEach(function (g) {
+      var rows = byGrade[g] || [];
+      var card = el('div', { class: 'disc-summary-card' }, [el('h4', { text: g + '年级' })]);
+      if (rows.length === 0) card.appendChild(el('p', { class: 'muted', text: cur ? '本月暂无违纪' : '暂无违纪记录' }));
+      else {
+        var t2 = el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '班级' }), el('th', { text: '违纪人数' }), el('th', { text: '违纪次数' }), el('th', { text: '违纪原因' })])])]);
+        var tb2 = el('tbody', {});
+        rows.forEach(function (r) {
+          tb2.appendChild(el('tr', {}, [el('td', { text: r.class }), el('td', { text: String(r.persons) }), el('td', { text: String(r.count) }), el('td', { class: 'disc-reasons', text: r.reasons.length ? r.reasons.join('、') : '—' })]));
+        });
+        t2.appendChild(tb2); card.appendChild(t2);
+      }
+      grid.appendChild(card);
+    });
+    sum.appendChild(grid);
   }
   function recordDiscipline(studentId, info) {
     if (!guardAdmin('记违纪')) return null;

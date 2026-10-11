@@ -920,3 +920,9 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .disc-summary-card th, .disc-summary-card td { padding: 6px 8px; border-bottom: 1px solid #eef0f4; font-size: 13px; text-align: left; white-space: normal; word-break: break-word; }
 .disc-summary-card th { color: #6b7280; font-weight: 600; background: #f8fafc; }
 .disc-summary-card .disc-reasons { color: #4b5563; }
+
+
+/* 违纪汇总头部：标题 + 月份筛选 */
+.disc-summary-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.disc-summary-head h3 { margin: 0; }
+.disc-summary-head select { padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; background: #fff; }
