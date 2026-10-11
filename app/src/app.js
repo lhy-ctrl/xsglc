@@ -1898,15 +1898,22 @@
     // 只显示有违纪记录的学生（删除违纪后该生从列表消失；学生信息仍保留）
     list = list.filter(function (s) { return (counts[s.id] || 0) > 0; });
     var table = el('table', {}, [el('thead', {}, [el('tr', {}, [
-      el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '违纪次数' }), el('th', { text: '违纪说明' }), el('th', { text: '操作' })])])]);
+      el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '违纪次数' }), el('th', { text: '违纪说明' }), el('th', { text: '通报日期' }), el('th', { text: '是否通报' }), el('th', { text: '操作' })])])]);
     var tb = el('tbody', {});
     list.forEach(function (s) {
       var cnt = counts[s.id] || 0;
       var reasons = C.studentDisciplineReasons(st.disciplineLogs, s.id);
+      // 该生最近一条违纪记录（按日期最大），用于显示通报日期/是否通报
+      var latest = null;
+      st.disciplineLogs.forEach(function (lg) { if (lg.studentId === s.id && (!latest || String(lg.date) > String(latest.date))) latest = lg; });
+      var repDate = (latest && latest.reported) ? latest.date : '—';
+      var repText = latest ? (latest.reported ? '通报' : '未通报') : '—';
       tb.appendChild(el('tr', { 'data-id': s.id }, [
         el('td', { text: s.class }), el('td', { text: C.formatName(s.name) }),
         el('td', { class: (cnt > 0 ? 'score-red' : ''), text: String(cnt) }),
         el('td', { class: 'disc-reasons', text: reasons.length ? reasons.join('、') : '—' }),
+        el('td', { text: repDate }),
+        el('td', { class: (latest && latest.reported ? 'rep-tag rep-yes' : 'rep-tag'), text: repText }),
         el('td', { class: 'ops' }, [
           isAdmin ? el('span', { class: 'link', onclick: function () { openEditDiscipline(s.id); } }, ['更改说明']) : null,
           isAdmin ? el('span', { class: 'link del', onclick: function () { openDeleteDiscipline(s.id); } }, ['删除']) : null
@@ -2033,40 +2040,63 @@
   }
 
   // 违纪汇总渲染：三块年级卡片 + 月份筛选（'' = 全部月份）
+  // 违纪汇总渲染：三块年级卡片 + 起止日期筛选（精确到日，'' 表示不限）
   function renderDisciplineSummary() {
     var st = store.getState();
     var sum = $('#disc-summary'); if (!sum) return;
     clear(sum);
     var logs = st.disciplineLogs || [];
-    // 所有有违纪记录的月份（去重、降序）
-    var months = {};
-    logs.forEach(function (l) { var m = String(l.date).slice(0, 7); if (m && /^\d{4}-\d{2}$/.test(m)) months[m] = true; });
-    var monthList = Object.keys(months).sort().reverse();
-    var cur = (state.disciplineSummaryMonth || C.todayStr().slice(0, 7));
-    if (monthList.indexOf(cur) === -1) cur = C.todayStr().slice(0, 7);
-    var sel = el('select', { id: 'disc-month-sel' }, [
-      el('option', { value: '', text: '全部月份' })
-    ].concat(monthList.map(function (m) { return el('option', { value: m, text: m + ' 月' }); })));
-    sel.value = cur;
-    sel.onchange = function () { state.disciplineSummaryMonth = sel.value; renderDisciplineSummary(); };
+    var today = C.todayStr();
+    var monthStart = today.slice(0, 8) + '01';
+    // 默认范围：当月1号 ~ 今天
+    var from = state.disciplineFrom || monthStart;
+    var to = state.disciplineTo || today;
+    if (from === '') from = '';
+    if (to === '') to = '';
+    var fromInp = el('input', { type: 'date', id: 'disc-from', value: from });
+    var toInp = el('input', { type: 'date', id: 'disc-to', value: to });
+    function apply() {
+      state.disciplineFrom = fromInp.value || '';
+      state.disciplineTo = toInp.value || '';
+      renderDisciplineSummary();
+    }
+    fromInp.onchange = apply;
+    toInp.onchange = apply;
+    var btnCur = el('button', { class: 'btn btn-sm', type: 'button' }, ['本月']);
+    btnCur.onclick = function () {
+      state.disciplineFrom = monthStart; state.disciplineTo = today;
+      renderDisciplineSummary();
+    };
+    var btnAll = el('button', { class: 'btn btn-sm', type: 'button' }, ['全部']);
+    btnAll.onclick = function () {
+      state.disciplineFrom = ''; state.disciplineTo = '';
+      renderDisciplineSummary();
+    };
     var headRow = el('div', { class: 'disc-summary-head' }, [
       el('h3', { text: '各班违纪次数汇总' }),
-      sel
+      el('span', { class: 'muted', text: '从' }),
+      fromInp,
+      el('span', { class: 'muted', text: '到' }),
+      toInp,
+      btnCur,
+      btnAll
     ]);
     sum.appendChild(headRow);
     var byGrade = {};
     C.GRADES.forEach(function (g) { byGrade[g] = []; });
-    C.disciplineClassSummaryMonth(st.students, logs, cur).forEach(function (r) {
+    C.disciplineClassSummaryRange(st.students, logs, from, to).forEach(function (r) {
       var g = C.studentGrade(r.class);
       if (!byGrade[g]) byGrade[g] = [];
       byGrade[g].push(r);
     });
     var grid = el('div', { class: 'disc-summary-grid' });
+    var hasAny = false;
     C.GRADES.forEach(function (g) {
       var rows = byGrade[g] || [];
       var card = el('div', { class: 'disc-summary-card' }, [el('h4', { text: g + '年级' })]);
-      if (rows.length === 0) card.appendChild(el('p', { class: 'muted', text: cur ? '本月暂无违纪' : '暂无违纪记录' }));
+      if (rows.length === 0) card.appendChild(el('p', { class: 'muted', text: (from || to) ? '该时间段暂无违纪' : '暂无违纪记录' }));
       else {
+        hasAny = true;
         var t2 = el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '班级' }), el('th', { text: '违纪人数' }), el('th', { text: '违纪次数' }), el('th', { text: '违纪原因' })])])]);
         var tb2 = el('tbody', {});
         rows.forEach(function (r) {

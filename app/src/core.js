@@ -441,6 +441,32 @@
       return (pa ? pa.classNo : 999) - (pb ? pb.classNo : 999);
     });
   }
+
+  // 指定日期范围按班级汇总违纪：[{class, count, persons, reasons}]，按班级顺序；from/to 为 YYYY-MM-DD，空串不限
+  function disciplineClassSummaryRange(students, logs, from, to) {
+    var idToClass = {};
+    (students || []).forEach(function (s) { idToClass[s.id] = s.class; });
+    var m = {};
+    (logs || []).forEach(function (l) {
+      var d = String(l.date);
+      if (from && d < from) return;
+      if (to && d > to) return;
+      var cls = idToClass[l.studentId] || '(未知班级)';
+      if (!m[cls]) m[cls] = { count: 0, persons: {}, reasons: {} };
+      m[cls].count++;
+      m[cls].persons[l.studentId] = true;
+      var r = l.reason || '';
+      if (r) m[cls].reasons[r] = true;
+    });
+    return Object.keys(m).map(function (k) {
+      return { class: k, count: m[k].count, persons: Object.keys(m[k].persons).length, reasons: Object.keys(m[k].reasons) };
+    }).sort(function (a, b) {
+      var pa = parseClass(a.class), pb = parseClass(b.class);
+      var ga = pa ? gradeIndex(pa.grade) : 99, gb = pb ? gradeIndex(pb.grade) : 99;
+      if (ga !== gb) return ga - gb;
+      return (pa ? pa.classNo : 999) - (pb ? pb.classNo : 999);
+    });
+  }
   // ================= 请假名单整理器 =================
   var CLASS_TOKEN_RE = /高[一二三][0-9一二三四五六七八九十]+班/g;
 
@@ -994,6 +1020,7 @@
     disciplineClassReasons: disciplineClassReasons,
     disciplineClassSummary: disciplineClassSummary,
     disciplineClassSummaryMonth: disciplineClassSummaryMonth,
+    disciplineClassSummaryRange: disciplineClassSummaryRange,
     formatLeave: formatLeave,
     formatReport: formatReport,
     computeHomeSummary: computeHomeSummary,

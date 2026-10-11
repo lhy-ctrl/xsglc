@@ -926,3 +926,11 @@ textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.6; }
 .disc-summary-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
 .disc-summary-head h3 { margin: 0; }
 .disc-summary-head select { padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; background: #fff; }
+
+
+/* 违纪列表：通报状态标签 */
+.rep-tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #eef0f4; color: #6b7280; display: inline-block; }
+.rep-yes { background: #e8f0fe; color: #1a56db; }
+/* 违纪汇总头部：日期筛选 */
+.disc-summary-head select, .disc-summary-head input[type=date] { padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; background: #fff; }
+.disc-summary-head .btn-sm { padding: 4px 10px; font-size: 13px; }
