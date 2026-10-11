@@ -1903,10 +1903,13 @@
     list.forEach(function (s) {
       var cnt = counts[s.id] || 0;
       var reasons = C.studentDisciplineReasons(st.disciplineLogs, s.id);
-      // 该生最近一条违纪记录（按日期最大），用于显示通报日期/是否通报
+      // 该生全部违纪日期（按时间升序），用于显示通报日期列；是否通报取最近一条的状态
+      var myLogs = st.disciplineLogs.filter(function (lg) { return lg.studentId === s.id; });
+      var dates = {};
+      myLogs.forEach(function (lg) { dates[String(lg.date)] = true; });
+      var repDate = Object.keys(dates).sort().join('、') || '—';
       var latest = null;
-      st.disciplineLogs.forEach(function (lg) { if (lg.studentId === s.id && (!latest || String(lg.date) > String(latest.date))) latest = lg; });
-      var repDate = latest ? latest.date : '—';
+      myLogs.forEach(function (lg) { if (!latest || String(lg.date) > String(latest.date)) latest = lg; });
       var repText = latest ? (latest.reported ? '通报' : '未通报') : '—';
       tb.appendChild(el('tr', { 'data-id': s.id }, [
         el('td', { text: s.class }), el('td', { text: C.formatName(s.name) }),
