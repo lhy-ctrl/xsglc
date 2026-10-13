@@ -590,6 +590,41 @@
               var localTer = getTertiaryAdmins();
               if (localTer.length) payload.settings.tertiaryAdmins = localTer;
             }
+            // 统计月份保护：云端没有月份配置时保留本地（量化分月份是本地手动配置）
+            var localSMonths = localState.settings && localState.settings.scoreMonths;
+            var cloudSMonths = payload.settings && payload.settings.scoreMonths;
+            if ((!cloudSMonths || !cloudSMonths.length) && localSMonths && localSMonths.length) {
+              if (!payload.settings) payload.settings = {};
+              payload.settings.scoreMonths = localSMonths.slice();
+            }
+            // 量化管理分保护：本地手动编辑（未点“保存”上传）的月度明细不被云端旧数据覆盖
+            // 合并规则：以 学生+月份 为粒度——云端没有的条目保留本地（本地未上传的新编辑）；
+            // 云端已有的条目以本地为准（本地是最新编辑，云端是上次上传的旧值）。
+            var localSm = localState.scoreMonthly || [];
+            var cloudSm = Array.isArray(payload.scoreMonthly) ? payload.scoreMonthly : [];
+            if (localSm.length) {
+              var smKey = function (x) { return x.studentId + '|' + (x.month || ''); };
+              var smMerged = cloudSm.slice();
+              var smIdx = {};
+              smMerged.forEach(function (x, i) { if (x) smIdx[smKey(x)] = i; });
+              localSm.forEach(function (x) {
+                if (!x) return;
+                var k = smKey(x);
+                if (smIdx[k] != null) smMerged[smIdx[k]] = x;
+                else { smIdx[k] = smMerged.length; smMerged.push(x); }
+              });
+              payload.scoreMonthly = smMerged;
+            }
+            // 量化分今日流水保护：本地与云端按 id 并集，避免本地记录被覆盖丢失
+            var localSl = localState.scoreLogs || [];
+            var cloudSl = Array.isArray(payload.scoreLogs) ? payload.scoreLogs : [];
+            if (localSl.length) {
+              var slSeen = {};
+              var slOut = cloudSl.slice();
+              slOut.forEach(function (x) { if (x && x.id) slSeen[x.id] = true; });
+              localSl.forEach(function (x) { if (x && x.id && !slSeen[x.id]) { slOut.push(x); slSeen[x.id] = true; } });
+              payload.scoreLogs = slOut;
+            }
             store.setState(payload);
             // 单设备登录检查：如果云端活跃设备不是本机，自动退出
             checkLoginSession(payload);
