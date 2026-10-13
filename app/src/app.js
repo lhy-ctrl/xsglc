@@ -1751,7 +1751,7 @@
     }
     var table = el('table', { style: 'table-layout:fixed;width:100%' }, [el('thead', {}, [el('tr', {}, [
       el('th', { text: '班级' }), el('th', { text: '姓名' }), el('th', { text: '性别' }),
-      el('th', { text: '班扣' }), el('th', { text: '班奖' }), el('th', { text: '政扣' }), el('th', { text: '政奖' }),
+      el('th', { text: '政扣' }), el('th', { text: '政奖' }), el('th', { text: '班扣' }), el('th', { text: '班奖' }),
       el('th', { text: '量化分' })
     ])])]);
     var tb = el('tbody', {});
@@ -1765,10 +1765,10 @@
       }
       tb.appendChild(el('tr', { 'data-id': s.id, style: rowStyle }, [
         el('td', { text: s.class }), el('td', { text: C.formatName(s.name) }), el('td', { text: s.gender }),
-        scoreMonthCell(s.id, 'banKou', ms.banKou),
-        scoreMonthCell(s.id, 'banJiang', ms.banJiang),
         scoreMonthCell(s.id, 'zhengKou', ms.zhengKou),
         scoreMonthCell(s.id, 'zhengJiang', ms.zhengJiang),
+        scoreMonthCell(s.id, 'banKou', ms.banKou),
+        scoreMonthCell(s.id, 'banJiang', ms.banJiang),
         el('td', { class: C.scoreClass(q.score), text: String(q.score) })
       ]));
     });
